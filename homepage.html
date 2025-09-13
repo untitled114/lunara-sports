@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunara.io - Secure Escrow for Freelancers</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Reset & Variables */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --primary:#6366f1; --primary-dark:#4f46e5; --secondary:#8b5cf6; --accent:#06b6d4;
+    --text-primary:#fff; --text-secondary:#e2e8f0; --text-muted:#94a3b8;
+    --surface:rgba(255,255,255,0.05); --surface-hover:rgba(255,255,255,0.1);
+    --glass-bg:rgba(255,255,255,0.08); --glass-border:rgba(255,255,255,0.2);
+  }
+  body {
+    font-family:'Inter',sans-serif;
+    background:#121212; color:var(--text-primary); line-height:1.6; overflow-x:hidden;
+  }
+
+  /* Particle canvas */
+  #particle-bg { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; }
+
+  /* Header */
+  header { position:fixed; top:0; left:0; right:0; z-index:1000; padding:1rem 0; }
+  .glass-morphism { background:var(--glass-bg); backdrop-filter:blur(10px); border:1px solid var(--glass-border); border-radius:16px; }
+  .container { max-width:1200px; margin:0 auto; padding:0 2rem; }
+  .header-content { display:flex; justify-content:space-between; align-items:center; }
+  .logo { font-size:1.5rem; font-weight:700; background:linear-gradient(135deg,var(--primary),var(--secondary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .nav { display:flex; gap:2rem; align-items:center; }
+  .nav-link { color:var(--text-secondary); text-decoration:none; font-weight:500; transition:color 0.3s; position:relative; }
+  .nav-link:hover { color:var(--primary); }
+  .nav-link.active::after { content:''; position:absolute; bottom:-4px; left:0; width:100%; height:2px; background:var(--primary); border-radius:1px; }
+  .header-content { display:flex; justify-content:space-between; align-items:center; position:relative; gap:1rem; }
+  .header-buttons { display:flex; gap:1rem; margin-left:auto; font-family:'Inter',sans-serif; }
+  .nav { display:flex; gap:2rem; align-items:center; }
+  
+
+
+  /* Hero */
+  .hero { min-height:100vh; display:flex; align-items:center; justify-content:center; text-align:center; position:relative; z-index:5; }
+  .hero-content { max-width:800px; z-index:10; }
+  .hero h1 { font-size:clamp(2.5rem,5vw,4rem); font-weight:700; margin-bottom:1.5rem; background:linear-gradient(135deg,#fff,#e2e8f0); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero-subtitle { font-size:1.25rem; color:var(--text-secondary); margin-bottom:2rem; }
+  .cta-buttons { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; margin-bottom:3rem; }
+  .btn { padding:0.875rem 2rem; border:none; border-radius:12px; font-weight:600; text-decoration:none; transition:all 0.3s; cursor:pointer; font-size:1rem; display:inline-flex; align-items:center; gap:0.5rem; }
+  .btn-primary { background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; box-shadow:0 4px 15px rgba(99,102,241,0.3);}
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(99,102,241,0.4);}
+  .btn-secondary { background:var(--glass-bg); color:var(--text-primary); border:1px solid var(--glass-border); backdrop-filter:blur(10px);}
+  .btn-secondary:hover { background:var(--surface-hover); transform:translateY(-2px); }
+
+  /* Features */
+  .section { padding:6rem 0; position:relative; z-index:5; }
+  .section-title { text-align:center; font-size:2.5rem; font-weight:700; margin-bottom:1rem; background:linear-gradient(135deg,#fff,#e2e8f0); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .section-subtitle { text-align:center; color:var(--text-secondary); margin-bottom:4rem; font-size:1.1rem; }
+  .features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:2rem; margin-bottom:4rem; }
+  .feature-card { padding:2rem; border-radius:16px; background:var(--glass-bg); backdrop-filter:blur(10px); border:1px solid var(--glass-border); transition:all 0.3s; }
+  .feature-card:hover { transform:translateY(-5px); background:var(--surface-hover); box-shadow:0 20px 40px rgba(0,0,0,0.3); }
+  .feature-icon { width:60px; height:60px; border-radius:12px; background:linear-gradient(135deg,var(--primary),var(--secondary)); display:flex; align-items:center; justify-content:center; margin-bottom:1.5rem; font-size:1.5rem; }
+  .feature-card h3 { font-size:1.25rem; font-weight:600; margin-bottom:1rem; color:var(--text-primary);}
+  .feature-card p { color:var(--text-secondary); line-height:1.6; }
+
+  /* Mobile */
+  .mobile-menu { display:none; background:var(--primary); border:none; color:white; font-size:1.5rem; cursor:pointer; padding:0.5rem; border-radius:8px; }
+  @media (max-width:768px){ .nav { display:none; } .mobile-menu{ display:block; } .hero h1{ font-size:2.5rem; } .cta-buttons{ flex-direction:column; align-items:center; } .container{ padding:0 1rem; } }
+</style>
+</head>
+<body>
+
+<canvas id="particle-bg"></canvas>
+
+<header class="glass-morphism">
+  <div class="container header-content">
+    
+    <!-- Left group: Logo -->
+    <div class="header-left">
+      <div class="logo">The Untitled Project</div>
+    </div>
+
+    <!-- Center group: Navigation links -->
+    <nav class="header-center nav">
+      <a href="#home" class="nav-link active">Home</a>
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#how-it-works" class="nav-link">How It Works</a>
+      <a href="#pricing" class="nav-link">Pricing</a>
+    </nav>
+
+    <!-- Right group: Buttons -->
+    <div class="header-right">
+      <a href="signup.html" class="btn btn-primary">Get Started</a>
+      <a href="signin.html" class="btn btn-secondary">Sign In</a>
+    </div>
+
+  </div>
+</header>
+
+
+  <main>
+  <!-- Hero -->
+  <section id="home" class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1>Secure Escrow for Modern Freelancers</h1>
+        <p class="hero-subtitle">Protect your projects, guarantee payments, and build trust with milestone-based escrow services.</p>
+        <div class="cta-buttons">
+          <a href="signup.html" class="btn btn-primary">Start Your Project</a>
+          <a href="signup.html" class="btn btn-secondary">See How It Works</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="section fade-in">
+    <div class="container">
+      <h2 class="section-title">Why Choose Lunara?</h2>
+      <p class="section-subtitle">Built for freelancers and clients who demand security, transparency, and efficiency.</p>
+      <div class="features-grid">
+        <div class="feature-card"><div class="feature-icon">🔐</div><h3>Secure Escrow</h3><p>Funds are protected until milestones are approved.</p></div>
+        <div class="feature-card"><div class="feature-icon">📋</div><h3>Milestones</h3><p>Break projects into clear milestones for structured payments.</p></div>
+        <div class="feature-card"><div class="feature-icon">⚖️</div><h3>Dispute Resolution</h3><p>Professional mediation services to resolve conflicts fairly and quickly.</p></div>
+        <div class="feature-card"><div class="feature-icon">📱</div><h3>Real-time Dashboard</h3><p>Track progress, payments, and communication in one place.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section id="how-it-works" class="section fade-in">
+    <div class="container">
+      <h2 class="section-title">How Lunara Works</h2>
+      <p class="section-subtitle">Simple, secure, and transparent process in four easy steps.</p>
+      <div class="features-grid">
+        <div class="feature-card"><div class="feature-icon">1️⃣</div><h3>Create Project</h3><p>Define scope, milestones, and payment terms. Both parties agree to the contract.</p></div>
+        <div class="feature-card"><div class="feature-icon">2️⃣</div><h3>Fund Escrow</h3><p>Client deposits project payment into secure escrow. Funds are held safely until work is completed.</p></div>
+        <div class="feature-card"><div class="feature-icon">3️⃣</div><h3>Complete Work</h3><p>Freelancer delivers milestone work. Client reviews and approves deliverables.</p></div>
+        <div class="feature-card"><div class="feature-icon">4️⃣</div><h3>Release Payment</h3><p>Upon approval, payment is automatically released. Milestone completed.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section id="pricing" class="section fade-in">
+    <div class="container">
+      <h2 class="section-title">Simple, Transparent Pricing</h2>
+      <p class="section-subtitle">No hidden fees. Pay only when you succeed.</p>
+      <div class="features-grid">
+        <div class="feature-card"><div class="feature-icon">💎</div><h3>For Freelancers</h3><p><strong>2.9% + $0.30</strong> per transaction. Get paid faster with escrow protection and automated milestones.</p><a href="signup.html" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:1rem;">Start Freelancing</a></div>
+        <div class="feature-card"><div class="feature-icon">🏢</div><h3>For Clients</h3><p><strong>Free to create projects</strong>. Only pay when you release milestones. Quality work guaranteed.</p><a href="signup.html" class="btn btn-secondary" style="width:100%; justify-content:center; margin-top:1rem;">Hire Talent</a></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+
+  <!-- Features Section -->
+  <section id="features" class="section">
+    <div class="container">
+      <h2 class="section-title">Why Choose Lunara?</h2>
+      <p class="section-subtitle">Built for freelancers and clients who demand security, transparency, and efficiency.</p>
+      <div class="features-grid">
+        <div class="feature-card"><div class="feature-icon">🔐</div><h3>Secure Escrow</h3><p>Funds are protected until milestones are approved.</p></div>
+        <div class="feature-card"><div class="feature-icon">📋</div><h3>Milestones</h3><p>Break projects into clear milestones for structured payments.</p></div>
+        <div class="feature-card"><div class="feature-icon">⚖️</div><h3>Dispute Resolution</h3><p>Professional mediation services to resolve conflicts fairly and quickly.</p></div>
+        <div class="feature-card"><div class="feature-icon">📱</div><h3>Real-time Dashboard</h3><p>Track progress, payments, and communication in one place.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
+<script>
+// Orb Particles
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight,0.1,1000);
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('particle-bg'), antialias:true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+
+const particleCount = 150000;
+const geometry = new THREE.BufferGeometry();
+const positions = new Float32Array(particleCount*3);
+for(let i=0;i<particleCount;i++){
+  positions[i*3] = (Math.random()-0.5)*50;
+  positions[i*3+1] = (Math.random()-0.5)*50;
+  positions[i*3+2] = (Math.random()-0.5)*50;
+
+}
+geometry.setAttribute('position', new THREE.BufferAttribute(positions,3));
+
+const material = new THREE.PointsMaterial({ size:0.02, color:0x9370db, blending:THREE.AdditiveBlending, transparent:true, depthTest:false });
+const particles = new THREE.Points(geometry, material);
+scene.add(particles);
+
+camera.position.z = 20;
+function animate(){ requestAnimationFrame(animate); particles.rotation.y+=0.0005; particles.rotation.x+=0.0003; renderer.render(scene,camera); }
+animate();
+
+window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
+</script>
+
+<script>
+const faders = document.querySelectorAll('.fade-in');
+const appearOptions = { threshold: 0.1 };
+const appearOnScroll = new IntersectionObserver((entries, observer) => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting){
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, appearOptions);
+
+faders.forEach(fader => appearOnScroll.observe(fader));
+</script>
+
+</body>
+</html>
