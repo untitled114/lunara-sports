@@ -1,71 +1,38 @@
-// js/button_logic.js
-
-// Placeholder user/account state
-function isLoggedIn() {
-    // For now, always false
-    return false;
-}
-
-function hasAccount() {
-    // For now, always false
-    return false;
-}
+// button_logic.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Select all elements with data-action
-    document.querySelectorAll('[data-action]').forEach(el => {
-        el.addEventListener('click', (e) => {
-            const action = el.dataset.action;
 
-            switch(action) {
-                // Landing page buttons
-                case 'start-project': // Get Started
-                    if (isLoggedIn()) {
-                        alert('Redirect to Dashboard (Start Project)');
-                    } else {
-                        alert('Redirect to Sign Up / Log In placeholder');
-                    }
-                    break;
+    // Helper function for navigation
+    const navigate = (url) => {
+        window.location.href = url;
+    };
 
-                case 'sign-in': // Sign In
-                    if (hasAccount()) {
-                        alert('Redirect to Sign In page');
-                    } else {
-                        alert('Redirect to Sign Up placeholder');
-                    }
-                    break;
-
-                case 'sign-up': // Sign Up (if we add later)
-                    if (isLoggedIn()) {
-                        alert('Redirect to Dashboard (already signed in)');
-                    } else {
-                        alert('Redirect to Sign Up page placeholder');
-                    }
-                    break;
-
-                case 'start-freelancing': // Start Freelancing
-                    alert('Redirect to Sign Up page with role=freelancer');
-                    break;
-
-                case 'hire-talent': // Hire Talent
-                    alert('Redirect to Sign Up page with role=client (placeholder)');
-                    break;
-
-                // Logo scroll
-                case 'go-home':
-                    document.querySelector('#home').scrollIntoView({ behavior: 'smooth' });
-                    break;
-
-                // Smooth scroll buttons
-                case 'how-it-works':
-                    document.querySelector('#how-it-works').scrollIntoView({ behavior: 'smooth' });
-                    break;
-
-                default:
-                    console.log(`Clicked element: ${el.textContent}`);
+    // Button Actions
+    const buttonActions = {
+        'start-project': () => navigate('signup.html'),
+        'sign-in': () => navigate('signin.html'),
+        'sign-up': () => navigate('signup.html'),
+        'start-freelancing': () => navigate('signup.html'),
+        'hire-talent': () => navigate('signup.html'), // TBD
+        'go-home': () => navigate('index.html'),
+        'how-it-works': () => {
+            const section = document.querySelector('#how-it-works');
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth' });
             }
+        }
+    };
 
+    // Attach to buttons with data-action
+    const buttons = document.querySelectorAll('[data-action]');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
             e.preventDefault();
+            const action = btn.getAttribute('data-action');
+            if (buttonActions[action]) {
+                buttonActions[action]();
+            }
         });
     });
+
 });

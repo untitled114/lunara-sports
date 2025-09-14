@@ -90,6 +90,8 @@ class ParticleSystem {
                 particle.y -= dy * force * 0.01;
             }
         });
+
+        
     }
 
     drawParticles() {
