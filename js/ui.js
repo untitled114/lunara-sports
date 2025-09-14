@@ -1,14 +1,7 @@
 /**
- * js/ui.js
- * Basic UI wiring for Lunara:
- * - reveal-on-scroll (IntersectionObserver)
- * - header .scrolled toggle
- * - scrollspy (nav highlight)
- * - mobile menu toggle
- * - CTA data-action wiring
- * - subtle hero parallax (mouse)
- *
- * Drop this file at js/ui.js — your HTML already includes js/ui.js in the footer.
+ * ui.js - Enhanced Version
+ * Minor improvements for better compatibility with your specific HTML structure
+ * and performance optimizations
  */
 
 (function () {
@@ -25,10 +18,14 @@
       console.warn('ui.js: target not found ->', selector);
       return;
     }
+    
+    // Account for fixed header height
+    const headerHeight = 80; // Adjust based on your header height
     const rect = el.getBoundingClientRect();
-    const top = window.scrollY + rect.top;
+    const top = window.scrollY + rect.top - headerHeight;
+    
     window.scrollTo({
-      top,
+      top: Math.max(0, top),
       behavior: prefersReducedMotion ? 'auto' : 'smooth'
     });
   }
@@ -43,14 +40,14 @@
 
     // If reduced motion, reveal immediately
     if (prefersReducedMotion) {
-      items.forEach(i => i.classList.add('animate'));
+      items.forEach(i => i.classList.add('animate', 'visible'));
       return;
     }
 
     const observer = new IntersectionObserver((entries, obs) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          entry.target.classList.add('animate');
+          entry.target.classList.add('animate', 'visible');
           obs.unobserve(entry.target);
         }
       });
@@ -71,51 +68,77 @@
 
     let ticking = false;
     function check() {
-      if (window.scrollY > 20) header.classList.add('scrolled');
-      else header.classList.remove('scrolled');
+      const scrolled = window.scrollY > 20;
+      header.classList.toggle('scrolled', scrolled);
       ticking = false;
     }
+    
     window.addEventListener('scroll', () => {
       if (!ticking) {
-        window.requestAnimationFrame(check);
+        requestAnimationFrame(check);
         ticking = true;
       }
     }, { passive: true });
 
-    // run once
+    // Run once on load
     check();
   }
 
   /* -------------------------
      Scroll-spy (nav highlight)
+     Updated to work with your HTML structure
      ------------------------- */
   function initScrollSpy() {
     const sections = Array.from(document.querySelectorAll('main section[id]'));
-    const navLinks = Array.from(document.querySelectorAll('.nav-link'));
-    const mobileLinks = Array.from(document.querySelectorAll('.mobile-nav-link'));
+    const navLinks = Array.from(document.querySelectorAll('.nav-link[data-section]'));
+    const mobileLinks = Array.from(document.querySelectorAll('.mobile-nav-link[data-section]'));
+    
     if (!sections.length) return;
 
-    // Observe when section is mostly visible
+    // Also handle nav links without data-section but with href
+    const allNavLinks = [
+      ...navLinks,
+      ...Array.from(document.querySelectorAll('.nav-link[href^="#"]:not([data-section])')),
+    ];
+    const allMobileLinks = [
+      ...mobileLinks,
+      ...Array.from(document.querySelectorAll('.mobile-nav-link[href^="#"]:not([data-section])')),
+    ];
+
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const id = entry.target.id;
-          navLinks.forEach(a => a.classList.toggle('active', a.dataset.section === id));
-          mobileLinks.forEach(a => a.classList.toggle('active', a.dataset.section === id));
+          
+          // Handle data-section links
+          [...navLinks, ...mobileLinks].forEach(a => {
+            a.classList.toggle('active', a.dataset.section === id);
+          });
+          
+          // Handle href links
+          [...allNavLinks, ...allMobileLinks].forEach(a => {
+            if (!a.dataset.section) {
+              const href = a.getAttribute('href');
+              a.classList.toggle('active', href === `#${id}`);
+            }
+          });
         }
       });
     }, {
-      threshold: [0.5]
+      threshold: [0.3], // Slightly higher threshold for better UX
+      rootMargin: '-80px 0px -50% 0px' // Account for header height
     });
 
     sections.forEach(s => observer.observe(s));
 
-    // also enable click-on-nav to smooth scroll
-    [...navLinks, ...mobileLinks].forEach(a => {
+    // Enable click-on-nav to smooth scroll
+    [...allNavLinks, ...allMobileLinks].forEach(a => {
       a.addEventListener('click', (e) => {
         e.preventDefault();
-        const target = a.getAttribute('href') || `#${a.dataset.section}`;
-        if (target) scrollToSelector(target);
+        const target = a.dataset.section ? `#${a.dataset.section}` : a.getAttribute('href');
+        if (target && target.startsWith('#')) {
+          scrollToSelector(target);
+        }
       });
     });
   }
@@ -124,79 +147,122 @@
      Mobile menu toggle
      ------------------------- */
   function initMobileMenu() {
-    const btn = document.getElementById('mobile-menu');
-    const overlay = document.getElementById('mobile-nav-overlay');
-    if (!btn || !overlay) return;
+    const btn = document.getElementById('mobile-menu') || document.querySelector('.mobile-menu');
+    const overlay = document.getElementById('mobile-nav-overlay') || document.querySelector('.mobile-nav-overlay');
+    
+    if (!btn || !overlay) {
+      console.warn('ui.js: Mobile menu elements not found. Expected #mobile-menu and #mobile-nav-overlay');
+      return;
+    }
 
-    btn.addEventListener('click', () => {
-      const open = btn.classList.toggle('active');
-      overlay.classList.toggle('active', open);
-      document.body.classList.toggle('mobile-nav-open', open);
-    });
+    function openMenu() {
+      btn.classList.add('active');
+      overlay.classList.add('active');
+      document.body.classList.add('mobile-nav-open');
+      document.body.style.overflow = 'hidden'; // Prevent background scroll
+    }
 
-    // close when clicking outside or clicking a link
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        btn.classList.remove('active');
-        overlay.classList.remove('active');
-        document.body.classList.remove('mobile-nav-open');
+    function closeMenu() {
+      btn.classList.remove('active');
+      overlay.classList.remove('active');
+      document.body.classList.remove('mobile-nav-open');
+      document.body.style.overflow = ''; // Restore scroll
+    }
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = btn.classList.contains('active');
+      if (isOpen) {
+        closeMenu();
+      } else {
+        openMenu();
       }
     });
 
-    overlay.querySelectorAll('a').forEach(a => {
-      a.addEventListener('click', () => {
-        btn.classList.remove('active');
-        overlay.classList.remove('active');
-        document.body.classList.remove('mobile-nav-open');
-      });
+    // Close when clicking outside
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeMenu();
+      }
+    });
+
+    // Close when clicking any link
+    overlay.querySelectorAll('a, .btn').forEach(link => {
+      link.addEventListener('click', closeMenu);
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && btn.classList.contains('active')) {
+        closeMenu();
+      }
+    });
+
+    // Close on window resize (if mobile menu is open and window gets larger)
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768 && btn.classList.contains('active')) {
+        closeMenu();
+      }
     });
   }
 
   /* -------------------------
      CTA Buttons wiring (data-action attributes)
-     Supported actions: start-project, how-it-works, start-freelancing, hire-talent
+     Updated with your specific sections
      ------------------------- */
   function initCTAButtons() {
     document.querySelectorAll('[data-action]').forEach(el => {
       el.addEventListener('click', (e) => {
         e.preventDefault();
         const action = el.dataset.action && el.dataset.action.trim();
+        
         switch (action) {
           case 'start-project':
-            scrollToSelector('#dashboard'); break;
+            scrollToSelector('#pricing');
+            break;
           case 'how-it-works':
-            scrollToSelector('#how-it-works'); break;
+            scrollToSelector('#how-it-works');
+            break;
           case 'start-freelancing':
-            scrollToSelector('#dashboard'); break;
+            scrollToSelector('#pricing');
+            break;
           case 'hire-talent':
-            scrollToSelector('#pricing'); break;
+            scrollToSelector('#pricing');
+            break;
           default:
-            // if action looks like a selector (#something) try it
-            if (action && action.startsWith('#')) scrollToSelector(action);
-            else console.warn('ui.js: Unrecognized data-action:', action);
+            // If action looks like a selector (#something) try it
+            if (action && action.startsWith('#')) {
+              scrollToSelector(action);
+            } else if (action) {
+              console.warn('ui.js: Unrecognized data-action:', action);
+            }
         }
 
-        // tiny click feedback
+        // Button press feedback
         el.classList.add('btn-pressed');
         setTimeout(() => el.classList.remove('btn-pressed'), 180);
       });
 
-      // keyboard activation for non-button elements
-      el.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter' || ev.key === ' ') {
-          ev.preventDefault();
-          el.click();
-        }
-      });
+      // Keyboard activation for accessibility
+      if (el.tagName !== 'BUTTON' && el.tagName !== 'A') {
+        el.setAttribute('tabindex', '0');
+        el.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            el.click();
+          }
+        });
+      }
     });
   }
 
   /* -------------------------
      Hero parallax (mouse-based, subtle)
-     - disabled if user prefers reduced motion
+     Enhanced with performance optimizations
      ------------------------- */
   function initHeroParallax() {
     if (prefersReducedMotion) return;
+    
     const hero = document.querySelector('.hero');
     const content = document.querySelector('.hero-content');
     if (!hero || !content) return;
@@ -204,6 +270,21 @@
     let mouseX = 0, mouseY = 0;
     let posX = 0, posY = 0;
     const ease = 0.09;
+    let animationId;
+
+    function updateParallax() {
+      posX += (mouseX - posX) * ease;
+      posY += (mouseY - posY) * ease;
+      
+      // Only update if movement is significant enough
+      if (Math.abs(mouseX - posX) > 0.1 || Math.abs(mouseY - posY) > 0.1) {
+        content.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+        animationId = requestAnimationFrame(updateParallax);
+      } else {
+        // Stop animation when movement is minimal
+        animationId = null;
+      }
+    }
 
     hero.addEventListener('mousemove', (e) => {
       const r = hero.getBoundingClientRect();
@@ -211,38 +292,73 @@
       const y = (e.clientY - r.top) / r.height - 0.5;
       mouseX = x * 16; // px
       mouseY = y * 10;
+      
+      // Start animation if not already running
+      if (!animationId) {
+        updateParallax();
+      }
     });
 
     hero.addEventListener('mouseleave', () => {
       mouseX = 0;
       mouseY = 0;
+      if (!animationId) {
+        updateParallax();
+      }
     });
-
-    function update() {
-      posX += (mouseX - posX) * ease;
-      posY += (mouseY - posY) * ease;
-      content.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
-      requestAnimationFrame(update);
-    }
-    update();
   }
 
   /* -------------------------
-     Initialize
+     Initialize with better error handling
      ------------------------- */
   function init() {
-    initRevealOnScroll();
-    initHeaderScroll();
-    initScrollSpy();
-    initMobileMenu();
-    initCTAButtons();
-    initHeroParallax();
+    try {
+      initRevealOnScroll();
+      initHeaderScroll();
+      initScrollSpy();
+      initMobileMenu();
+      initCTAButtons();
+      initHeroParallax();
+      
+      // Optional: Log successful initialization
+      console.log('ui.js: All components initialized successfully');
+    } catch (error) {
+      console.error('ui.js: Error during initialization:', error);
+    }
   }
 
+  // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
 
+  // Expose some functions globally for debugging (optional)
+  if (typeof window !== 'undefined') {
+    window.UIControls = {
+      scrollTo: scrollToSelector,
+      init: init
+    };
+  }
+
 })();
+
+/*
+IMPROVEMENTS MADE:
+
+1. ✅ Better ScrollSpy - Works with both data-section and href attributes
+2. ✅ Enhanced Mobile Menu - Prevents background scroll, escape key support, resize handling  
+3. ✅ Better Scroll Offset - Accounts for fixed header height
+4. ✅ Performance - Optimized parallax animation
+5. ✅ Error Handling - Try/catch blocks and better warnings
+6. ✅ Accessibility - Proper tabindex and keyboard support
+7. ✅ Fallback Selectors - Works even if IDs are missing
+8. ✅ Debug Support - Global functions for troubleshooting
+
+COMPATIBILITY NOTES:
+- Works with your current HTML structure
+- Handles both old and new navigation patterns
+- Graceful fallbacks if elements are missing
+- Better mobile experience 
+*/
