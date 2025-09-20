@@ -5,811 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SafeSend - User Profile</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root {
-  --primary: #6366f1;
-  --secondary: #8b5cf6;
-  --accent: #06d6a0;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --text-primary: #ffffff;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --bg-primary: #0f0f23;
-  --bg-secondary: #1a1a2e;
-  --bg-card: rgba(255,255,255,0.05);
-  --border-color: rgba(255,255,255,0.1);
-  --shadow-light: 0 4px 20px rgba(0,0,0,0.1);
-  --shadow-heavy: 0 20px 60px rgba(0,0,0,0.3);
-}
-
-* { 
-  margin: 0; 
-  padding: 0; 
-  box-sizing: border-box; 
-}
-
-body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
-  line-height: 1.6;
-  overflow-x: hidden;
-}
-
-.container { 
-  max-width: 1200px; 
-  margin: 0 auto; 
-  padding: 0 1rem; 
-}
-
-/* Header */
-header {
-  background: rgba(15,15,35,0.95);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  transition: all 0.3s ease;
-}
-
-header.scrolled {
-  box-shadow: var(--shadow-heavy);
-}
-
-header .container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-  position: relative;
-}
-
-.logo {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--accent), var(--primary));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.logo:hover {
-  transform: scale(1.05);
-}
-
-.nav {
-  display: flex;
-  gap: 2rem;
-  position: relative;
-}
-
-.nav-link {
-  color: var(--text-secondary);
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.nav-link::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  opacity: 0.1;
-  transition: left 0.3s ease;
-  z-index: -1;
-}
-
-.nav-link:hover::before {
-  left: 0;
-}
-
-.nav-link:hover, .nav-link.active {
-  color: var(--accent);
-  transform: translateY(-2px);
-}
-
-.header-buttons {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.btn {
-  padding: 0.6rem 1.2rem;
-  border-radius: 0.75rem;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-  transition: left 0.3s ease;
-  z-index: -1;
-}
-
-.btn:hover::before {
-  left: 0;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: white;
-  box-shadow: var(--shadow-light);
-}
-
-.btn-secondary {
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-  backdrop-filter: blur(10px);
-}
-
-.btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-heavy);
-}
-
-.btn-icon {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-icon:hover {
-  background: var(--bg-card);
-  color: var(--accent);
-  transform: scale(1.1);
-}
-
-/* Mobile Menu */
-.mobile-menu-toggle {
-  display: none;
-  flex-direction: column;
-  gap: 3px;
-  cursor: pointer;
-  padding: 0.5rem;
-}
-
-.mobile-menu-toggle span {
-  width: 20px;
-  height: 2px;
-  background: var(--text-secondary);
-  transition: all 0.3s ease;
-}
-
-.mobile-menu {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: rgba(15,15,35,0.98);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border-color);
-  padding: 1rem;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.mobile-menu.active {
-  display: flex;
-}
-
-/* Profile Hero */
-.profile-hero {
-  padding: 4rem 0;
-  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-primary));
-  position: relative;
-  overflow: hidden;
-}
-
-.profile-hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.1), transparent),
-              radial-gradient(circle at 70% 80%, rgba(6, 214, 160, 0.1), transparent);
-  z-index: 0;
-}
-
-.profile-hero .container {
-  position: relative;
-  z-index: 1;
-}
-
-.profile-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 2rem;
-  margin-bottom: 3rem;
-  animation: slideInUp 0.8s ease-out;
-}
-
-.profile-avatar-container {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.profile-avatar {
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  border: 4px solid var(--accent);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  object-fit: cover;
-}
-
-.profile-avatar:hover {
-  transform: scale(1.05);
-  box-shadow: 0 10px 30px rgba(6, 214, 160, 0.3);
-}
-
-.avatar-status {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  width: 20px;
-  height: 20px;
-  background: var(--success);
-  border: 3px solid var(--bg-primary);
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
-.profile-info {
-  flex: 1;
-}
-
-.profile-name {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.profile-username {
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-}
-
-.profile-bio {
-  color: var(--text-secondary);
-  font-size: 1rem;
-  line-height: 1.5;
-  margin-bottom: 1rem;
-}
-
-.profile-tags {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.tag {
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.8rem;
-  border: 1px solid var(--border-color);
-  backdrop-filter: blur(10px);
-}
-
-/* Quick Actions */
-.quick-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.quick-action {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  padding: 0.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-}
-
-.quick-action:hover {
-  background: var(--accent);
-  transform: scale(1.1);
-}
-
-/* Stats */
-.profile-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-  animation: slideInUp 0.8s ease-out 0.2s both;
-}
-
-.stat-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  text-align: center;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(6, 214, 160, 0.1));
-  transition: left 0.3s ease;
-  z-index: -1;
-}
-
-.stat-card:hover::before {
-  left: 0;
-}
-
-.stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-heavy);
-}
-
-.stat-card .icon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
-
-.stat-card h3 {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-.stat-card p {
-  font-size: 2rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.stat-card .subtext {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-top: 0.25rem;
-}
-
-/* Profile Actions */
-.profile-actions {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  animation: slideInUp 0.8s ease-out 0.4s both;
-}
-
-/* Tabs */
-.tabs {
-  margin: 3rem 0 2rem;
-  animation: slideInUp 0.8s ease-out 0.6s both;
-}
-
-.tab-nav {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  border-bottom: 2px solid var(--border-color);
-  overflow-x: auto;
-  padding-bottom: 1rem;
-}
-
-.tab-button {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-  position: relative;
-}
-
-.tab-button::after {
-  content: '';
-  position: absolute;
-  bottom: -17px;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  transition: all 0.3s ease;
-  transform: translateX(-50%);
-}
-
-.tab-button.active,
-.tab-button:hover {
-  background: var(--bg-card);
-  color: var(--accent);
-}
-
-.tab-button.active::after {
-  width: 80%;
-}
-
-.tab-content {
-  display: none;
-  animation: fadeIn 0.5s ease-out;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-/* Activity Grid */
-.activity-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
-}
-
-.activity-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-
-.activity-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(6, 214, 160, 0.05));
-  transition: left 0.3s ease;
-  z-index: -1;
-}
-
-.activity-card:hover::before {
-  left: 0;
-}
-
-.activity-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-heavy);
-}
-
-.activity-card-header {
-  display: flex;
-  justify-content: between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
-  gap: 1rem;
-}
-
-.activity-card h3 {
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  flex: 1;
-}
-
-.activity-card .date {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.activity-card p {
-  color: var(--text-secondary);
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-}
-
-.activity-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.activity-amount {
-  font-weight: 700;
-  color: var(--success);
-  font-size: 1.1rem;
-}
-
-/* Progress Bar */
-.progress-container {
-  margin-bottom: 0.5rem;
-}
-
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.progress-bar {
-  background: rgba(255,255,255,0.1);
-  border-radius: 10px;
-  height: 6px;
-  overflow: hidden;
-  position: relative;
-}
-
-.progress-bar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  animation: shimmer 2s infinite;
-}
-
-.progress-bar-inner {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary), var(--accent));
-  border-radius: 10px;
-  transition: width 1.5s ease-out;
-  position: relative;
-}
-
-/* Badge */
-.badge {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.25rem 0.6rem;
-  border-radius: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.badge.completed {
-  background: linear-gradient(135deg, var(--success), #059669);
-  color: white;
-}
-
-.badge.in-progress {
-  background: linear-gradient(135deg, var(--warning), #d97706);
-  color: white;
-}
-
-.badge.pending {
-  background: linear-gradient(135deg, var(--text-muted), #6b7280);
-  color: white;
-}
-
-.badge.verified {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: white;
-  margin-left: 0.5rem;
-}
-
-/* Modal */
-.modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.8);
-  backdrop-filter: blur(10px);
-  z-index: 2000;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-
-.modal.active {
-  display: flex;
-  animation: fadeIn 0.3s ease-out;
-}
-
-.modal-content {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 1rem;
-  padding: 2rem;
-  max-width: 500px;
-  width: 100%;
-  max-height: 80vh;
-  overflow-y: auto;
-  position: relative;
-  animation: slideInUp 0.3s ease-out;
-}
-
-.modal-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  transition: all 0.3s ease;
-}
-
-.modal-close:hover {
-  background: var(--bg-card);
-  color: var(--text-primary);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideInUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
-  .nav, .header-buttons { display: none; }
-  
-  .mobile-menu-toggle { display: flex; }
-  
-  .profile-header {
-    flex-direction: column;
-    text-align: center;
-    align-items: center;
-  }
-  
-  .profile-name {
-    font-size: 2rem;
-    justify-content: center;
-  }
-  
-  .profile-stats {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-  
-  .stat-card {
-    padding: 1rem;
-  }
-  
-  .stat-card p {
-    font-size: 1.5rem;
-  }
-  
-  .activity-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .tab-nav {
-    gap: 0.25rem;
-  }
-  
-  .tab-button {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-  }
-  
-  .profile-actions {
-    justify-content: center;
-  }
-  
-  .quick-actions {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .container {
-    padding: 0 0.75rem;
-  }
-  
-  .profile-hero {
-    padding: 2rem 0;
-  }
-  
-  .profile-stats {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-}
-</style>
+<!-- Fixed CSS file reference -->
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/user_profile.css">
 </head>
 <body>
 
@@ -817,7 +15,7 @@ header .container {
   <div class="container">
     <div class="logo">SafeSend</div>
     <nav class="nav">
-      <a href="#home" class="nav-link">Home</a>
+      <a href="index.html" class="nav-link">Home</a>
       <a href="#profile" class="nav-link active">Profile</a>
       <a href="#projects" class="nav-link">Projects</a>
       <a href="#analytics" class="nav-link">Analytics</a>
@@ -835,7 +33,7 @@ header .container {
       <span></span>
     </div>
     <div class="mobile-menu" id="mobile-menu">
-      <a href="#home" class="nav-link">Home</a>
+      <a href="index.html" class="nav-link">Home</a>
       <a href="#profile" class="nav-link active">Profile</a>
       <a href="#projects" class="nav-link">Projects</a>
       <a href="#analytics" class="nav-link">Analytics</a>
@@ -846,6 +44,7 @@ header .container {
   </div>
 </header>
 
+<!-- Rest of your HTML content remains the same -->
 <main>
   <section class="profile-hero">
     <div class="container">
@@ -912,7 +111,7 @@ header .container {
     </div>
   </section>
 
-  <section class="container">
+   <section class="container">
     <div class="tabs">
       <div class="tab-nav">
         <button class="tab-button active" data-tab="activity">Recent Activity</button>
@@ -1262,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const mobileToggle = document.getElementById('mobile-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
   
-  mobileToggle.addEventListener('click', () => {
+  mobileToggle?.addEventListener('click', () => {
     mobileMenu.classList.toggle('active');
   });
 
@@ -1280,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Add active class to clicked button and corresponding content
       button.classList.add('active');
-      document.getElementById(targetTab).classList.add('active');
+      document.getElementById(targetTab)?.classList.add('active');
     });
   });
 
@@ -1301,8 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
     button.addEventListener('click', () => {
       setTimeout(() => {
         const activeContent = document.querySelector('.tab-content.active');
-        const bars = activeContent.querySelectorAll('.progress-bar-inner');
-        bars.forEach(bar => {
+        const bars = activeContent?.querySelectorAll('.progress-bar-inner');
+        bars?.forEach(bar => {
           bar.style.width = '0%';
           setTimeout(() => {
             const width = bar.dataset.width;
@@ -1314,28 +513,24 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Logo click handler
-  document.querySelector('.logo').addEventListener('click', () => {
-    window.location.href = '#home';
+  document.querySelector('.logo')?.addEventListener('click', () => {
+    window.location.href = 'index.html';
   });
 
   // Quick actions
   document.querySelectorAll('.quick-action').forEach(action => {
     action.addEventListener('click', (e) => {
       const title = e.currentTarget.getAttribute('title');
-      // Add haptic feedback
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-      
-      // Show toast notification (you can implement this)
       console.log(`${title} clicked`);
     });
   });
 
   // Avatar upload functionality
   const avatarUpload = document.getElementById('avatar-upload');
-  avatarUpload.addEventListener('click', () => {
-    // Create file input
+  avatarUpload?.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -1433,5 +628,10 @@ document.querySelectorAll('.stat-card, .activity-card').forEach(el => {
   observer.observe(el);
 });
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/button_logic.js"></script>
+
 </body>
 </html>
