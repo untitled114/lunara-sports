@@ -1,0 +1,29 @@
+/* ===================== SAFESEND MAIN STYLES ===================== */
+/* Modular CSS Architecture - Import all component styles */
+
+/* Core Foundation */
+@import 'base.css';
+@import 'layout.css';
+
+/* Components */
+@import 'buttons.css';
+@import 'forms.css';
+@import 'cards.css';
+
+/* Sections */
+@import 'hero.css';
+@import 'sections.css';
+
+/* Enhancements */
+@import 'animations.css';
+@import 'responsive.css';
+@import 'accessibility.css';
+
+/* Mobile Navigation */
+@import 'mobile-nav.css';
+
+/* Atmospheric Effects */
+@import 'glow-effects.css';
+
+/* ===================== PAGE-SPECIFIC OVERRIDES ===================== */
+/* This section can be used for any global overrides or page-specific adjustments */

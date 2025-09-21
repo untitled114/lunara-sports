@@ -1,0 +1,37 @@
+/* ===================== ACCESSIBILITY ===================== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .fade-in,
+    .fade-in-up,
+    .slide-in-left,
+    .slide-in-right {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ===================== SCROLLBAR STYLING ===================== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0f0f23;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}

@@ -1,0 +1,182 @@
+/* ===================== AUTH PAGES ===================== */
+.auth-section {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0 var(--space-lg);
+    position: relative;
+    z-index: 10;
+}
+
+.auth-container {
+    max-width: 450px;
+    width: 100%;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2rem;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.auth-title {
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1rem;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.auth-title .emoji {
+    font-size: 2rem;
+}
+
+.auth-title .text {
+    display: inline-block;
+    color: #ffffff;
+}
+
+.auth-form .form-group {
+    margin-bottom: var(--space-md);
+}
+
+.auth-form input[type="text"],
+.auth-form input[type="email"],
+.auth-form input[type="password"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    transition: all var(--transition-base);
+}
+
+.auth-form input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 8px rgba(99,102,241,0.3);
+}
+
+.auth-footer {
+    margin-top: var(--space-md);
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+}
+
+.auth-footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+.auth-trust {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* ===================== SUPPORT FORM ===================== */
+.support-form {
+    max-width: 600px;
+    margin: 0 auto;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    backdrop-filter: blur(10px);
+}
+
+.support-form .form-group {
+    margin-bottom: var(--space-md);
+    text-align: left;
+}
+
+.support-form label {
+    display: block;
+    margin-bottom: var(--space-xs);
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.support-form input,
+.support-form select,
+.support-form textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    transition: all var(--transition-base);
+}
+
+.support-form input:focus,
+.support-form select:focus,
+.support-form textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 8px rgba(99,102,241,0.3);
+}
+
+.support-form textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* ===================== FAQ GRID ===================== */
+.faq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: 3rem;
+}
+
+.faq-card {
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    transition: all var(--transition-base);
+}
+
+.faq-card:hover {
+    transform: translateY(-5px);
+    background: var(--surface-hover);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.faq-card h3 {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    margin-bottom: var(--space-sm);
+    color: var(--text-primary);
+}
+
+.faq-card p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.faq-card a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.faq-card a:hover {
+    text-decoration: underline;
+}

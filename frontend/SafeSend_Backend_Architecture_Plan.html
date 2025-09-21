@@ -1,0 +1,540 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>SafeSend Backend Architecture Plan</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 40px; color: #333; max-width: 1200px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; border-left: 4px solid #3498db; padding-left: 15px; }
+        h3 { color: #7f8c8d; margin-top: 20px; }
+        code { background: #f8f9fa; padding: 2px 4px; border-radius: 3px; color: #e74c3c; }
+        pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        pre code { background: none; color: #ecf0f1; }
+        .emoji { font-size: 1.2em; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        blockquote { border-left: 4px solid #3498db; margin: 0; padding-left: 20px; background: #f8f9fa; }
+    </style>
+</head>
+<body>
+<h1 id="safesend-backend-architecture-plan">SafeSend Backend Architecture Plan</h1>
+
+<h2 id="technology-stack">🏗️ Technology Stack</h2>
+
+<pre><code>{
+  "backend": "Python/Django + Django REST Framework",
+  "database": "PostgreSQL",
+  "cache": "Redis",
+  "deployment": "Azure App Service + Azure Database",
+  "payments": ["Stripe", "PayPal", "Venmo"],
+  "storage": "Azure Blob Storage",
+  "queue": "Celery + Redis",
+  "monitoring": "Azure Application Insights"
+}
+</code></pre>
+
+<h2 id="proposed-project-structure">📁 Proposed Project Structure</h2>
+
+<pre><code>safesend-backend/
+├── safesend/                   # Main Django project
+│   ├── __init__.py
+│   ├── settings/
+│   │   ├── __init__.py
+│   │   ├── base.py            # Base settings
+│   │   ├── development.py     # Dev environment
+│   │   ├── production.py      # Production settings
+│   │   └── azure.py           # Azure specific settings
+│   ├── urls.py                # Main URL configuration
+│   ├── wsgi.py                # WSGI application
+│   └── asgi.py                # ASGI for WebSocket support
+├── apps/                       # Django applications
+│   ├── accounts/              # User management
+│   │   ├── models.py          # User, Profile models
+│   │   ├── serializers.py     # DRF serializers
+│   │   ├── views.py           # API views
+│   │   ├── urls.py            # App URLs
+│   │   └── signals.py         # User signals
+│   ├── projects/              # Project management
+│   │   ├── models.py          # Project, Milestone models
+│   │   ├── serializers.py
+│   │   ├── views.py
+│   │   └── urls.py
+│   ├── payments/              # Payment processing
+│   │   ├── models.py          # Transaction, Escrow models
+│   │   ├── services/          # Payment service integrations
+│   │   │   ├── stripe_service.py
+│   │   │   ├── paypal_service.py
+│   │   │   └── venmo_service.py
+│   │   ├── webhooks.py        # Payment webhooks
+│   │   └── tasks.py           # Celery tasks
+│   ├── notifications/         # Real-time notifications
+│   │   ├── models.py          # Notification models
+│   │   ├── consumers.py       # WebSocket consumers
+│   │   └── routing.py         # WebSocket routing
+│   └── common/                # Shared utilities
+│       ├── permissions.py     # Custom permissions
+│       ├── mixins.py          # View mixins
+│       └── utils.py           # Helper functions
+├── static/                     # Static files (API docs, etc.)
+├── media/                      # User uploads
+├── requirements/               # Dependencies
+│   ├── base.txt
+│   ├── development.txt
+│   └── production.txt
+├── docker/                     # Docker configuration
+├── scripts/                    # Deployment scripts
+├── manage.py
+├── requirements.txt
+├── Dockerfile
+└── docker-compose.yml
+</code></pre>
+
+<h2 id="database-models-design">🗄️ Database Models Design</h2>
+
+<h3 id="core-models">Core Models</h3>
+
+<pre><code># accounts/models.py
+class User(AbstractUser):
+    email = models.EmailField(unique=True)
+    user_type = models.CharField(choices=[('freelancer', 'Freelancer'), ('client', 'Client')])
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(blank=True)
+    avatar = models.ImageField(upload_to='avatars/', blank=True)
+    skills = models.JSONField(default=list)
+    hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    portfolio_url = models.URLField(blank=True)
+
+# projects/models.py
+class Project(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('disputed', 'Disputed')
+    ]
+
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='client_projects')
+    freelancer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='freelancer_projects', null=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    created_at = models.DateTimeField(auto_now_add=True)
+    deadline = models.DateTimeField()
+
+class Milestone(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='milestones')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    due_date = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending'),
+        ('submitted', 'Submitted'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected')
+    ], default='pending')
+    deliverables = models.JSONField(default=list)  # File URLs
+
+# payments/models.py
+class EscrowAccount(models.Model):
+    project = models.OneToOneField(Project, on_delete=models.CASCADE)
+    total_deposited = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_released = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    stripe_account_id = models.CharField(max_length=100, blank=True)
+
+class Transaction(models.Model):
+    TRANSACTION_TYPES = [
+        ('deposit', 'Deposit'),
+        ('release', 'Release'),
+        ('refund', 'Refund'),
+        ('fee', 'Platform Fee')
+    ]
+
+    PAYMENT_PROVIDERS = [
+        ('stripe', 'Stripe'),
+        ('paypal', 'PayPal'),
+        ('venmo', 'Venmo')
+    ]
+
+    escrow_account = models.ForeignKey(EscrowAccount, on_delete=models.CASCADE)
+    milestone = models.ForeignKey(Milestone, on_delete=models.CASCADE, null=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    payment_provider = models.CharField(max_length=20, choices=PAYMENT_PROVIDERS)
+    provider_transaction_id = models.CharField(max_length=200)
+    status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed')
+    ])
+    created_at = models.DateTimeField(auto_now_add=True)
+</code></pre>
+
+<h2 id="api-endpoints-design">🔗 API Endpoints Design</h2>
+
+<h3 id="authentication-users">Authentication &amp; Users</h3>
+
+<pre><code>POST   /api/auth/register/          # User registration
+POST   /api/auth/login/             # Login with JWT
+POST   /api/auth/logout/            # Token invalidation
+POST   /api/auth/refresh/           # Refresh JWT token
+POST   /api/auth/verify-email/      # Email verification
+POST   /api/auth/reset-password/    # Password reset
+
+GET    /api/users/profile/          # Get current user profile
+PUT    /api/users/profile/          # Update profile
+POST   /api/users/upload-avatar/    # Upload profile picture
+</code></pre>
+
+<h3 id="projects-milestones">Projects &amp; Milestones</h3>
+
+<pre><code>GET    /api/projects/               # List user's projects
+POST   /api/projects/               # Create new project
+GET    /api/projects/{id}/          # Get project details
+PUT    /api/projects/{id}/          # Update project
+DELETE /api/projects/{id}/          # Delete project
+
+POST   /api/projects/{id}/milestones/     # Create milestone
+GET    /api/projects/{id}/milestones/     # List milestones
+PUT    /api/milestones/{id}/              # Update milestone
+POST   /api/milestones/{id}/submit/       # Submit deliverables
+POST   /api/milestones/{id}/approve/      # Approve milestone
+POST   /api/milestones/{id}/reject/       # Reject milestone
+</code></pre>
+
+<h3 id="payments-escrow">Payments &amp; Escrow</h3>
+
+<pre><code>POST   /api/payments/deposit/       # Deposit to escrow
+POST   /api/payments/release/       # Release milestone payment
+GET    /api/payments/transactions/  # Payment history
+POST   /api/payments/refund/        # Request refund
+
+POST   /api/webhooks/stripe/        # Stripe webhook
+POST   /api/webhooks/paypal/        # PayPal webhook
+POST   /api/webhooks/venmo/         # Venmo webhook
+</code></pre>
+
+<h3 id="notifications-real-time">Notifications &amp; Real-time</h3>
+
+<pre><code>GET    /api/notifications/          # Get notifications
+PUT    /api/notifications/{id}/read/ # Mark as read
+WebSocket: /ws/notifications/{user_id}/ # Real-time updates
+</code></pre>
+
+<h2 id="payment-integration-strategy">💳 Payment Integration Strategy</h2>
+
+<h3 id="stripe-primary">Stripe (Primary)</h3>
+
+<ul>
+<li><strong>Connect Accounts</strong> for escrow functionality</li>
+<li><strong>Payment Intents</strong> for secure payments</li>
+<li><strong>Webhooks</strong> for real-time status updates</li>
+<li><strong>Marketplace</strong> model for fee collection</li>
+</ul>
+
+<h3 id="paypal">PayPal</h3>
+
+<ul>
+<li><strong>Adaptive Payments</strong> for escrow</li>
+<li><strong>Express Checkout</strong> for user experience</li>
+<li><strong>IPN</strong> (Instant Payment Notification) for webhooks</li>
+</ul>
+
+<h3 id="venmo">Venmo</h3>
+
+<ul>
+<li><strong>Venmo API</strong> (limited business use)</li>
+<li><strong>OAuth flow</strong> for user authorization</li>
+<li><strong>Transaction API</strong> for payments</li>
+</ul>
+
+<pre><code># Payment Service Architecture
+class PaymentServiceFactory:
+    @staticmethod
+    def get_service(provider: str):
+        services = {
+            'stripe': StripeService(),
+            'paypal': PayPalService(),
+            'venmo': VenmoService()
+        }
+        return services.get(provider)
+
+class BasePaymentService:
+    def create_escrow(self, amount, project_id): pass
+    def deposit_funds(self, escrow_id, payment_method): pass
+    def release_funds(self, escrow_id, milestone_id): pass
+    def process_webhook(self, payload, signature): pass
+</code></pre>
+
+<h2 id="azure-deployment-architecture">🏗️ Azure Deployment Architecture</h2>
+
+<h3 id="azure-services">Azure Services</h3>
+
+<ul>
+<li><strong>Azure App Service</strong> - Django application hosting</li>
+<li><strong>Azure Database for PostgreSQL</strong> - Primary database</li>
+<li><strong>Azure Cache for Redis</strong> - Session store &amp; caching</li>
+<li><strong>Azure Blob Storage</strong> - File uploads &amp; static assets</li>
+<li><strong>Azure Application Insights</strong> - Monitoring &amp; logging</li>
+<li><strong>Azure Key Vault</strong> - Secrets management</li>
+<li><strong>Azure Service Bus</strong> - Message queuing (Celery alternative)</li>
+</ul>
+
+<h3 id="environment-configuration">Environment Configuration</h3>
+
+<pre><code># settings/azure.py
+import os
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'HOST': os.environ['AZURE_POSTGRESQL_HOST'],
+        'NAME': os.environ['AZURE_POSTGRESQL_NAME'],
+        'USER': os.environ['AZURE_POSTGRESQL_USER'],
+        'PASSWORD': os.environ['AZURE_POSTGRESQL_PASSWORD'],
+        'OPTIONS': {'sslmode': 'require'},
+    }
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ['AZURE_REDIS_URL'],
+        'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'}
+    }
+}
+</code></pre>
+
+<h2 id="development-setup">📦 Development Setup</h2>
+
+<h3 id="docker-setup">Docker Setup</h3>
+
+<pre><code># Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY requirements/ requirements/
+RUN pip install -r requirements/production.txt
+
+COPY . .
+EXPOSE 8000
+
+CMD ["gunicorn", "safesend.wsgi:application", "--bind", "0.0.0.0:8000"]
+</code></pre>
+
+<pre><code># docker-compose.yml
+version: '3.8'
+services:
+  web:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://user:pass@db:5432/safesend
+    depends_on: [db, redis]
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: safesend
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  celery:
+    build: .
+    command: celery -A safesend worker -l info
+    depends_on: [db, redis]
+</code></pre>
+
+<h2 id="implementation-timeline">🚀 Implementation Timeline</h2>
+
+<h3 id="phase-1-week-1-2-foundation">Phase 1 (Week 1-2): Foundation</h3>
+
+<ul>
+<li>Django project setup</li>
+<li>User authentication &amp; registration</li>
+<li>Basic API structure</li>
+<li>Database models</li>
+</ul>
+
+<h3 id="phase-2-week-3-4-core-features">Phase 2 (Week 3-4): Core Features</h3>
+
+<ul>
+<li>Project &amp; milestone management</li>
+<li>File upload system</li>
+<li>Basic dashboard APIs</li>
+</ul>
+
+<h3 id="phase-3-week-5-6-payments">Phase 3 (Week 5-6): Payments</h3>
+
+<ul>
+<li>Stripe integration</li>
+<li>Escrow functionality</li>
+<li>Payment webhooks</li>
+<li>PayPal integration</li>
+</ul>
+
+<h3 id="phase-4-week-7-8-real-time-polish">Phase 4 (Week 7-8): Real-time &amp; Polish</h3>
+
+<ul>
+<li>WebSocket notifications</li>
+<li>Venmo integration</li>
+<li>API documentation</li>
+<li>Testing &amp; security</li>
+</ul>
+
+<h3 id="phase-5-week-9-10-deployment">Phase 5 (Week 9-10): Deployment</h3>
+
+<ul>
+<li>Azure setup</li>
+<li>CI/CD pipeline</li>
+<li>Monitoring &amp; logging</li>
+<li>Production testing</li>
+</ul>
+
+<h2 id="production-readiness-checklist">📋 Production Readiness Checklist</h2>
+
+<h3 id="frontend-requirements-current-status">Frontend Requirements (Current Status)</h3>
+
+<h4 id="seo-meta">SEO &amp; Meta</h4>
+
+<ul>
+<li>[ ] Add comprehensive meta tags</li>
+<li>[ ] Create favicon and app icons</li>
+<li>[ ] Add Open Graph and Twitter Card meta</li>
+<li>[ ] Implement structured data</li>
+<li>[ ] Create sitemap.xml</li>
+<li>[ ] Add robots.txt</li>
+</ul>
+
+<h4 id="performance">Performance</h4>
+
+<ul>
+<li>[ ] Minify CSS/JS files</li>
+<li>[ ] Optimize and compress images</li>
+<li>[ ] Implement lazy loading</li>
+<li>[ ] Add service worker for caching</li>
+<li>[ ] Configure CDN</li>
+<li>[ ] Bundle and tree-shake JavaScript</li>
+</ul>
+
+<h4 id="security">Security</h4>
+
+<ul>
+<li>[ ] Add Content Security Policy headers</li>
+<li>[ ] Implement security headers</li>
+<li>[ ] Sanitize all user inputs</li>
+<li>[ ] Add rate limiting</li>
+<li>[ ] Configure HTTPS redirects</li>
+</ul>
+
+<h3 id="backend-requirements-to-be-implemented">Backend Requirements (To Be Implemented)</h3>
+
+<h4 id="authentication-system">Authentication System</h4>
+
+<ul>
+<li>[ ] User registration/login API</li>
+<li>[ ] JWT token management</li>
+<li>[ ] Password reset functionality</li>
+<li>[ ] Email verification</li>
+<li>[ ] OAuth integration (Google, GitHub)</li>
+</ul>
+
+<h4 id="core-business-logic">Core Business Logic</h4>
+
+<ul>
+<li>[ ] Project creation API</li>
+<li>[ ] Escrow payment system</li>
+<li>[ ] Milestone management</li>
+<li>[ ] User dashboard API</li>
+<li>[ ] File upload system</li>
+<li>[ ] Notification system</li>
+</ul>
+
+<h4 id="database">Database</h4>
+
+<ul>
+<li>[ ] User management</li>
+<li>[ ] Project data storage</li>
+<li>[ ] Payment transaction logs</li>
+<li>[ ] File storage system</li>
+</ul>
+
+<h4 id="payment-integration">Payment Integration</h4>
+
+<ul>
+<li>[ ] Stripe/PayPal integration</li>
+<li>[ ] Escrow functionality</li>
+<li>[ ] Webhook handling</li>
+<li>[ ] Dispute resolution system</li>
+</ul>
+
+<h3 id="devops-infrastructure">DevOps &amp; Infrastructure</h3>
+
+<h4 id="deployment">Deployment</h4>
+
+<ul>
+<li>[ ] CI/CD pipeline setup</li>
+<li>[ ] Environment configuration</li>
+<li>[ ] Domain and SSL setup</li>
+<li>[ ] CDN configuration</li>
+<li>[ ] Backup system</li>
+</ul>
+
+<h4 id="monitoring">Monitoring</h4>
+
+<ul>
+<li>[ ] Application monitoring</li>
+<li>[ ] Error tracking</li>
+<li>[ ] Performance monitoring</li>
+<li>[ ] Uptime monitoring</li>
+<li>[ ] Log aggregation</li>
+</ul>
+
+<h3 id="legal-compliance">Legal &amp; Compliance</h3>
+
+<ul>
+<li>[ ] Privacy policy</li>
+<li>[ ] Terms of service</li>
+<li>[ ] Cookie consent</li>
+<li>[ ] GDPR compliance</li>
+<li>[ ] Data retention policies</li>
+</ul>
+
+<h2 id="next-steps">💡 Next Steps</h2>
+
+<p><strong>Immediate Actions:</strong></p>
+
+<ol>
+<li><strong>Start implementing</strong> the Django backend structure</li>
+<li><strong>Create the initial models</strong> and database setup</li>
+<li><strong>Set up authentication</strong> with JWT tokens</li>
+<li><strong>Begin Stripe integration</strong> for escrow functionality</li>
+<li><strong>Configure Azure</strong> deployment setup</li>
+</ol>
+
+<p>This architecture provides a solid foundation for SafeSend's escrow platform with the chosen Django/PostgreSQL/Azure tech stack. The Django REST Framework will integrate seamlessly with the existing frontend, and Azure provides excellent scalability for growth.</p>
+
+<hr />
+
+<p><em>Generated with Claude Code - SafeSend Backend Architecture Plan</em>
+<em>Date: September 2024</em></p>
+
+</body>
+</html>
