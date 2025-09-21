@@ -22,6 +22,7 @@ THIRD_PARTY_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
+    'django_filters',
 ]
 
 LOCAL_APPS = [
@@ -50,7 +51,10 @@ ROOT_URLCONF = 'safesend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [
+            BASE_DIR / 'templates',
+            BASE_DIR.parent / 'frontend',  # Add frontend directory for template serving
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -117,7 +121,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.backend.DjangoFilterBackend',
+        'django_filters.rest_framework.DjangoFilterBackend',
     ],
 }
 

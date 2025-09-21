@@ -1,26 +1,47 @@
 """
 Development settings for SafeSend project.
-Local development with SQLite database.
+Local development with PostgreSQL database using environment variables.
 """
 
 from .base import *
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-dev-key-change-in-production'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
-# Database - SQLite for local development
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database - PostgreSQL for local development (with SQLite fallback)
+if os.getenv('DB_NAME'):
+    # Use PostgreSQL if environment variables are set
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'OPTIONS': {
+                'sslmode': 'require',
+            },
+        }
     }
-}
+else:
+    # Fallback to SQLite if no PostgreSQL configuration
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Development-specific apps (optional)
 # INSTALLED_APPS += [
@@ -83,3 +104,15 @@ SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
 
 # Static files serving in development
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
+# Additional static files directories
+STATICFILES_DIRS = [
+    BASE_DIR.parent / 'frontend' / 'css',
+    BASE_DIR.parent / 'frontend' / 'js',
+    BASE_DIR.parent / 'css',
+    BASE_DIR.parent / 'js',
+]
+
+# Media files (uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

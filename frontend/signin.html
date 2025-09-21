@@ -75,10 +75,101 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/api.js"></script>
 <script src="js/personality.js"></script>
 <script src="js/particles.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/button_logic.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is already authenticated
+    if (window.SafeSendAPI.isAuthenticated()) {
+        window.location.href = '/dashboard.html';
+        return;
+    }
+
+    const signinForm = document.getElementById('signin-form');
+    const submitButton = signinForm.querySelector('button[type="submit"]');
+
+    signinForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const email = signinForm.querySelector('input[type="email"]').value;
+        const password = signinForm.querySelector('input[type="password"]').value;
+
+        // Disable submit button and show loading state
+        submitButton.disabled = true;
+        const originalText = submitButton.textContent;
+        submitButton.textContent = 'Signing In...';
+
+        try {
+            // Authenticate with PostgreSQL-backed API
+            const response = await window.SafeSendAPI.login(email, password);
+
+            // Show success message
+            showToast('Welcome back! Redirecting to dashboard...', 'success');
+
+            // Redirect to dashboard after successful login
+            setTimeout(() => {
+                window.location.href = '/dashboard.html';
+            }, 1000);
+
+        } catch (error) {
+            // Handle login errors
+            console.error('Login error:', error);
+            showToast(error.message || 'Login failed. Please try again.', 'error');
+
+            // Re-enable submit button
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+        }
+    });
+});
+
+// Toast notification function (if not already defined)
+function showToast(message, type = 'info') {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.toast');
+    existingToasts.forEach(toast => toast.remove());
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    // Style the toast
+    Object.assign(toast.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        padding: '16px 24px',
+        borderRadius: '8px',
+        color: '#white',
+        backgroundColor: type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#3B82F6',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+        zIndex: '10000',
+        fontWeight: '500',
+        transform: 'translateX(100%)',
+        transition: 'transform 0.3s ease-in-out'
+    });
+
+    document.body.appendChild(toast);
+
+    // Animate in
+    setTimeout(() => {
+        toast.style.transform = 'translateX(0)';
+    }, 100);
+
+    // Remove after 4 seconds
+    setTimeout(() => {
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 4000);
+}
+</script>
 
 </body>
 </html>

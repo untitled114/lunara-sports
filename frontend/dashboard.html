@@ -927,8 +927,225 @@ function updateToastPositions() {
 }
 </script>
 
+<script src="js/api.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/button_logic.js"></script>
+<script>
+// Enhanced Dashboard with PostgreSQL Integration
+document.addEventListener('DOMContentLoaded', async function() {
+    // Authentication check - redirect if not logged in
+    if (!checkAuthentication()) {
+        return;
+    }
+
+    // Initialize dashboard with real-time data
+    await initializeDashboard();
+
+    // Set up auto-refresh for real-time updates
+    setupAutoRefresh();
+
+    // Set up project creation form
+    setupProjectCreation();
+});
+
+async function initializeDashboard() {
+    try {
+        // Show loading state
+        showLoadingState();
+
+        // Fetch real data from PostgreSQL-backed API
+        const dashboardData = await window.SafeSendAPI.refreshDashboardData();
+
+        // Update all dashboard components with real data
+        updateDashboardStats(dashboardData.stats);
+        updateProjectsList(dashboardData.projects);
+        updateUserInfo();
+
+        // Hide loading state
+        hideLoadingState();
+
+    } catch (error) {
+        console.error('Dashboard initialization error:', error);
+        handleAPIError(error, 'Dashboard initialization');
+
+        // Fallback to existing static data if API fails
+        hideLoadingState();
+    }
+}
+
+function updateDashboardStats(stats) {
+    // Update stat items with real PostgreSQL data
+    const statMappings = {
+        'overdue-tasks': stats.overdue_tasks,
+        'due-today': stats.due_today,
+        'weekly-progress': stats.week_progress
+    };
+
+    Object.entries(statMappings).forEach(([statKey, value]) => {
+        const statElement = document.querySelector(`[data-stat="${statKey}"]`);
+        if (statElement) {
+            const valueElement = statElement.querySelector('.stat-value');
+            if (valueElement) {
+                valueElement.textContent = statKey === 'weekly-progress' ? `${value}%` : value;
+                valueElement.setAttribute('data-count', value);
+            }
+        }
+    });
+
+    // Update additional stats (can be displayed elsewhere)
+    updateAdditionalStats(stats);
+}
+
+function updateAdditionalStats(stats) {
+    // Update any additional stat displays
+    const additionalStats = {
+        totalProjects: stats.total_projects,
+        activeProjects: stats.active_projects,
+        completedProjects: stats.completed_projects,
+        totalEarned: stats.total_earned,
+        pendingPayments: stats.pending_payments,
+        successRate: stats.success_rate
+    };
+
+    // You can use these stats to update other parts of the dashboard
+    console.log('Additional stats from PostgreSQL:', additionalStats);
+}
+
+function updateProjectsList(projects) {
+    // Update project cards with real data from PostgreSQL
+    // This would replace the static project cards with dynamic ones
+    if (projects && projects.length > 0) {
+        // For now, log the real projects data
+        console.log('Real projects from PostgreSQL:', projects);
+
+        // TODO: Replace static project cards with dynamic rendering
+        // This would involve updating the project cards HTML with real data
+    }
+}
+
+function updateUserInfo() {
+    const user = window.SafeSendAPI.getCurrentUser();
+    if (user) {
+        // Update user display elements
+        const userNameElement = document.querySelector('[data-user-name]');
+        if (userNameElement) {
+            userNameElement.textContent = user.first_name || user.username;
+        }
+
+        // Update any other user-related UI elements
+        console.log('Current user from PostgreSQL:', user);
+    }
+}
+
+function setupAutoRefresh() {
+    // Set up real-time updates every 30 seconds
+    window.DashboardAutoRefresh.start(async () => {
+        try {
+            const dashboardData = await window.SafeSendAPI.refreshDashboardData();
+            updateDashboardStats(dashboardData.stats);
+            updateProjectsList(dashboardData.projects);
+        } catch (error) {
+            console.error('Auto-refresh error:', error);
+        }
+    });
+}
+
+function setupProjectCreation() {
+    const createProjectForm = document.getElementById('create-project-form');
+    if (createProjectForm) {
+        createProjectForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(createProjectForm);
+            const projectData = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                total_amount: parseFloat(formData.get('budget')),
+                currency: 'USD',
+                deadline: new Date(formData.get('deadline')).toISOString(),
+                project_type: formData.get('category') || 'web_development',
+                skills_required: formData.get('skills') || ''
+            };
+
+            try {
+                // Show loading state
+                const submitButton = createProjectForm.querySelector('button[type="submit"]');
+                const originalText = submitButton.textContent;
+                submitButton.disabled = true;
+                submitButton.textContent = 'Creating Project...';
+
+                // Create project in PostgreSQL
+                const newProject = await window.SafeSendAPI.createProject(projectData);
+
+                // Show success message
+                showToast('Project created successfully!', 'success');
+
+                // Close modal and refresh dashboard
+                closeProjectModal();
+                await initializeDashboard();
+
+                // Reset form
+                createProjectForm.reset();
+
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
+
+            } catch (error) {
+                console.error('Project creation error:', error);
+                handleAPIError(error, 'Project creation');
+
+                // Reset button state
+                const submitButton = createProjectForm.querySelector('button[type="submit"]');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Create Project';
+            }
+        });
+    }
+}
+
+function closeProjectModal() {
+    const modal = document.querySelector('.create-project-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function showLoadingState() {
+    // Show loading indicators
+    document.querySelectorAll('.stat-value').forEach(el => {
+        el.style.opacity = '0.5';
+    });
+}
+
+function hideLoadingState() {
+    // Hide loading indicators
+    document.querySelectorAll('.stat-value').forEach(el => {
+        el.style.opacity = '1';
+    });
+}
+
+// Enhanced logout function
+function handleLogout() {
+    window.SafeSendAPI.logout();
+}
+
+// Update logout button to use the API
+document.addEventListener('DOMContentLoaded', function() {
+    const logoutButton = document.querySelector('.btn-secondary[href="index.html"]');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            handleLogout();
+        });
+    }
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    window.DashboardAutoRefresh.stop();
+});
+</script>
 
 </body>
 </html>
