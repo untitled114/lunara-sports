@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeSend - Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+<!-- Essential Meta Tags for Security -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://images.unsplash.com;">
+<meta name="robots" content="noindex, nofollow">
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Core Stylesheets -->
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/dashboard-authentic.css">
+</head>
+<body>
+
+<!-- PLACEHOLDER: User authentication should be verified server-side before rendering this page -->
+
+<header id="header">
+  <div class="container">
+    <div class="logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;">SafeSend</div>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="projects.html" class="nav-link">Projects <span class="nav-badge">7</span></a>
+      <a href="payments.html" class="nav-link">Payments <span class="nav-badge urgent">2</span></a>
+      <a href="messages.html" class="nav-link">Messages <span class="nav-badge">12</span></a>
+    </nav>
+    <div class="header-buttons">
+      <button class="btn-icon notification-btn urgent-pulse" title="Urgent notifications" aria-label="5 urgent notifications">
+        🚨
+        <span class="notification-badge urgent">5</span>
+      </button>
+      <a href="user_profile.html" class="profile-mini" aria-label="View profile">
+        <!-- PLACEHOLDER: Replace with actual user avatar from secure storage -->
+        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="Jordan Chen - Freelance Developer" loading="lazy" crossorigin="anonymous">
+        <!-- PLACEHOLDER: Replace with actual user name from session -->
+        <span data-user-name>Jordan</span>
+      </a>
+      <a href="index.html" class="btn btn-secondary">Logout</a>
+    </div>
+    <button id="mobile-menu" class="mobile-menu" aria-label="Toggle mobile menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+</header>
+
+<!-- Critical Alert Banner -->
+<div class="alert-banner critical">
+  <div class="container">
+    <div class="alert-content">
+      <span class="alert-icon">⚠️</span>
+      <span class="alert-text"><strong>Payment Overdue:</strong> TechFlow's milestone payment is 3 days late. Automatic escrow release in 4 days.</span>
+      <button class="alert-action">Contact Client</button>
+      <button class="alert-dismiss" aria-label="Dismiss alert">&times;</button>
+    </div>
+  </div>
+</div>
+
+<main class="dashboard-main">
+  <!-- Hero Welcome Section -->
+  <section class="dashboard-hero">
+    <div class="container">
+      <div class="welcome-card">
+        <div class="welcome-content">
+          <!-- PLACEHOLDER: Replace with actual user first name from session -->
+          <h1>Thursday grind, <span data-user-firstname>Jordan</span>! ⚡</h1>
+          <p>You've got 3 client check-ins today and a milestone deadline tonight</p>
+          <!-- PLACEHOLDER: Add last login time from user session -->
+          <span class="last-login">Last active: <time datetime="2024-12-15T14:23:00">2 hours ago from Coffee Bean WiFi</time></span>
+        </div>
+        <div class="quick-stats">
+          <!-- PLACEHOLDER: These stats should be dynamically loaded from API -->
+          <div class="stat-item urgent" data-stat="overdue-tasks">
+            <span class="stat-value" data-count="2">2</span>
+            <span class="stat-label">Overdue</span>
+          </div>
+          <div class="stat-item warning" data-stat="due-today">
+            <span class="stat-value" data-count="3">3</span>
+            <span class="stat-label">Due Today</span>
+          </div>
+          <div class="stat-item success" data-stat="weekly-progress">
+            <span class="stat-value" data-percentage="76">76%</span>
+            <span class="stat-label">Week Progress</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Dashboard Content -->
+  <section class="dashboard-content">
+    <div class="container">
+      <div class="dashboard-grid">
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+
+          <!-- Urgent Actions Widget -->
+          <div class="widget urgent-actions">
+            <div class="widget-header">
+              <h2>🔥 Needs Your Attention</h2>
+              <span class="urgency-indicator">4 urgent items</span>
+            </div>
+            <div class="urgent-list">
+              <div class="urgent-item critical">
+                <div class="urgent-icon">💸</div>
+                <div class="urgent-content">
+                  <div class="urgent-title">TechFlow payment is 3 days overdue</div>
+                  <div class="urgent-subtitle">$2,400 milestone • Auto-release in 4 days</div>
+                </div>
+                <button class="btn-urgent" onclick="chasePayment('proj_tf_002')">Chase Payment</button>
+              </div>
+              <div class="urgent-item warning">
+                <div class="urgent-icon">⏰</div>
+                <div class="urgent-content">
+                  <div class="urgent-title">HealthApp UI mockups due in 6 hours</div>
+                  <div class="urgent-subtitle">Client expecting preview tonight</div>
+                </div>
+                <button class="btn-urgent" onclick="viewProject('proj_ha_001')">Work Now</button>
+              </div>
+              <div class="urgent-item info">
+                <div class="urgent-icon">💬</div>
+                <div class="urgent-content">
+                  <div class="urgent-title">Sarah from EcoTech wants scope change</div>
+                  <div class="urgent-subtitle">Requesting additional API endpoints</div>
+                </div>
+                <button class="btn-urgent" onclick="contactClient('ecotech')">Discuss</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Projects Widget -->
+          <div class="widget active-projects">
+            <div class="widget-header">
+              <h2>Projects in Progress</h2>
+              <a href="projects.html" class="view-all">View All (7)</a>
+            </div>
+            <div class="project-list">
+
+              <!-- PLACEHOLDER: Project data should be loaded from secure API endpoint -->
+              <div class="project-card critical-deadline" data-project-id="proj_ha_001" role="article">
+                <div class="project-header">
+                  <div class="project-info">
+                    <h3>HealthApp Patient Portal - Mobile First</h3>
+                    <!-- PLACEHOLDER: Client name should be sanitized before display -->
+                    <span class="client-name verified" data-client="healthtech">HealthTech Solutions ✓</span>
+                  </div>
+                  <span class="project-status in-progress critical" aria-label="Project status: Critical - Due Tonight">
+                    <span class="status-icon pulse">🔥</span> DUE TONIGHT
+                  </span>
+                </div>
+                <div class="project-progress">
+                  <div class="progress-info">
+                    <span>UI Mockups - Final Review Phase</span>
+                    <span class="progress-percentage critical">85%</span>
+                  </div>
+                  <div class="progress-bar critical" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-fill" style="width: 85%"></div>
+                  </div>
+                </div>
+                <div class="project-meta">
+                  <span class="project-value" data-amount="1800">$1,800</span>
+                  <!-- PLACEHOLDER: Deadline should be calculated from server time -->
+                  <span class="project-deadline critical-time" data-deadline="2024-12-15T23:59:00">
+                    <span class="deadline-icon pulse">⏰</span> 6 hours left
+                  </span>
+                </div>
+                <div class="project-recent-activity">
+                  <span class="recent-activity">💬 Client messaged 2h ago: "Looking forward to seeing the designs!"</span>
+                </div>
+                <div class="project-actions">
+                  <button class="btn-sm btn-primary pulse" onclick="viewProject('proj_ha_001')">Continue Work</button>
+                  <button class="btn-sm btn-secondary" onclick="contactClient('healthtech')">Update Client</button>
+                </div>
+              </div>
+
+              <div class="project-card payment-pending" data-project-id="proj_tf_002" role="article">
+                <div class="project-header">
+                  <div class="project-info">
+                    <h3>TechFlow Analytics Dashboard - Backend API</h3>
+                    <span class="client-name problematic" data-client="techflow">TechFlow Ltd. ⚠️ Late payer</span>
+                  </div>
+                  <span class="project-status completed warning" aria-label="Project status: Completed - Payment Overdue">
+                    <span class="status-icon">✅</span> AWAITING PAYMENT
+                  </span>
+                </div>
+                <div class="project-progress">
+                  <div class="progress-info">
+                    <span>Completed 3 days ago - Payment overdue</span>
+                    <span class="progress-percentage">100%</span>
+                  </div>
+                  <div class="progress-bar completed" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-fill" style="width: 100%"></div>
+                  </div>
+                </div>
+                <div class="project-meta">
+                  <span class="project-value overdue" data-amount="2400">$2,400</span>
+                  <span class="project-deadline overdue" data-status="overdue">
+                    <span class="deadline-icon">💸</span> 3 days overdue
+                  </span>
+                </div>
+                <div class="project-recent-activity">
+                  <span class="recent-activity warning">📧 No response to 2 payment reminders</span>
+                </div>
+                <div class="project-actions">
+                  <button class="btn-sm btn-warning" onclick="chasePayment('proj_tf_002')">Chase Payment</button>
+                  <button class="btn-sm btn-secondary" onclick="viewProject('proj_tf_002')">View Details</button>
+                </div>
+              </div>
+
+              <div class="project-card smooth-sailing" data-project-id="proj_ec_003" role="article">
+                <div class="project-header">
+                  <div class="project-info">
+                    <h3>EcoTech Sustainability Tracker - Full Stack</h3>
+                    <span class="client-name great" data-client="ecotech">EcoTech Inc. 🌟 Great client</span>
+                  </div>
+                  <span class="project-status in-progress" aria-label="Project status: In Progress - On Track">
+                    <span class="status-icon">🚀</span> ON TRACK
+                  </span>
+                </div>
+                <div class="project-progress">
+                  <div class="progress-info">
+                    <span>Milestone 2 of 4 - Database Schema Complete</span>
+                    <span class="progress-percentage">42%</span>
+                  </div>
+                  <div class="progress-bar" role="progressbar" aria-valuenow="42" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-fill" style="width: 42%"></div>
+                  </div>
+                </div>
+                <div class="project-meta">
+                  <span class="project-value" data-amount="4200">$4,200</span>
+                  <span class="project-deadline normal" data-deadline="2024-12-28">
+                    <span class="deadline-icon">📅</span> Due Dec 28
+                  </span>
+                </div>
+                <div class="project-recent-activity">
+                  <span class="recent-activity positive">✅ Milestone payment received yesterday</span>
+                </div>
+                <div class="project-actions">
+                  <button class="btn-sm btn-primary" onclick="viewProject('proj_ec_003')">Continue</button>
+                  <button class="btn-sm btn-secondary" onclick="contactClient('ecotech')">Check In</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Today's Timeline Widget -->
+          <div class="widget timeline-widget">
+            <div class="widget-header">
+              <h2>Today's Schedule</h2>
+              <span class="current-time">3:47 PM</span>
+            </div>
+            <div class="timeline-list">
+              <!-- PLACEHOLDER: Schedule data should be loaded from calendar API -->
+              <div class="timeline-item completed">
+                <div class="timeline-time">9:00 AM</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">✅ Daily standup with EcoTech team</div>
+                  <div class="timeline-note">Discussed API authentication approach</div>
+                </div>
+              </div>
+              <div class="timeline-item completed">
+                <div class="timeline-time">11:30 AM</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">✅ Code review - User management module</div>
+                  <div class="timeline-note">Submitted changes, waiting for approval</div>
+                </div>
+              </div>
+              <div class="timeline-item current">
+                <div class="timeline-time">4:00 PM</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">🎯 HealthApp UI mockup deadline</div>
+                  <div class="timeline-note">2 screens left to finalize</div>
+                </div>
+              </div>
+              <div class="timeline-item upcoming">
+                <div class="timeline-time">6:00 PM</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">📞 Client call - TechFlow payment discussion</div>
+                  <div class="timeline-note">Prepare invoice and timeline</div>
+                </div>
+              </div>
+              <div class="timeline-item upcoming">
+                <div class="timeline-time">8:00 PM</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">📧 Weekly client updates</div>
+                  <div class="timeline-note">Send progress reports to all active clients</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+
+          <!-- This Week's Reality Check -->
+          <div class="widget reality-check">
+            <h3>This Week's Reality</h3>
+            <!-- PLACEHOLDER: Financial data should be loaded from secure API with proper validation -->
+            <div class="earnings-amount" data-earnings="3200">$3,200</div>
+            <div class="earnings-change mixed" data-change="-5">Behind target by $800</div>
+            <div class="earnings-breakdown">
+              <div class="breakdown-item">
+                <span>Invoiced & Paid</span>
+                <span class="amount positive" data-completed="1800">$1,800</span>
+              </div>
+              <div class="breakdown-item">
+                <span>Work Done, Unpaid</span>
+                <span class="amount warning" data-pending="2400">$2,400</span>
+              </div>
+              <div class="breakdown-item">
+                <span>Coffee & Expenses</span>
+                <span class="amount expense" data-expenses="127">-$127</span>
+              </div>
+            </div>
+            <div class="week-goal">
+              <div class="goal-progress">
+                <span>Weekly Goal: $4,000</span>
+                <span>80%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 80%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Client Relationships Widget -->
+          <div class="widget client-health">
+            <h3>Client Pulse Check</h3>
+            <div class="client-list">
+              <!-- PLACEHOLDER: Client relationship data should be calculated from interaction patterns -->
+              <div class="client-item happy">
+                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" alt="Sarah - EcoTech" class="client-avatar" crossorigin="anonymous">
+                <div class="client-info">
+                  <div class="client-name">Sarah K. (EcoTech)</div>
+                  <div class="client-mood">😊 Happy - paid early</div>
+                </div>
+                <div class="client-health-score green">9.2</div>
+              </div>
+              <div class="client-item neutral">
+                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="Dr. Martinez - HealthTech" class="client-avatar" crossorigin="anonymous">
+                <div class="client-info">
+                  <div class="client-name">Dr. Martinez (HealthTech)</div>
+                  <div class="client-mood">😐 Neutral - deadline stress</div>
+                </div>
+                <div class="client-health-score yellow">7.1</div>
+              </div>
+              <div class="client-item problematic">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face" alt="Mike - TechFlow" class="client-avatar" crossorigin="anonymous">
+                <div class="client-info">
+                  <div class="client-name">Mike R. (TechFlow)</div>
+                  <div class="client-mood">😤 Avoiding payments</div>
+                </div>
+                <div class="client-health-score red">3.8</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions That Matter -->
+          <div class="widget survival-actions">
+            <h3>Survival Mode</h3>
+            <div class="survival-grid">
+              <button class="survival-action critical" onclick="chaseAllPayments()" aria-label="Chase all overdue payments">
+                <div class="survival-icon">💸</div>
+                <span>Chase Payments<br><small>$3,200 overdue</small></span>
+              </button>
+              <button class="survival-action urgent" onclick="sendClientUpdates()" aria-label="Send overdue client updates">
+                <div class="survival-icon">📧</div>
+                <span>Client Updates<br><small>4 overdue</small></span>
+              </button>
+              <button class="survival-action normal" onclick="generateInvoices()" aria-label="Generate pending invoices">
+                <div class="survival-icon">🧾</div>
+                <span>Send Invoices<br><small>2 ready</small></span>
+              </button>
+              <button class="survival-action normal" onclick="findNewWork()" aria-label="Find new projects">
+                <div class="survival-icon">🎯</div>
+                <span>Find Work<br><small>Pipeline thin</small></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Recent Chaos -->
+          <div class="widget chaos-feed">
+            <div class="widget-header">
+              <h3>What's Happening</h3>
+              <span class="chaos-count">Live updates</span>
+            </div>
+            <div class="chaos-list">
+              <!-- PLACEHOLDER: Real-time activity feed -->
+              <div class="chaos-item urgent">
+                <div class="chaos-time">12 min ago</div>
+                <div class="chaos-content">
+                  <span class="chaos-title">💸 TechFlow payment reminder bounced</span>
+                  <span class="chaos-detail">Email delivery failed - invalid address</span>
+                </div>
+              </div>
+              <div class="chaos-item warning">
+                <div class="chaos-time">34 min ago</div>
+                <div class="chaos-content">
+                  <span class="chaos-title">📱 Dr. Martinez called twice</span>
+                  <span class="chaos-detail">Probably about tonight's deadline</span>
+                </div>
+              </div>
+              <div class="chaos-item positive">
+                <div class="chaos-time">1 hour ago</div>
+                <div class="chaos-content">
+                  <span class="chaos-title">✅ EcoTech approved database schema</span>
+                  <span class="chaos-detail">$1,200 milestone unlocked</span>
+                </div>
+              </div>
+              <div class="chaos-item normal">
+                <div class="chaos-time">2 hours ago</div>
+                <div class="chaos-content">
+                  <span class="chaos-title">☕ Working from Coffee Bean again</span>
+                  <span class="chaos-detail">Home internet still down</span>
+                </div>
+              </div>
+              <div class="chaos-item">
+                <div class="chaos-time">3 hours ago</div>
+                <div class="chaos-content">
+                  <span class="chaos-title">🎉 Completed user auth module</span>
+                  <span class="chaos-detail">2 hours ahead of schedule</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Quick Action Modal - More Realistic -->
+<div class="modal" id="new-project-modal" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal('new-project')" aria-label="Close modal">&times;</button>
+    <h2 id="modal-title">Add New Project</h2>
+    <div class="modal-note">💡 Tip: Use clear project names and always discuss scope before starting</div>
+    <!-- PLACEHOLDER: Form should include CSRF protection and proper validation -->
+    <form class="project-form" onsubmit="createProject(event)" novalidate>
+      <div class="form-group">
+        <label for="project-title">What are you building? *</label>
+        <input type="text" id="project-title" name="title" placeholder="e.g., E-commerce mobile app for local bakery" required maxlength="100">
+      </div>
+      <div class="form-group">
+        <label for="client-email">Client Contact *</label>
+        <input type="email" id="client-email" name="clientEmail" placeholder="jane@awesomebakery.com" required>
+      </div>
+      <div class="form-group">
+        <label for="project-value">Project Value (be realistic) *</label>
+        <input type="number" id="project-value" name="value" placeholder="2500.00" step="0.01" min="1" required>
+        <small>Remember: this should cover your time, revisions, and coffee money</small>
+      </div>
+      <div class="form-group">
+        <label for="project-deadline">When do they want it?</label>
+        <input type="date" id="project-deadline" name="deadline" min="2024-12-16">
+      </div>
+      <div class="form-group">
+        <label for="project-description">Scope & Deliverables *</label>
+        <textarea id="project-description" name="description" rows="4" placeholder="Be specific about what you're delivering. Include number of pages, features, revisions, etc. This saves headaches later." required maxlength="1000"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('new-project')">Maybe Later</button>
+        <button type="submit" class="btn btn-primary">Let's Do This</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Mobile Navigation Overlay -->
+<div class="mobile-nav-overlay">
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <a href="#dashboard" class="mobile-nav-link active">Dashboard</a>
+    <a href="#projects" class="mobile-nav-link">Projects <span class="nav-badge">7</span></a>
+    <a href="#payments" class="mobile-nav-link">Payments <span class="nav-badge urgent">2</span></a>
+    <a href="#messages" class="mobile-nav-link">Messages <span class="nav-badge">12</span></a>
+    <div class="mobile-nav-buttons">
+      <a href="user_profile.html" class="btn btn-secondary">Profile</a>
+      <a href="index.html" class="btn btn-primary">Logout</a>
+    </div>
+  </nav>
+</div>
+
+<!-- Core JavaScript -->
+<script>
+// SECURITY NOTE: All user inputs should be validated and sanitized server-side
+// PLACEHOLDER: Replace with actual API endpoints and proper error handling
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Header scroll effect
+  const header = document.getElementById('header');
+  window.addEventListener('scroll', () => {
+    header.classList.toggle('scrolled', window.scrollY > 50);
+  });
+
+  // Mobile menu toggle
+  const mobileMenu = document.getElementById('mobile-menu');
+  const mobileOverlay = document.querySelector('.mobile-nav-overlay');
+
+  mobileMenu?.addEventListener('click', () => {
+    mobileOverlay.classList.toggle('active');
+    const isExpanded = mobileMenu.getAttribute('aria-expanded') === 'true';
+    mobileMenu.setAttribute('aria-expanded', !isExpanded);
+  });
+
+  // Close mobile menu when clicking outside
+  mobileOverlay?.addEventListener('click', (e) => {
+    if (e.target === mobileOverlay) {
+      mobileOverlay.classList.remove('active');
+      mobileMenu?.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Alert banner dismiss
+  document.querySelector('.alert-dismiss')?.addEventListener('click', () => {
+    document.querySelector('.alert-banner').style.display = 'none';
+  });
+
+  // Logo click handler
+  document.querySelector('.logo')?.addEventListener('click', () => {
+    window.location.href = 'dashboard.html';
+  });
+
+  // Update current time every minute
+  updateCurrentTime();
+  setInterval(updateCurrentTime, 60000);
+
+  // Make cards interactive
+  setupCardInteractions();
+
+  // Setup navigation
+  setupNavigation();
+
+  // Load dashboard data
+  loadDashboardData();
+});
+
+// Make cards and elements interactive
+function setupCardInteractions() {
+  // Project cards click to expand
+  document.querySelectorAll('.project-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (!e.target.closest('button')) {
+        card.classList.toggle('expanded');
+        const projectId = card.dataset.projectId;
+        showToast(`Project details: ${card.querySelector('h3').textContent}`, 'info');
+      }
+    });
+
+    // Add hover effects
+    card.addEventListener('mouseenter', () => {
+      card.style.transform = 'translateY(-3px)';
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = 'translateY(0)';
+    });
+  });
+
+  // Urgent items interactive
+  document.querySelectorAll('.urgent-item').forEach(item => {
+    item.addEventListener('click', () => {
+      item.classList.toggle('selected');
+      const title = item.querySelector('.urgent-title').textContent;
+      showToast(`Selected: ${title}`, 'info');
+    });
+  });
+
+  // Timeline items interactive
+  document.querySelectorAll('.timeline-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const title = item.querySelector('.timeline-title').textContent;
+      if (item.classList.contains('completed')) {
+        showToast('Task already completed ✅', 'success');
+      } else if (item.classList.contains('current')) {
+        showToast('Working on this now... ⚡', 'warning');
+      } else {
+        showToast(`Upcoming: ${title}`, 'info');
+      }
+    });
+  });
+
+  // Client items interactive
+  document.querySelectorAll('.client-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const clientName = item.querySelector('.client-name').textContent;
+      const clientId = clientName.split('(')[1]?.split(')')[0].toLowerCase().replace(/\s+/g, '');
+      showToast(`Opening conversation with ${clientName}`, 'info');
+      setTimeout(() => {
+        window.location.href = `messages.html?client=${clientId}`;
+      }, 1000);
+    });
+  });
+
+  // Chaos feed items interactive
+  document.querySelectorAll('.chaos-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const title = item.querySelector('.chaos-title').textContent;
+      showToast(`Activity: ${title}`, 'info');
+
+      // Simulate marking as read
+      setTimeout(() => {
+        item.style.opacity = '0.6';
+        item.style.pointerEvents = 'none';
+      }, 500);
+    });
+  });
+
+  // Stats interactive
+  document.querySelectorAll('.stat-item').forEach(stat => {
+    stat.addEventListener('click', () => {
+      const label = stat.querySelector('.stat-label').textContent;
+      const value = stat.querySelector('.stat-value').textContent;
+
+      if (label === 'Overdue') {
+        window.location.href = 'projects.html?filter=overdue';
+      } else if (label === 'Due Today') {
+        window.location.href = 'projects.html?filter=due-today';
+      } else if (label === 'Week Progress') {
+        showToast(`This week: ${value} of goals completed`, 'info');
+      }
+    });
+  });
+}
+
+// Setup navigation between pages
+function setupNavigation() {
+  // Navigation links
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      const href = link.getAttribute('href');
+
+      if (href === 'projects.html') {
+        e.preventDefault();
+        showToast('Loading projects page...', 'info');
+        setTimeout(() => {
+          window.location.href = 'projects.html';
+        }, 500);
+      } else if (href === 'payments.html') {
+        e.preventDefault();
+        showToast('Loading payments page...', 'info');
+        setTimeout(() => {
+          window.location.href = 'payments.html';
+        }, 500);
+      } else if (href === 'messages.html') {
+        e.preventDefault();
+        showToast('Loading messages page...', 'info');
+        setTimeout(() => {
+          window.location.href = 'messages.html';
+        }, 500);
+      }
+      // Let dashboard.html and other links work normally without preventDefault
+    });
+  });
+
+  // Alert banner actions
+  document.querySelector('.alert-action')?.addEventListener('click', () => {
+    showToast('Opening payment discussion...', 'warning');
+    setTimeout(() => {
+      window.location.href = 'messages.html?client=techflow&urgent=payment';
+    }, 1000);
+  });
+
+  // Profile navigation
+  document.querySelector('.profile-mini')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showToast('Loading your profile...', 'info');
+    setTimeout(() => {
+      window.location.href = 'user_profile.html';
+    }, 500);
+  });
+}
+
+function updateCurrentTime() {
+  const timeElement = document.querySelector('.current-time');
+  if (timeElement) {
+    const now = new Date();
+    timeElement.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }
+}
+
+// Modal functions with accessibility support
+function showModal(modalId) {
+  const modal = document.getElementById(`${modalId}-modal`);
+  if (modal) {
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    // Focus management
+    const firstInput = modal.querySelector('input, button, textarea');
+    firstInput?.focus();
+  }
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(`${modalId}-modal`);
+  if (modal) {
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = 'auto';
+  }
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const activeModal = document.querySelector('.modal.active');
+    if (activeModal) {
+      const modalId = activeModal.id.replace('-modal', '');
+      closeModal(modalId);
+    }
+  }
+});
+
+// DATABASE INTEGRATION: Replace with actual API calls to Azure backend
+function loadDashboardData() {
+  // TODO: Implement API calls to:
+  // - GET /api/user/dashboard-stats (for stats widgets)
+  // - GET /api/projects/active (for project cards)
+  // - GET /api/payments/overdue (for payment alerts)
+  // - GET /api/timeline/today (for today's schedule)
+  // - GET /api/clients/health (for client relationship data)
+
+  // Example implementation for Azure:
+  /*
+  fetch('/api/user/dashboard-stats', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${getAuthToken()}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => updateDashboardStats(data))
+  .catch(error => showToast('Failed to load dashboard data', 'error'));
+  */
+}
+
+function createProject(event) {
+  event.preventDefault();
+  // PLACEHOLDER: Implement with CSRF protection and validation
+  showToast('Project added to pipeline! Time to get to work 💪', 'success');
+  closeModal('new-project');
+}
+
+function viewProject(projectId) {
+  // Navigate to project detail (placeholder for your cousin's work)
+  showToast('Opening project details...', 'info');
+  setTimeout(() => {
+    window.location.href = `projects.html?id=${projectId}`;
+  }, 500);
+}
+
+function contactClient(clientId) {
+  // Navigate to messages with client filter
+  showToast('Opening messages...', 'info');
+  setTimeout(() => {
+    window.location.href = `messages.html?client=${clientId}`;
+  }, 500);
+}
+
+function chasePayment(projectId) {
+  // Interactive payment chasing
+  const confirmChase = confirm('Send payment reminder to client? This will:\n\n• Email a polite but firm reminder\n• Update project status\n• Log the interaction\n\nProceed?');
+
+  if (confirmChase) {
+    showToast('Payment reminder sent. Keep your fingers crossed! 🤞', 'warning');
+
+    // Update UI to show action taken
+    const projectCard = document.querySelector(`[data-project-id="${projectId}"]`);
+    if (projectCard) {
+      const activitySpan = projectCard.querySelector('.recent-activity');
+      if (activitySpan) {
+        activitySpan.innerHTML = '📧 Payment reminder sent just now';
+        activitySpan.className = 'recent-activity warning';
+      }
+    }
+
+    // Navigate to payments page after a delay
+    setTimeout(() => {
+      window.location.href = `payments.html?highlight=${projectId}`;
+    }, 2000);
+  }
+}
+
+function chaseAllPayments() {
+  const overdueCount = 2;
+  const confirmChaseAll = confirm(`Send payment reminders to ${overdueCount} overdue clients?\n\nThis will:\n• Email all clients with overdue payments\n• Update all relevant project statuses\n• Schedule follow-up reminders\n\nTotal overdue: $3,200\n\nProceed?`);
+
+  if (confirmChaseAll) {
+    showToast('All payment reminders sent. Time to follow up! 📞', 'warning');
+
+    // Simulate sending process
+    setTimeout(() => {
+      showToast('✅ 2 payment reminders sent successfully', 'success');
+    }, 2000);
+
+    setTimeout(() => {
+      window.location.href = 'payments.html?tab=overdue';
+    }, 3000);
+  }
+}
+
+function sendClientUpdates() {
+  const updateCount = 4;
+  showToast(`Preparing ${updateCount} client updates...`, 'info');
+
+  // Simulate update generation
+  setTimeout(() => {
+    showToast('Client updates sent. Transparency is key! ✨', 'success');
+
+    // Update the survival action to show completion
+    const updateBtn = document.querySelector('.survival-action[onclick="sendClientUpdates()"]');
+    if (updateBtn) {
+      updateBtn.innerHTML = '<div class="survival-icon">✅</div><span>All Caught Up<br><small>Updates sent</small></span>';
+      updateBtn.style.opacity = '0.7';
+      updateBtn.onclick = null;
+    }
+  }, 1500);
+}
+
+function generateInvoices() {
+  const invoiceCount = 2;
+  showToast(`Generating ${invoiceCount} invoices...`, 'info');
+
+  setTimeout(() => {
+    showToast('Invoices generated and sent. Money incoming! 💰', 'success');
+
+    // Navigate to payments page
+    setTimeout(() => {
+      window.location.href = 'payments.html?tab=invoices';
+    }, 1500);
+  }, 1000);
+}
+
+function findNewWork() {
+  const platforms = [
+    { name: 'Upwork', url: 'https://upwork.com' },
+    { name: 'Freelancer', url: 'https://freelancer.com' },
+    { name: 'Fiverr', url: 'https://fiverr.com' },
+    { name: 'Toptal', url: 'https://toptal.com' }
+  ];
+
+  const choice = confirm('Where do you want to hunt for new projects?\n\nOK = Open job platforms\nCancel = Add project manually');
+
+  if (choice) {
+    showToast('Opening job platforms. Good hunting! 🎯', 'info');
+    // Open multiple platforms
+    platforms.forEach((platform, index) => {
+      setTimeout(() => {
+        window.open(platform.url, '_blank');
+      }, index * 500);
+    });
+  } else {
+    showModal('new-project');
+  }
+}
+
+function showToast(message, type = 'info') {
+  // Check for existing toasts to stack them
+  const existingToasts = document.querySelectorAll('.toast');
+  const toastHeight = 60; // Approximate height including margins
+  const topOffset = 20 + (existingToasts.length * toastHeight);
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+
+  // Style the toast with calculated position
+  Object.assign(toast.style, {
+    position: 'fixed',
+    top: `${topOffset}px`,
+    right: '20px',
+    padding: '12px 20px',
+    backgroundColor: type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : '#6366f1',
+    color: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    zIndex: '10000',
+    transform: 'translateX(100%)',
+    transition: 'all 0.3s ease',
+    maxWidth: '300px',
+    fontSize: '14px',
+    marginBottom: '8px'
+  });
+
+  document.body.appendChild(toast);
+
+  // Animate in
+  setTimeout(() => {
+    toast.style.transform = 'translateX(0)';
+  }, 100);
+
+  // Remove after delay and update remaining toasts positions
+  setTimeout(() => {
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+        // Reposition remaining toasts
+        updateToastPositions();
+      }
+    }, 300);
+  }, 4000);
+}
+
+function updateToastPositions() {
+  const remainingToasts = document.querySelectorAll('.toast');
+  const toastHeight = 60;
+
+  remainingToasts.forEach((toast, index) => {
+    const newTop = 20 + (index * toastHeight);
+    toast.style.top = `${newTop}px`;
+  });
+}
+</script>
+
+<script src="js/ui.js"></script>
+<script src="js/button_logic.js"></script>
+
+</body>
+</html>

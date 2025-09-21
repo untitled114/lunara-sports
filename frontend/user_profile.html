@@ -4,31 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SafeSend - User Profile</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+<!-- Essential Meta Tags for Security -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://images.unsplash.com;">
+<meta name="robots" content="noindex, nofollow">
+
+<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<!-- Fixed CSS file reference -->
+
+<!-- Core Stylesheets -->
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/dashboard-authentic.css">
 <link rel="stylesheet" href="css/user_profile.css">
-<link rel="stylesheet" href="css/mobile-nav.css">
 </head>
 <body>
 
+<!-- PLACEHOLDER: User authentication should be verified server-side before rendering this page -->
+
 <header id="header">
   <div class="container">
-    <div class="logo">SafeSend</div>
-    <nav class="nav">
-      <a href="index.html" class="nav-link">Home</a>
-      <a href="#profile" class="nav-link active">Profile</a>
-      <a href="#projects" class="nav-link">Projects</a>
-      <a href="#analytics" class="nav-link">Analytics</a>
-      <a href="#payments" class="nav-link">Payments</a>
+    <div class="logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;">SafeSend</div>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="projects.html" class="nav-link">Projects <span class="nav-badge">7</span></a>
+      <a href="payments.html" class="nav-link">Payments <span class="nav-badge urgent">2</span></a>
+      <a href="messages.html" class="nav-link">Messages <span class="nav-badge">12</span></a>
     </nav>
     <div class="header-buttons">
-      <button class="btn-icon" title="Notifications">🔔</button>
-      <button class="btn-icon" title="Messages">💬</button>
-      <a href="#settings" class="btn btn-secondary">Settings</a>
-      <a href="#logout" class="btn btn-primary">Logout</a>
+      <button class="btn-icon notification-btn urgent-pulse" title="Urgent notifications" aria-label="5 urgent notifications">
+        🚨
+        <span class="notification-badge urgent">5</span>
+      </button>
+      <a href="user_profile.html" class="profile-mini" aria-label="View profile">
+        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="Jordan Chen - Freelance Developer" loading="lazy" crossorigin="anonymous">
+        <span data-user-name>Jordan</span>
+      </a>
+      <a href="index.html" class="btn btn-secondary">Logout</a>
     </div>
-    <!-- Mobile Menu Button -->
     <button id="mobile-menu" class="mobile-menu" aria-label="Toggle mobile menu" aria-expanded="false">
       <span></span>
       <span></span>
@@ -43,7 +57,7 @@
     <div class="container">
       <div class="profile-header">
         <div class="profile-avatar-container">
-          <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" alt="User Avatar" class="profile-avatar" id="avatar-upload">
+          <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" alt="User Avatar" class="profile-avatar" id="avatar-upload" crossorigin="anonymous">
           <div class="avatar-status" title="Online"></div>
         </div>
         <div class="profile-info">
@@ -251,7 +265,7 @@
         <div class="activity-grid">
           <div class="activity-card">
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-              <img src="https://images.unsplash.com/photo-1494790108755-2616b8cd3eda?w=50&h=50&fit=crop&crop=face" alt="Client" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent);">
+              <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop&crop=face" alt="Client" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent);" crossorigin="anonymous">
               <div>
                 <h4>Sarah Johnson</h4>
                 <div style="color: var(--warning);">⭐⭐⭐⭐⭐</div>
@@ -262,7 +276,7 @@
           </div>
           <div class="activity-card">
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-              <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face" alt="Client" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent);">
+              <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face" alt="Client" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent);" crossorigin="anonymous">
               <div>
                 <h4>Mike Chen</h4>
                 <div style="color: var(--warning);">⭐⭐⭐⭐⭐</div>
@@ -341,7 +355,7 @@
     <a href="#payments" class="mobile-nav-link">Payments</a>
     <div class="mobile-nav-buttons">
       <a href="#settings" class="btn btn-secondary">Settings</a>
-      <a href="#logout" class="btn btn-primary">Logout</a>
+      <a href="index.html" class="btn btn-primary">Logout</a>
     </div>
   </nav>
 </div>
@@ -516,8 +530,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Logo click handler
   document.querySelector('.logo')?.addEventListener('click', () => {
-    window.location.href = 'index.html';
+    window.location.href = 'dashboard.html';
   });
+
+  // Setup navigation links
+  document.querySelectorAll('.nav-link').forEach(link => {
+    if (link.getAttribute('href').startsWith('#')) return; // Skip anchor links
+
+    link.addEventListener('click', (e) => {
+      const href = link.getAttribute('href');
+
+      if (href === 'projects.html' || href === 'payments.html' || href === 'messages.html') {
+        e.preventDefault();
+        showToast('Loading page...', 'info');
+        setTimeout(() => {
+          window.location.href = href;
+        }, 500);
+      }
+    });
+  });
+
+  // Add toast notification function
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = `
+      position: fixed; top: 20px; right: 20px; z-index: 10000;
+      background: ${type === 'info' ? '#6366f1' : type === 'success' ? '#10b981' : '#ef4444'};
+      color: white; padding: 12px 20px; border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px;
+      transform: translateX(100%); transition: transform 0.3s ease;
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => toast.style.transform = 'translateX(0)', 100);
+    setTimeout(() => {
+      toast.style.transform = 'translateX(100%)';
+      setTimeout(() => document.body.removeChild(toast), 300);
+    }, 3000);
+  }
 
   // Quick actions
   document.querySelectorAll('.quick-action').forEach(action => {
@@ -526,7 +578,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-      console.log(`${title} clicked`);
     });
   });
 
@@ -629,13 +680,42 @@ const observer = new IntersectionObserver((entries) => {
 document.querySelectorAll('.stat-card, .activity-card').forEach(el => {
   observer.observe(el);
 });
+
+// Mobile menu functionality
+const mobileMenu = document.getElementById('mobile-menu');
+const mobileOverlay = document.querySelector('.mobile-nav-overlay');
+
+mobileMenu?.addEventListener('click', () => {
+  mobileOverlay.classList.toggle('active');
+  const isExpanded = mobileMenu.getAttribute('aria-expanded') === 'true';
+  mobileMenu.setAttribute('aria-expanded', !isExpanded);
+});
+
+mobileOverlay?.addEventListener('click', (e) => {
+  if (e.target === mobileOverlay) {
+    mobileOverlay.classList.remove('active');
+    mobileMenu?.setAttribute('aria-expanded', 'false');
+  }
+});
 </script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="js/particles.js"></script>
+<!-- Mobile Navigation Overlay -->
+<div class="mobile-nav-overlay">
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <a href="dashboard.html" class="mobile-nav-link">Dashboard</a>
+    <a href="projects.html" class="mobile-nav-link">Projects <span class="nav-badge">7</span></a>
+    <a href="payments.html" class="mobile-nav-link">Payments <span class="nav-badge urgent">2</span></a>
+    <a href="messages.html" class="mobile-nav-link">Messages <span class="nav-badge">12</span></a>
+    <div class="mobile-nav-buttons">
+      <a href="user_profile.html" class="btn btn-secondary">Profile</a>
+      <a href="index.html" class="btn btn-primary">Logout</a>
+    </div>
+  </nav>
+</div>
+
 <script src="js/ui.js"></script>
-<script src="js/user_profile.js"></script>
 <script src="js/button_logic.js"></script>
+<script src="js/user_profile.js"></script>
 
 </body>
 </html>

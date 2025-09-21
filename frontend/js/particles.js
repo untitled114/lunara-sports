@@ -17,6 +17,9 @@
       this.isActive = true;
       this.isVisible = true;
 
+      // Initialize config properties first
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
       // Configuration based on device capabilities
       this.config = {
         particleCount: this.getOptimalParticleCount(),
@@ -24,8 +27,8 @@
         particleSpeed: 0.5,
         mouseRadius: 100,
         maxConnections: 3,
-        enable3D: this.shouldEnable3D(),
-        reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        reduceMotion: reduceMotion,
+        enable3D: this.shouldEnable3D(reduceMotion)
       };
 
       // Performance monitoring
@@ -52,10 +55,10 @@
     /**
      * Determine if 3D should be enabled
      */
-    shouldEnable3D() {
+    shouldEnable3D(reduceMotion = false) {
       return window.innerWidth >= 1024 &&
              typeof THREE !== 'undefined' &&
-             !this.config.reduceMotion;
+             !reduceMotion;
     }
 
     /**
@@ -229,17 +232,26 @@
         );
 
         // Enhanced color palette for more orb-like appearance
-        const colors = [
-          `rgba(147, 197, 253, ${particle.opacity * 0.8})`, // Blue
-          `rgba(139, 92, 246, ${particle.opacity * 0.6})`,  // Purple
-          `rgba(6, 182, 212, ${particle.opacity * 0.7})`    // Cyan
-        ];
+        const colorIndex = Math.floor(particle.x * particle.y) % 3;
+        let mainColor, fadedColor;
 
-        const colorIndex = Math.floor(particle.x * particle.y) % colors.length;
-        const mainColor = colors[colorIndex];
+        switch(colorIndex) {
+          case 0: // Blue
+            mainColor = `rgba(147, 197, 253, ${particle.opacity * 0.8})`;
+            fadedColor = `rgba(147, 197, 253, ${particle.opacity * 0.3})`;
+            break;
+          case 1: // Purple
+            mainColor = `rgba(139, 92, 246, ${particle.opacity * 0.6})`;
+            fadedColor = `rgba(139, 92, 246, ${particle.opacity * 0.3})`;
+            break;
+          default: // Cyan
+            mainColor = `rgba(6, 182, 212, ${particle.opacity * 0.7})`;
+            fadedColor = `rgba(6, 182, 212, ${particle.opacity * 0.3})`;
+            break;
+        }
 
         gradient.addColorStop(0, mainColor);
-        gradient.addColorStop(0.4, mainColor.replace(/[\d\.]+\)$/g, `${particle.opacity * 0.3})`));
+        gradient.addColorStop(0.4, fadedColor);
         gradient.addColorStop(1, 'rgba(147, 197, 253, 0)');
 
         // Draw glow

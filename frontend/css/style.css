@@ -1,29 +1,49 @@
 /* ===================== SAFESEND MAIN STYLES ===================== */
-/* Modular CSS Architecture - Import all component styles */
+/* Optimized CSS Architecture - Essential imports only */
 
 /* Core Foundation */
 @import 'base.css';
 @import 'layout.css';
 
-/* Components */
+/* Essential Components */
 @import 'buttons.css';
 @import 'forms.css';
 @import 'cards.css';
 
-/* Sections */
+/* UI Elements */
 @import 'hero.css';
 @import 'sections.css';
-
-/* Enhancements */
-@import 'animations.css';
-@import 'responsive.css';
-@import 'accessibility.css';
-
-/* Mobile Navigation */
 @import 'mobile-nav.css';
 
-/* Atmospheric Effects */
-@import 'glow-effects.css';
+/* Performance: Load heavy effects last */
+@import 'animations.css';
+@import 'responsive.css';
 
-/* ===================== PAGE-SPECIFIC OVERRIDES ===================== */
-/* This section can be used for any global overrides or page-specific adjustments */
+/* ===================== INTERACTIVE ENHANCEMENTS ===================== */
+.logo[onclick],
+.stat-item[onclick],
+.project-card,
+.feature-card,
+.pricing-card,
+.nav-link,
+button,
+.btn,
+.survival-action,
+.urgent-item button {
+  cursor: pointer !important;
+}
+
+/* Improve card hover states */
+.project-card:hover,
+.widget:hover {
+  transform: translateY(-2px);
+  transition: var(--transition-base);
+}
+
+/* Better focus states for accessibility */
+button:focus,
+.btn:focus,
+.nav-link:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

@@ -320,8 +320,7 @@
       initCTAButtons();
       initHeroParallax();
       
-      // Optional: Log successful initialization
-      console.log('ui.js: All components initialized successfully');
+      // Initialization complete
     } catch (error) {
       console.error('ui.js: Error during initialization:', error);
     }
