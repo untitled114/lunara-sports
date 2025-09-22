@@ -38,9 +38,13 @@ urlpatterns = [
     path('messages.html', TemplateView.as_view(template_name='messages.html'), name='messages'),
     path('user_profile.html', TemplateView.as_view(template_name='user_profile.html'), name='user_profile'),
     path('support.html', TemplateView.as_view(template_name='support.html'), name='support'),
+    path('test_flow.html', TemplateView.as_view(template_name='test_flow.html'), name='test_flow'),
 ]
 
 # Serve static files in development
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Serve frontend static files directly
+    urlpatterns += static('/css/', document_root=settings.BASE_DIR.parent / 'frontend' / 'css')
+    urlpatterns += static('/js/', document_root=settings.BASE_DIR.parent / 'frontend' / 'js')

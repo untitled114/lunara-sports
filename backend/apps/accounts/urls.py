@@ -5,16 +5,17 @@ All authentication and user management endpoints.
 
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
+from django.views.decorators.csrf import csrf_exempt
 from . import views
 
 app_name = 'accounts'
 
 urlpatterns = [
     # Authentication endpoints
-    path('register/', views.UserRegistrationView.as_view(), name='register'),
-    path('login/', views.UserLoginView.as_view(), name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('register/', csrf_exempt(views.UserRegistrationView.as_view()), name='register'),
+    path('login/', csrf_exempt(views.UserLoginView.as_view()), name='login'),
+    path('logout/', csrf_exempt(views.logout_view), name='logout'),
+    path('refresh/', csrf_exempt(TokenRefreshView.as_view()), name='token_refresh'),
 
     # User profile endpoints
     path('profile/', views.UserProfileView.as_view(), name='profile'),

@@ -99,6 +99,24 @@ LOGGING = {
 # Development CORS settings - Allow all origins
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Disable CSRF protection for development API endpoints
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
+
+# Override middleware to remove CSRF in development
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',  # DISABLED FOR DEVELOPMENT
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
 # Override JWT signing key for development
 SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
 

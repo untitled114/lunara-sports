@@ -10,6 +10,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import authenticate
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from .models import User, Profile
 from .serializers import (
@@ -19,6 +21,7 @@ from .serializers import (
 )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class UserRegistrationView(generics.CreateAPIView):
     """
     Register a new user with automatic profile creation.
@@ -45,6 +48,7 @@ class UserRegistrationView(generics.CreateAPIView):
         return Response(tokens, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class UserLoginView(generics.GenericAPIView):
     """
     Authenticate user and return JWT tokens.
