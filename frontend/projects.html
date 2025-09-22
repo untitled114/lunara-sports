@@ -24,23 +24,23 @@
 
 <header id="header">
   <div class="container">
-    <div class="logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;">SafeSend</div>
+    <div class="logo" data-action="dashboard" style="cursor: pointer;">SafeSend</div>
     <nav class="nav" aria-label="Main navigation">
-      <a href="dashboard.html" class="nav-link">Dashboard</a>
-      <a href="projects.html" class="nav-link active">Projects <span class="nav-badge">7</span></a>
-      <a href="payments.html" class="nav-link">Payments <span class="nav-badge urgent">2</span></a>
-      <a href="messages.html" class="nav-link">Messages <span class="nav-badge">12</span></a>
+      <a href="#" data-action="dashboard" class="nav-link">Dashboard</a>
+      <a href="#" data-action="projects" class="nav-link active">Projects <span class="nav-badge">7</span></a>
+      <a href="#" data-action="payments" class="nav-link">Payments <span class="nav-badge urgent">2</span></a>
+      <a href="#" data-action="messages" class="nav-link">Messages <span class="nav-badge">12</span></a>
     </nav>
     <div class="header-buttons">
-      <button class="btn-icon notification-btn urgent-pulse" title="Urgent notifications" aria-label="5 urgent notifications">
+      <button class="btn-icon notification-btn urgent-pulse" title="Urgent notifications" data-action="notifications" aria-label="5 urgent notifications">
         🚨
         <span class="notification-badge urgent">5</span>
       </button>
-      <a href="user_profile.html" class="profile-mini" aria-label="View profile">
+      <a href="#" data-action="profile" class="profile-mini" aria-label="View profile">
         <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="Jordan Chen - Freelance Developer" loading="lazy" crossorigin="anonymous">
         <span data-user-name>Jordan</span>
       </a>
-      <a href="index.html" class="btn btn-secondary">Logout</a>
+      <a href="#" data-action="logout" class="btn btn-secondary">Logout</a>
     </div>
     <button id="mobile-menu" class="mobile-menu" aria-label="Toggle mobile menu" aria-expanded="false">
       <span></span>
@@ -60,7 +60,7 @@
           <span class="last-login">This page will include: Project management, timelines, deliverables, and client collaboration tools</span>
         </div>
         <div class="quick-stats">
-          <div class="stat-item" onclick="window.location.href='dashboard.html'">
+          <div class="stat-item" data-action="dashboard">
             <span class="stat-value">←</span>
             <span class="stat-label">Back to Dashboard</span>
           </div>
@@ -109,7 +109,7 @@
             💡 <strong>For Developers:</strong> URL parameters are set up for deep linking:<br>
             <code>?id=proj_123</code> for specific projects, <code>?filter=overdue</code> for filters
           </p>
-          <button onclick="window.location.href='dashboard.html'" class="btn btn-primary">
+          <button data-action="dashboard" class="btn btn-primary">
             Return to Dashboard
           </button>
         </div>
@@ -121,13 +121,13 @@
 <!-- Mobile Navigation Overlay -->
 <div class="mobile-nav-overlay">
   <nav class="mobile-nav" aria-label="Mobile navigation">
-    <a href="dashboard.html" class="mobile-nav-link">Dashboard</a>
-    <a href="projects.html" class="mobile-nav-link active">Projects <span class="nav-badge">7</span></a>
-    <a href="payments.html" class="mobile-nav-link">Payments <span class="nav-badge urgent">2</span></a>
-    <a href="messages.html" class="mobile-nav-link">Messages <span class="nav-badge">12</span></a>
+    <a href="#" data-action="dashboard" class="mobile-nav-link">Dashboard</a>
+    <a href="#" data-action="projects" class="mobile-nav-link active">Projects <span class="nav-badge">7</span></a>
+    <a href="#" data-action="payments" class="mobile-nav-link">Payments <span class="nav-badge urgent">2</span></a>
+    <a href="#" data-action="messages" class="mobile-nav-link">Messages <span class="nav-badge">12</span></a>
     <div class="mobile-nav-buttons">
-      <a href="user_profile.html" class="btn btn-secondary">Profile</a>
-      <a href="index.html" class="btn btn-primary">Logout</a>
+      <a href="#" data-action="profile" class="btn btn-secondary">Profile</a>
+      <a href="#" data-action="logout" class="btn btn-primary">Logout</a>
     </div>
   </nav>
 </div>
@@ -173,5 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="js/ui.js"></script>
 <script src="js/button_logic.js"></script>
 
+<script src="js/api.js"></script>
+<script src="js/navigation.js"></script>
 </body>
 </html>

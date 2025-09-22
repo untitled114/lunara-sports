@@ -17,13 +17,13 @@
   <div class="container">
     <div class="logo" data-action="go-home">SafeSend</div>
     <nav class="nav" aria-label="Main navigation">
-      <a href="index.html" class="nav-link">Home</a>
+      <a href="#" data-action="go-home" class="nav-link">Home</a>
       <a href="index.html#features" class="nav-link">Features</a>
       <a href="index.html#how-it-works" class="nav-link">How It Works</a>
       <a href="index.html#pricing" class="nav-link">Pricing</a>
     </nav>
     <div class="header-buttons">
-      <a href="signin.html" class="btn btn-secondary" data-action="sign-in">Sign In</a>
+      <a href="#" data-action="sign-in" class="btn btn-secondary" data-action="sign-in">Sign In</a>
     </div>
 
     <!-- Mobile Menu Button -->
@@ -57,7 +57,7 @@
           <input type="password" placeholder="Again.. just making sure 👀" required>
         </div>
         <button type="submit" class="btn btn-primary btn-block">Start My Journey</button>
-        <p class="auth-footer">Already have an account? <a href="signin.html">Log In</a></p>
+        <p class="auth-footer">Already have an account? <a href="#" data-action="sign-in">Log In</a></p>
         <p class="auth-trust">🔒 Your info is safe. Encrypted end-to-end.</p>
       </form>
     </div>
@@ -67,13 +67,13 @@
 <!-- Mobile Navigation Overlay -->
 <div class="mobile-nav-overlay">
   <nav class="mobile-nav" aria-label="Mobile navigation">
-    <a href="index.html" class="mobile-nav-link">Home</a>
+    <a href="#" data-action="go-home" class="mobile-nav-link">Home</a>
     <a href="index.html#features" class="mobile-nav-link">Features</a>
     <a href="index.html#how-it-works" class="mobile-nav-link">How It Works</a>
     <a href="index.html#pricing" class="mobile-nav-link">Pricing</a>
     <div class="mobile-nav-buttons">
-      <a href="signup.html" class="btn btn-primary">Sign Up</a>
-      <a href="signin.html" class="btn btn-secondary">Sign In</a>
+      <a href="#" data-action="sign-up" class="btn btn-primary">Sign Up</a>
+      <a href="#" data-action="sign-in" class="btn btn-secondary">Sign In</a>
     </div>
   </nav>
 </div>
@@ -84,5 +84,7 @@
 <script src="js/ui.js"></script>
 <script src="js/button_logic.js"></script>
 
+<script src="js/api.js"></script>
+<script src="js/navigation.js"></script>
 </body>
 </html>
