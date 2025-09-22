@@ -1,0 +1,67 @@
+# SafeSend Azure Production Environment Variables
+# Copy these to Azure App Service Configuration -> Application Settings
+# Generated: September 2025
+
+# ===== DJANGO CORE SETTINGS =====
+SECRET_KEY=GENERATE-STRONG-SECRET-KEY-HERE
+DEBUG=False
+DJANGO_SETTINGS_MODULE=safesend.settings.production
+
+# ===== AZURE HOSTING =====
+WEBSITE_HOSTNAME=safesend-prod-backend.azurewebsites.net
+SCM_DO_BUILD_DURING_DEPLOYMENT=true
+
+# ===== DATABASE (Your existing Neon PostgreSQL) =====
+# Keep your existing Neon database configuration
+AZURE_POSTGRESQL_NAME=neondb
+AZURE_POSTGRESQL_USER=neondb_owner
+AZURE_POSTGRESQL_PASSWORD=YOUR_NEON_PASSWORD
+AZURE_POSTGRESQL_HOST=ep-cold-night-a8z0ndqj-pooler.eastus2.azure.neon.tech
+
+# ===== AZURE STORAGE (Will be provided by script) =====
+# Note: Storage account names can only contain lowercase letters and numbers (no hyphens)
+AZURE_STORAGE_ACCOUNT_NAME=safesendprodstorage
+AZURE_STORAGE_ACCOUNT_KEY=WILL_BE_GENERATED_BY_SCRIPT
+
+# ===== REDIS CACHE (Automatically created by deployment script) =====
+AZURE_REDIS_URL=redis://:PRIMARY_KEY@safesend-prod-redis.redis.cache.windows.net:6380/0?ssl=True
+
+# ===== EMAIL CONFIGURATION =====
+# Option 1: SendGrid (Recommended)
+EMAIL_HOST=smtp.sendgrid.net
+EMAIL_PORT=587
+EMAIL_HOST_USER=apikey
+EMAIL_HOST_PASSWORD=YOUR_SENDGRID_API_KEY
+DEFAULT_FROM_EMAIL=noreply@lunara-app.com
+
+# Option 2: Azure Communication Services
+# EMAIL_HOST=smtp.azurecomm.net
+# EMAIL_PORT=587
+# EMAIL_HOST_USER=YOUR_ACS_USERNAME
+# EMAIL_HOST_PASSWORD=YOUR_ACS_PASSWORD
+
+# ===== CORS SETTINGS (will be auto-configured) =====
+# Frontend URL will be: https://safesend-prod-frontend.azurestaticapps.net
+# Custom domain: https://lunara-app.com
+
+# ===== SECURITY SETTINGS =====
+# These are already configured in production.py
+# SECURE_SSL_REDIRECT=True
+# SECURE_HSTS_SECONDS=31536000
+
+# ===== ADDITIONAL CONFIGURATION =====
+# Add any other environment variables your app needs
+
+# ===== INSTRUCTIONS =====
+# 1. Generate a strong SECRET_KEY (use Django's get_random_secret_key())
+# 2. Get your Neon PostgreSQL password from your .env file
+# 3. Set up SendGrid account and get API key
+# 4. Azure Storage details will be provided by the deployment script
+# 5. Redis connection string will be generated if you choose to create it
+
+# ===== COST BREAKDOWN =====
+# App Service Basic B1: ~$13/month
+# Storage Account: ~$2/month
+# Redis Basic C0 (optional): ~$16/month
+# Static Web App: Free tier available
+# Total: ~$15-31/month (depending on Redis)
