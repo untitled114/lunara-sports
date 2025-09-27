@@ -76,6 +76,7 @@ jobs:
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --name ${{ env.CONTAINER_NAME }} \
           --image $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest \
+          --os-type Linux \
           --cpu 1 \
           --memory 1 \
           --registry-login-server $ACR_LOGIN_SERVER \

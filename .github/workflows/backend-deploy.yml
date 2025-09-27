@@ -48,11 +48,12 @@ jobs:
         ACR_PASSWORD=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query passwords[0].value --output tsv)
         ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
 
-        # Update container instance
+        # Create container instance
         az container create \
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --name ${{ env.CONTAINER_NAME }} \
           --image $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest \
+          --os-type Linux \
           --cpu 1 \
           --memory 1 \
           --registry-login-server $ACR_LOGIN_SERVER \

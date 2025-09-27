@@ -91,6 +91,7 @@ deploy_container() {
         --resource-group $RESOURCE_GROUP \
         --name $CONTAINER_NAME \
         --image $ACR_LOGIN_SERVER/$IMAGE_NAME:$TAG \
+        --os-type Linux \
         --cpu 1 \
         --memory 1 \
         --registry-login-server $ACR_LOGIN_SERVER \
