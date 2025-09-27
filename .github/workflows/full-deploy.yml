@@ -1,0 +1,146 @@
+name: Full Application Deployment
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+    inputs:
+      deploy_backend:
+        description: 'Deploy backend'
+        required: true
+        default: 'true'
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy frontend'
+        required: true
+        default: 'true'
+        type: boolean
+
+env:
+  REGISTRY_NAME: lunaraappregistry
+  RESOURCE_GROUP: lunara-app-rg
+  CONTAINER_NAME: lunara-app-backend
+  IMAGE_NAME: lunara-backend
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          backend:
+            - 'backend/**'
+          frontend:
+            - 'frontend/**'
+
+  deploy-backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event.inputs.deploy_backend == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      backend_url: ${{ steps.get-url.outputs.backend_url }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Build and push Docker image
+      run: |
+        az acr login --name ${{ env.REGISTRY_NAME }}
+        ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
+
+        docker build -t $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }} ./backend/
+        docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+        docker tag $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }} $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest
+        docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest
+
+    - name: Deploy to Container Instance
+      run: |
+        ACR_USERNAME=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query username --output tsv)
+        ACR_PASSWORD=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query passwords[0].value --output tsv)
+        ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
+
+        az container create \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name ${{ env.CONTAINER_NAME }} \
+          --image $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest \
+          --cpu 1 \
+          --memory 1 \
+          --registry-login-server $ACR_LOGIN_SERVER \
+          --registry-username $ACR_USERNAME \
+          --registry-password $ACR_PASSWORD \
+          --dns-name-label ${{ env.CONTAINER_NAME }} \
+          --ports 8000 \
+          --environment-variables \
+            SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+            DEBUG="False" \
+            DB_NAME="${{ secrets.DB_NAME }}" \
+            DB_USER="${{ secrets.DB_USER }}" \
+            DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+            DB_HOST="${{ secrets.DB_HOST }}" \
+            DB_PORT="${{ secrets.DB_PORT }}" \
+            DJANGO_SETTINGS_MODULE="safesend.settings.production" \
+          --location eastus \
+          --restart-policy Always \
+          --no-wait
+
+    - name: Get backend URL
+      id: get-url
+      run: |
+        sleep 60
+        CONTAINER_FQDN=$(az container show \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name ${{ env.CONTAINER_NAME }} \
+          --query ipAddress.fqdn \
+          --output tsv)
+        echo "backend_url=https://$CONTAINER_FQDN:8000" >> $GITHUB_OUTPUT
+
+  deploy-frontend:
+    needs: [changes, deploy-backend]
+    if: always() && (needs.changes.outputs.frontend == 'true' || github.event.inputs.deploy_frontend == 'true')
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Update API endpoint
+      if: needs.deploy-backend.outputs.backend_url
+      run: |
+        BACKEND_URL="${{ needs.deploy-backend.outputs.backend_url }}"
+        sed -i "s|https://lunara-app-backend.azurecontainer.io:8000|$BACKEND_URL|g" frontend/js/api.js
+
+    - name: Deploy to Static Web Apps
+      uses: Azure/static-web-apps-deploy@v1
+      with:
+        azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        action: "upload"
+        app_location: "/frontend"
+        api_location: ""
+        output_location: ""
+
+  notify:
+    needs: [deploy-backend, deploy-frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deployment Summary
+      run: |
+        echo "🚀 Deployment Complete!"
+        echo "Frontend: https://wonderful-grass-03e5ee00f.1.azurestaticapps.net"
+        if [ "${{ needs.deploy-backend.outputs.backend_url }}" ]; then
+          echo "Backend: ${{ needs.deploy-backend.outputs.backend_url }}"
+        fi

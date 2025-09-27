@@ -6,7 +6,9 @@
 
 class SafeSendAPI {
   constructor() {
-    this.baseURL = '/api';  // Django API base URL
+    this.baseURL = process.env.NODE_ENV === 'production'
+      ? 'https://lunara-app-backend.azurecontainer.io/api'  // Production backend URL
+      : '/api';  // Local development
     this.tokens = {
       access: localStorage.getItem('safesend_access_token'),
       refresh: localStorage.getItem('safesend_refresh_token')

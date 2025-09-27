@@ -8,14 +8,14 @@
 set -e  # Exit on any error
 
 # Configuration
-RESOURCE_GROUP="safesend-prod-rg"
+RESOURCE_GROUP="lunara-app-rg"
 LOCATION="eastus"
-APP_NAME="safesend-prod"
-APP_SERVICE_PLAN="safesend-prod-plan"
-APP_SERVICE_BACKEND="safesend-prod-backend"
-STORAGE_ACCOUNT="safesendprodstorage"  # Note: Storage accounts cannot have hyphens
-STATIC_WEB_APP="safesend-prod-frontend"
-REDIS_CACHE="safesend-prod-redis"
+APP_NAME="lunara-app"
+APP_SERVICE_PLAN="lunara-app-plan"
+APP_SERVICE_BACKEND="lunara-app-backend"
+STORAGE_ACCOUNT="lunaraappstorage"  # Note: Storage accounts cannot have hyphens
+STATIC_WEB_APP="lunara-app-frontend"
+REDIS_CACHE="lunara-app-redis"
 
 # Color codes for output
 RED='\033[0;31m'
@@ -24,7 +24,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚀 SafeSend Azure Deployment Starting...${NC}"
+echo -e "${BLUE}🚀 Lunara App Azure Deployment Starting...${NC}"
 echo "Resource Group: $RESOURCE_GROUP"
 echo "Location: $LOCATION"
 echo "App Name: $APP_NAME"
@@ -54,16 +54,16 @@ create_resource_group() {
 
 # Function to create App Service Plan
 create_app_service_plan() {
-    echo -e "${YELLOW}Creating App Service Plan (Basic B1)...${NC}"
+    echo -e "${YELLOW}Creating App Service Plan (Free F1)...${NC}"
     az appservice plan create \
         --name $APP_SERVICE_PLAN \
         --resource-group $RESOURCE_GROUP \
         --location $LOCATION \
-        --sku B1 \
+        --sku F1 \
         --is-linux \
         --output table
     echo -e "${GREEN}✅ App Service Plan created: $APP_SERVICE_PLAN${NC}"
-    echo -e "${BLUE}💰 Estimated cost: ~$13/month${NC}"
+    echo -e "${BLUE}💰 Estimated cost: FREE${NC}"
 }
 
 # Function to create App Service
@@ -150,11 +150,11 @@ deployment_summary() {
     echo "• Custom Domain: lunara-app.com (configure manually)"
     echo ""
     echo -e "${BLUE}💰 Monthly Cost Estimate:${NC}"
-    echo "• App Service Plan (B1): ~$13"
+    echo "• App Service Plan (F1): FREE"
     echo "• Storage Account: ~$2"
     echo "• Redis Cache (C0): ~$16"
     echo "• Static Web App: Free"
-    echo "• Total: ~$31/month"
+    echo "• Total: ~$18/month"
     echo ""
     echo -e "${YELLOW}📋 NEXT STEPS:${NC}"
     echo "1. Add missing environment variables (see azure-env-template.txt)"
@@ -165,7 +165,7 @@ deployment_summary() {
     echo "6. Configure custom domain lunara-app.com"
     echo "7. Test the full application"
     echo ""
-    echo -e "${GREEN}✅ SafeSend is ready for production deployment!${NC}"
+    echo -e "${GREEN}✅ Lunara App is ready for production deployment!${NC}"
 }
 
 # Function to configure App Service settings
@@ -264,7 +264,7 @@ configure_redis_settings() {
 
 # Main execution
 main() {
-    echo -e "${BLUE}🎯 Starting SafeSend Azure Deployment${NC}"
+    echo -e "${BLUE}🎯 Starting Lunara App Azure Deployment${NC}"
     echo "======================================"
 
     check_azure_login
@@ -272,13 +272,13 @@ main() {
     echo ""
     echo -e "${YELLOW}📋 Resources to be created:${NC}"
     echo "• Resource Group: $RESOURCE_GROUP"
-    echo "• App Service Plan: $APP_SERVICE_PLAN (Basic B1 - ~$13/month)"
+    echo "• App Service Plan: $APP_SERVICE_PLAN (Free F1 - FREE)"
     echo "• App Service Backend: $APP_SERVICE_BACKEND"
     echo "• Storage Account: $STORAGE_ACCOUNT (~$2/month)"
     echo "• Static Web App: $STATIC_WEB_APP (Free tier)"
     echo "• Redis Cache: $REDIS_CACHE (Basic C0 - ~$16/month)"
     echo ""
-    echo -e "${BLUE}💰 Total estimated monthly cost: ~$31/month${NC}"
+    echo -e "${BLUE}💰 Total estimated monthly cost: ~$18/month${NC}"
     echo ""
 
     read -p "Continue with deployment? (y/n): " -n 1 -r
