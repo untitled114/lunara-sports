@@ -1,0 +1,364 @@
+# Lunara App (SafeSend) - Complete Project Documentation
+# Version: 2.0 - Production Deployment Ready
+# Last Updated: September 26, 2025
+
+## PROJECT OVERVIEW
+
+**Lunara App** (formerly SafeSend) is a freelancer-client escrow platform providing secure project management, milestone tracking, and payment protection. The platform ensures trust and transparency between freelancers and clients through escrow-based transactions.
+
+### Key Features
+- 🔐 Secure escrow-based payments
+- 📋 Milestone-driven project management
+- ⚖️ Fair dispute resolution system
+- 📱 Real-time progress tracking
+- 🏢 Separate client and freelancer dashboards
+
+## TECHNICAL ARCHITECTURE
+
+### Frontend (Static Web App)
+- **Technology**: Vanilla HTML5, CSS3, JavaScript ES6+
+- **Deployment**: Azure Static Web Apps
+- **URL**: https://wonderful-grass-03e5ee00f.1.azurestaticapps.net
+- **Features**:
+  - Responsive design with mobile navigation
+  - JWT-based authentication
+  - Real-time API integration
+  - Security headers (CSP, XSS protection)
+  - Auto-deployment via GitHub Actions
+
+### Backend (Container Instance)
+- **Technology**: Django 4.2.7 + Django REST Framework
+- **Deployment**: Azure Container Instances
+- **Database**: PostgreSQL (Neon hosting)
+- **Features**:
+  - JWT authentication with refresh tokens
+  - RESTful API architecture
+  - File upload handling
+  - Project and milestone management
+  - User profile management
+
+### Database Schema
+```sql
+-- Core Models
+Users (accounts_user)
+├── Profiles (accounts_userprofile)
+├── Projects (projects_project)
+├── Milestones (projects_milestone)
+└── Project Files (projects_projectfile)
+
+-- Authentication
+JWT Tokens (refresh/access)
+```
+
+### Storage & Assets
+- **Azure Storage Account**: `lunaraappstorage`
+- **Media Files**: Blob container with secure access
+- **Static Files**: Served via Static Web Apps CDN
+
+## DEPLOYMENT ARCHITECTURE
+
+### Production Environment
+```
+GitHub Repository (master)
+├── Frontend Deploy → Azure Static Web Apps
+├── Backend Deploy → Azure Container Instances
+└── Storage → Azure Storage Account
+
+Azure Resources (lunara-app-rg)
+├── Static Web App: Lunara
+├── Storage Account: lunaraappstorage
+├── Container Registry: lunaraappregistry
+└── Container Instance: lunara-app-backend
+```
+
+### GitHub Actions Workflows
+1. **frontend-deploy.yml**: Frontend deployment trigger
+2. **backend-deploy.yml**: Backend containerization and deployment
+3. **full-deploy.yml**: Orchestrated full-stack deployment
+
+### Environment Configuration
+- **Production Secrets**: Managed via GitHub Secrets
+- **Database**: Neon PostgreSQL with connection pooling
+- **Security**: HTTPS enforced, security headers configured
+
+## API DOCUMENTATION
+
+### Authentication Endpoints
+```
+POST /api/auth/login/          # User authentication
+POST /api/auth/register/       # User registration
+POST /api/auth/refresh/        # Token refresh
+POST /api/auth/logout/         # User logout
+GET  /api/auth/profile/        # User profile
+PATCH /api/auth/profile/update/ # Profile update
+```
+
+### Project Management Endpoints
+```
+GET    /api/projects/                    # List projects
+POST   /api/projects/                    # Create project
+GET    /api/projects/{id}/               # Project details
+PATCH  /api/projects/{id}/               # Update project
+DELETE /api/projects/{id}/               # Delete project
+GET    /api/projects/my_projects/        # User's projects
+POST   /api/projects/{id}/assign_freelancer/ # Assign freelancer
+```
+
+### Milestone Endpoints
+```
+GET    /api/projects/{id}/milestones/           # List milestones
+POST   /api/projects/{id}/milestones/           # Create milestone
+PATCH  /api/projects/{id}/milestones/{mid}/     # Update milestone
+POST   /api/projects/{id}/milestones/{mid}/submit/ # Submit work
+POST   /api/projects/{id}/milestones/{mid}/review/ # Review submission
+```
+
+## SECURITY IMPLEMENTATION
+
+### Frontend Security
+- Content Security Policy (CSP) headers
+- XSS protection enabled
+- Frame options set to DENY
+- HTTPS enforcement
+- Input validation and sanitization
+
+### Backend Security
+- JWT-based authentication
+- Token refresh mechanism
+- CORS configuration
+- SQL injection prevention (ORM)
+- File upload validation
+- Environment variable protection
+
+### Database Security
+- Connection string encryption
+- SSL-enabled connections
+- Access control via environment variables
+- No sensitive data in repositories
+
+## USER INTERFACE DESIGN
+
+### Landing Page (index.html)
+- Hero section with value proposition
+- Feature highlights
+- How it works explanation
+- Pricing information
+- Call-to-action buttons
+
+### Authentication Pages
+- **Sign Up**: User registration with validation
+- **Sign In**: Login with remember me option
+- **Profile**: User profile management
+
+### Dashboard Pages
+- **Project Dashboard**: Overview of all projects
+- **Project Details**: Individual project management
+- **Messages**: Communication system
+- **User Profile**: Account settings
+
+### Responsive Design
+- Mobile-first approach
+- Hamburger navigation for mobile
+- Touch-friendly interfaces
+- Progressive enhancement
+
+## DATABASE CONFIGURATION
+
+### Neon PostgreSQL Setup
+```
+Host: ep-cold-night-a8z0ndqj-pooler.eastus2.azure.neon.tech
+Database: neondb
+User: neondb_owner
+Port: 5432
+SSL: Required
+```
+
+### Key Tables
+- **accounts_user**: User authentication and basic info
+- **accounts_userprofile**: Extended user profiles
+- **projects_project**: Project definitions and status
+- **projects_milestone**: Project milestones and deliverables
+- **projects_projectfile**: File attachments and uploads
+
+## DEPLOYMENT PROCESS
+
+### Prerequisites
+1. Azure CLI configured
+2. GitHub repository with secrets
+3. Docker installed (for local testing)
+
+### GitHub Secrets Required
+```
+AZURE_CREDENTIALS                 # Service principal JSON
+AZURE_STATIC_WEB_APPS_API_TOKEN  # Static Web Apps token
+DJANGO_SECRET_KEY                # Production Django secret
+DB_NAME, DB_USER, DB_PASSWORD    # Database credentials
+DB_HOST, DB_PORT                 # Database connection
+```
+
+### Deployment Steps
+1. **Frontend**: Automatic deployment on push to master
+2. **Backend**: Container build and deploy via GitHub Actions
+3. **Database**: Already configured and running
+4. **Storage**: Configured during initial setup
+
+### Manual Deployment Commands
+```bash
+# Backend deployment
+./azure-container-deploy.sh
+
+# Minimal infrastructure
+./azure-deploy-minimal.sh
+
+# Check deployment status
+az staticwebapp show --name Lunara --resource-group lunara-app-rg
+az container list --resource-group lunara-app-rg
+```
+
+## TESTING STRATEGY
+
+### Frontend Testing
+- Manual UI testing across browsers
+- Mobile responsiveness testing
+- API integration testing
+- Authentication flow testing
+
+### Backend Testing
+- Django unit tests
+- API endpoint testing
+- Database integration testing
+- Authentication testing
+
+### Integration Testing
+- End-to-end user workflows
+- Payment flow testing
+- File upload testing
+- Cross-browser compatibility
+
+## PERFORMANCE OPTIMIZATION
+
+### Frontend Performance
+- Static Web Apps global CDN
+- Minified CSS and JavaScript
+- Optimized images and assets
+- Lazy loading for heavy content
+
+### Backend Performance
+- Database connection pooling
+- Efficient Django ORM queries
+- Caching strategy implementation
+- Container resource optimization
+
+### Database Performance
+- Indexed database queries
+- Connection pooling via Neon
+- Optimized query patterns
+- Regular performance monitoring
+
+## MONITORING AND LOGGING
+
+### Application Monitoring
+- Azure Application Insights (to be configured)
+- Container health checks
+- Database connection monitoring
+- API response time tracking
+
+### Error Tracking
+- Frontend error logging
+- Backend exception handling
+- Database error monitoring
+- User action tracking
+
+### Performance Metrics
+- Page load times
+- API response times
+- Database query performance
+- User engagement metrics
+
+## COST ANALYSIS
+
+### Monthly Operational Costs
+```
+Azure Static Web Apps:    FREE
+Storage Account:          ~$2/month
+Container Registry:       ~$5/month
+Container Instance:       ~$15/month
+Neon PostgreSQL:          FREE (current plan)
+---
+Total Estimated Cost:    ~$22/month
+```
+
+### Cost Optimization Strategies
+- Use free tiers where possible
+- Monitor resource usage
+- Optimize container resource allocation
+- Regular cost reviews
+
+## FUTURE ENHANCEMENTS
+
+### Phase 2 Features
+- Real-time messaging system
+- Advanced dispute resolution
+- Payment integration (Stripe/PayPal)
+- Mobile application
+- Advanced analytics dashboard
+
+### Technical Improvements
+- Container orchestration (AKS)
+- Advanced caching (Redis)
+- CDN optimization
+- Performance monitoring
+- Automated testing pipeline
+
+### Scalability Considerations
+- Microservices architecture
+- Load balancing implementation
+- Database sharding strategy
+- Container scaling policies
+
+## TROUBLESHOOTING GUIDE
+
+### Common Issues
+1. **Static Web App not updating**: Check GitHub Actions workflow
+2. **Backend not accessible**: Verify container instance status
+3. **Database connection errors**: Check environment variables
+4. **Authentication issues**: Verify JWT token configuration
+
+### Debug Commands
+```bash
+# Check Azure resources
+az group show --name lunara-app-rg
+
+# Container logs
+az container logs --name lunara-app-backend --resource-group lunara-app-rg
+
+# Static Web App status
+az staticwebapp show --name Lunara --resource-group lunara-app-rg
+```
+
+### Support Resources
+- Azure documentation
+- Django REST Framework docs
+- GitHub Actions documentation
+- Neon PostgreSQL support
+
+## PROJECT TEAM
+
+### Roles and Responsibilities
+- **Full-Stack Development**: Complete application development
+- **DevOps**: Azure deployment and CI/CD
+- **Security**: Authentication and data protection
+- **UI/UX**: User interface design and experience
+
+### Contact Information
+- Repository: https://github.com/untitled114/lunaro.io
+- Documentation: This file
+- Deployment logs: developer-logs.txt
+
+---
+
+**Document Version**: 2.0
+**Last Updated**: September 26, 2025
+**Next Review**: After full deployment completion
+
+This documentation should be updated with each major deployment or architectural change.

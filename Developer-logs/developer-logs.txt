@@ -1,0 +1,131 @@
+# Lunara App Developer Logs
+# Latest deployment session: September 26, 2025
+
+## DEPLOYMENT SESSION - September 26, 2025
+
+### Initial Challenge: Azure Subscription Quota Limits
+- **Issue**: DP-900 subscription had 0 quota for App Service VMs (both Free and Basic tiers)
+- **Error**: "Current Limit (Free VMs): 0, Amount required: 1"
+- **Solution**: Pivoted to Azure Container Instances for backend deployment
+
+### Azure Infrastructure Deployed
+
+#### ✅ Successfully Deployed:
+1. **Resource Group**: `lunara-app-rg` (East US)
+2. **Storage Account**: `lunaraappstorage` (~$2/month)
+   - Blob container: `media`
+   - Configuration saved: `azure-storage-config.txt`
+3. **Static Web App**: `Lunara`
+   - URL: https://wonderful-grass-03e5ee00f.1.azurestaticapps.net
+   - Connected to GitHub repo: master branch
+   - Auto-deployment enabled
+
+#### 🔄 Pending Deployment:
+1. **Container Registry**: `lunaraappregistry` (provider registration pending)
+2. **Container Instance**: `lunara-app-backend` (waiting for ACR)
+
+### GitHub Actions Configuration
+
+#### Created Workflows:
+1. **frontend-deploy.yml**: Auto-deploys frontend on frontend/ changes
+2. **backend-deploy.yml**: Deploys backend to Azure Container Instances
+3. **full-deploy.yml**: Complete deployment with dependency management
+
+#### GitHub Secrets Configured:
+- AZURE_CREDENTIALS (Service Principal JSON)
+- AZURE_STATIC_WEB_APPS_API_TOKEN (deployment token)
+- DJANGO_SECRET_KEY (production secret)
+- DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT (Neon PostgreSQL)
+
+### Key Issues Resolved
+
+#### 1. Static Web Apps Deployment Token Error
+- **Issue**: Auto-generated workflow was using wrong secret name and pointing to backend folder
+- **Root Cause**: Azure created workflow with `AZURE_STATIC_WEB_APPS_API_TOKEN_WONDERFUL_GRASS_03E5EE00F`
+- **Solution**: Updated workflow to use `AZURE_STATIC_WEB_APPS_API_TOKEN` and point to `./frontend`
+
+#### 2. Azure Provider Registration
+- **Issue**: Container Registry and Container Instance providers not registered
+- **Command Used**: `az provider register --namespace Microsoft.ContainerRegistry`
+- **Status**: Registration in progress (takes 5-10 minutes)
+
+#### 3. Frontend-Backend Integration
+- **API Endpoint**: Updated to production URL pattern
+- **CORS**: Configured for cross-origin requests
+- **Security Headers**: Implemented in staticwebapp.config.json
+
+### Current Architecture
+
+```
+Frontend (Static Web App)
+├── GitHub Actions deployment
+├── Security headers configured
+└── API endpoints pointing to backend
+
+Backend (Container Instance - Pending)
+├── Django application
+├── Dockerized deployment
+├── Neon PostgreSQL database
+└── Azure Storage integration
+
+Storage (Azure Storage Account)
+├── Media files container
+├── Blob storage for uploads
+└── Access keys configured
+```
+
+### Security Implementation
+- CSP headers configured
+- XSS protection enabled
+- Frame options set to DENY
+- HTTPS enforced
+- JWT authentication ready
+
+### Performance Considerations
+- Static Web App: Global CDN distribution
+- Container Instance: 1 CPU, 1GB memory allocated
+- Database: Neon PostgreSQL with connection pooling
+- Storage: Hot tier for frequent access
+
+### Cost Breakdown (Monthly)
+- Static Web App: FREE
+- Storage Account: ~$2
+- Container Registry: ~$5
+- Container Instance: ~$15
+- **Total**: ~$22/month
+
+### Next Developer Actions Required
+1. Wait for Azure provider registration completion
+2. Monitor GitHub Actions for backend deployment success
+3. Test full application functionality
+4. Configure custom domain (lunara-app.com)
+5. Set up monitoring and logging
+
+### Development Environment
+- Frontend: Vanilla HTML/CSS/JS
+- Backend: Django 4.2.7 with DRF
+- Database: PostgreSQL (Neon hosted)
+- Deployment: GitHub Actions + Azure
+- Authentication: JWT with refresh tokens
+
+### Git Repository Status
+- Current branch: master
+- Latest commit: Frontend workflow fix
+- All deployment infrastructure committed
+- GitHub secrets configured and active
+
+### Technical Decisions Made
+1. **Container Instances over App Service**: Due to quota limitations
+2. **GitHub Actions over Azure DevOps**: Better GitHub integration
+3. **Neon over Azure Database**: Existing setup, cost-effective
+4. **Static Web Apps over Blob Storage**: Built-in GitHub integration
+
+### Monitoring Setup Needed
+- Application Insights integration
+- Container health checks
+- Database connection monitoring
+- Error tracking and alerting
+
+---
+Last Updated: September 26, 2025 21:45 UTC
+Next Review: After backend deployment completion
