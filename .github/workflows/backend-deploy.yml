@@ -3,7 +3,7 @@ name: Deploy Backend to Azure Container Instances
 on:
   push:
     branches: [ master, main ]
-    paths: [ 'backend/**' ]
+    paths: [ 'backend/**', '.github/workflows/backend-deploy.yml' ]
   workflow_dispatch:
 
 env:

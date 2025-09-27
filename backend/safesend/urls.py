@@ -19,8 +19,16 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from django.http import JsonResponse
+
+def health_check(request):
+    """Health check endpoint for container monitoring"""
+    return JsonResponse({"status": "healthy", "service": "lunara-backend"})
 
 urlpatterns = [
+    # Health check for container monitoring
+    path('health/', health_check, name='health'),
+
     # Admin interface
     path('admin/', admin.site.urls),
 
