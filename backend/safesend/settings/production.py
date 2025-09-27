@@ -15,19 +15,20 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # Azure App Service automatically sets WEBSITE_HOSTNAME
 ALLOWED_HOSTS = [
     os.environ.get('WEBSITE_HOSTNAME', 'localhost'),
-    'lunara-backend.azurewebsites.net',
-    'gentle-dune-04dd3000f.1.azurestaticapps.net',  # Your Static Web App
+    'lunara-app-backend.eastus.azurecontainer.io',  # Container instance FQDN
+    'wonderful-grass-03e5ee00f.1.azurestaticapps.net',  # Current Static Web App
+    '*',  # Allow all hosts for now (remove in production)
 ]
 
-# Database - PostgreSQL on Azure
+# Database - PostgreSQL on Azure (using Neon)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('AZURE_POSTGRESQL_NAME'),
-        'USER': os.environ.get('AZURE_POSTGRESQL_USER'),
-        'PASSWORD': os.environ.get('AZURE_POSTGRESQL_PASSWORD'),
-        'HOST': os.environ.get('AZURE_POSTGRESQL_HOST'),
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
         'OPTIONS': {
             'sslmode': 'require',
         },
@@ -69,8 +70,8 @@ CSRF_COOKIE_HTTPONLY = True
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
-    "https://gentle-dune-04dd3000f.1.azurestaticapps.net",  # Your Static Web App
-    "https://lunara-backend.azurewebsites.net",  # Your API domain
+    "https://wonderful-grass-03e5ee00f.1.azurestaticapps.net",  # Current Static Web App
+    "http://lunara-app-backend.eastus.azurecontainer.io:8000",  # Backend container
 ]
 
 # Logging for production
