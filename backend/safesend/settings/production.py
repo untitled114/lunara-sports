@@ -13,12 +13,7 @@ DEBUG = False
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # Azure App Service automatically sets WEBSITE_HOSTNAME
-ALLOWED_HOSTS = [
-    os.environ.get('WEBSITE_HOSTNAME', 'localhost'),
-    'lunara-app-backend.eastus.azurecontainer.io',  # Container instance FQDN
-    'wonderful-grass-03e5ee00f.1.azurestaticapps.net',  # Current Static Web App
-    '*',  # Allow all hosts for now (remove in production)
-]
+ALLOWED_HOSTS = ['*']  # Allow all hosts for testing - will secure later
 
 # Database - PostgreSQL on Azure (using Neon)
 DATABASES = {
@@ -81,7 +76,7 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # Additional CORS settings for better compatibility
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins for testing
 CORS_ALLOWED_HEADERS = [
     "accept",
     "accept-encoding",
