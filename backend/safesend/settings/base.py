@@ -1,5 +1,5 @@
 """
-Base Django settings for SafeSend project.
+Base Django settings for Lunara project.
 Common settings shared across all environments.
 """
 

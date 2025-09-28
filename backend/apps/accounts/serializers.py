@@ -1,5 +1,5 @@
 """
-Serializers for SafeSend user account management.
+Serializers for Lunara user account management.
 Handles user registration, authentication, and profile management.
 """
 

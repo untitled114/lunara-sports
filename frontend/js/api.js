@@ -1,11 +1,11 @@
 /**
- * api.js - Enhanced API Integration Module for SafeSend
+ * api.js - Enhanced API Integration Module for Lunara
  * Handles all API communication with PostgreSQL-backed Django backend
  * Provides real-time data persistence and seamless frontend-backend integration
  * Updated: Fixed process.env browser compatibility issue + logout flow
  */
 
-class SafeSendAPI {
+class LunaraAPI {
   constructor() {
     // Detect environment based on hostname
     const isProduction = window.location.hostname !== 'localhost' &&
@@ -16,8 +16,8 @@ class SafeSendAPI {
       ? 'https://lunara-app-backend.azurecontainer.io/api'  // Production backend URL
       : '/api';  // Local development
     this.tokens = {
-      access: localStorage.getItem('safesend_access_token'),
-      refresh: localStorage.getItem('safesend_refresh_token')
+      access: localStorage.getItem('lunara_access_token'),
+      refresh: localStorage.getItem('lunara_refresh_token')
     };
     this.retryAttempts = 3;
     this.retryDelay = 1000;
@@ -57,7 +57,7 @@ class SafeSendAPI {
       if (response.ok) {
         const data = await response.json();
         this.tokens.access = data.access;
-        localStorage.setItem('safesend_access_token', data.access);
+        localStorage.setItem('lunara_access_token', data.access);
         return data.access;
       } else {
         throw new Error('Token refresh failed');
@@ -172,9 +172,9 @@ class SafeSendAPI {
     this.tokens.access = data.access;
     this.tokens.refresh = data.refresh;
 
-    localStorage.setItem('safesend_access_token', data.access);
-    localStorage.setItem('safesend_refresh_token', data.refresh);
-    localStorage.setItem('safesend_user', JSON.stringify(data.user));
+    localStorage.setItem('lunara_access_token', data.access);
+    localStorage.setItem('lunara_refresh_token', data.refresh);
+    localStorage.setItem('lunara_user', JSON.stringify(data.user));
   }
 
   async logout() {
@@ -193,8 +193,8 @@ class SafeSendAPI {
     } finally {
       this.clearTokens();
       // Use Firefox-compatible navigation
-      if (window.SafeSendNavigate) {
-        window.SafeSendNavigate('index.html');
+      if (window.LunaraNavigate) {
+        window.LunaraNavigate('index.html');
       } else {
         window.location.href = 'index.html';
       }
@@ -204,9 +204,9 @@ class SafeSendAPI {
   clearTokens() {
     this.tokens.access = null;
     this.tokens.refresh = null;
-    localStorage.removeItem('safesend_access_token');
-    localStorage.removeItem('safesend_refresh_token');
-    localStorage.removeItem('safesend_user');
+    localStorage.removeItem('lunara_access_token');
+    localStorage.removeItem('lunara_refresh_token');
+    localStorage.removeItem('lunara_user');
   }
 
   // ===== USER PROFILE METHODS =====
@@ -368,7 +368,7 @@ class SafeSendAPI {
   }
 
   getCurrentUser() {
-    const userStr = localStorage.getItem('safesend_user');
+    const userStr = localStorage.getItem('lunara_user');
     return userStr ? JSON.parse(userStr) : null;
   }
 
@@ -533,14 +533,14 @@ class SafeSendAPI {
 }
 
 // Create global API instance with enhanced functionality
-window.SafeSendAPI = new SafeSendAPI();
+window.LunaraAPI = new LunaraAPI();
 
 // Enhanced authentication check for protected pages
 function checkAuthentication() {
-  if (!window.SafeSendAPI.isAuthenticated()) {
+  if (!window.LunaraAPI.isAuthenticated()) {
     // Use Firefox-compatible navigation
-    if (window.SafeSendNavigate) {
-      window.SafeSendNavigate('signin.html');
+    if (window.LunaraNavigate) {
+      window.LunaraNavigate('signin.html');
     } else {
       window.location.href = '/signin.html';
     }
@@ -555,7 +555,7 @@ function handleAPIError(error, context = 'API operation') {
 
   if (error.message.includes('401')) {
     showNotification('Session expired. Please login again.', 'error');
-    window.SafeSendAPI.logout();
+    window.LunaraAPI.logout();
   } else if (error.message.includes('403')) {
     showNotification('Access denied. You don\'t have permission for this action.', 'error');
   } else if (error.message.includes('404')) {

@@ -1,5 +1,5 @@
 """
-Serializers for SafeSend project management.
+Serializers for Lunara project management.
 Handles projects, milestones, and invitations with PostgreSQL persistence.
 """
 

@@ -1,5 +1,5 @@
 """
-URL configuration for SafeSend payments API.
+URL configuration for Lunara payments API.
 All payment, escrow, and transaction management endpoints.
 """
 

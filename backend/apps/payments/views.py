@@ -1,5 +1,5 @@
 """
-Views for SafeSend payment and escrow management.
+Views for Lunara payment and escrow management.
 Handles transactions, escrow accounts, and payment methods with PostgreSQL persistence.
 """
 

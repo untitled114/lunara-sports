@@ -1,5 +1,5 @@
 """
-Project and Milestone models for SafeSend project management.
+Project and Milestone models for Lunara project management.
 """
 
 from django.db import models

@@ -1,10 +1,10 @@
 /**
- * SafeSend Navigation System
+ * Lunara Navigation System
  * Handles page transitions and navigation for the entire application
  */
 
 // Global navigation helper with Firefox compatibility
-window.SafeSendNavigate = (function() {
+window.LunaraNavigate = (function() {
     let isNavigating = false;
 
     return function(page) {
@@ -29,7 +29,7 @@ window.SafeSendNavigate = (function() {
     };
 })();
 
-class SafeSendNavigation {
+class LunaraNavigation {
     constructor() {
         this.isNavigating = false;
         this.init();
@@ -174,12 +174,12 @@ class SafeSendNavigation {
 
     navigateToPage(page) {
         // Use global navigation helper
-        window.SafeSendNavigate(page);
+        window.LunaraNavigate(page);
     }
 
     checkAuthAndNavigate(page) {
         // Check if user is authenticated
-        if (window.SafeSendAPI && window.SafeSendAPI.isAuthenticated()) {
+        if (window.LunaraAPI && window.LunaraAPI.isAuthenticated()) {
             this.navigateToPage(page);
         } else {
             this.showAuthRequired();
@@ -197,14 +197,14 @@ class SafeSendNavigation {
         // Redirect to dashboard if already authenticated and on signin/signup pages
         const currentPage = window.location.pathname.split('/').pop();
         if ((currentPage === 'signin.html' || currentPage === 'signup.html') &&
-            window.SafeSendAPI && window.SafeSendAPI.isAuthenticated()) {
+            window.LunaraAPI && window.LunaraAPI.isAuthenticated()) {
             this.navigateToPage('dashboard.html');
         }
     }
 
     handleLogout() {
-        if (window.SafeSendAPI) {
-            window.SafeSendAPI.logout().then(() => {
+        if (window.LunaraAPI) {
+            window.LunaraAPI.logout().then(() => {
                 this.showToast('Logged out successfully', 'success');
                 // Clear any cached data
                 if (window.DataSync) {
@@ -369,14 +369,14 @@ class SafeSendNavigation {
 
 // Initialize navigation when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.SafeSendNavigation = new SafeSendNavigation();
+    window.LunaraNavigation = new LunaraNavigation();
 });
 
 // Also initialize if the script loads after DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        window.SafeSendNavigation = new SafeSendNavigation();
+        window.LunaraNavigation = new LunaraNavigation();
     });
 } else {
-    window.SafeSendNavigation = new SafeSendNavigation();
+    window.LunaraNavigation = new LunaraNavigation();
 }

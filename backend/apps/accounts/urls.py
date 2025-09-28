@@ -1,5 +1,5 @@
 """
-URL configuration for SafeSend accounts API.
+URL configuration for Lunara accounts API.
 All authentication and user management endpoints.
 """
 

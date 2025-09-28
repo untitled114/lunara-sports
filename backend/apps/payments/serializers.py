@@ -1,5 +1,5 @@
 """
-Serializers for SafeSend payment and escrow management.
+Serializers for Lunara payment and escrow management.
 """
 
 from rest_framework import serializers

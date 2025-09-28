@@ -1,5 +1,5 @@
 """
-Payment and Escrow models for SafeSend financial transactions.
+Payment and Escrow models for Lunara financial transactions.
 """
 
 from django.db import models

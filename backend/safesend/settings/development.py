@@ -1,5 +1,5 @@
 """
-Development settings for SafeSend project.
+Development settings for Lunara project.
 Local development with PostgreSQL database using environment variables.
 """
 

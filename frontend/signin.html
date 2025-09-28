@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sign In - SafeSend</title>
+<title>Sign In - Lunara</title>
 <!-- Favicon and Icons -->
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
@@ -18,7 +18,7 @@
 
 <header id="header">
   <div class="container">
-    <div class="logo" data-action="go-home">SafeSend</div>
+    <div class="logo" data-action="go-home">Lunara</div>
     <nav class="nav" aria-label="Main navigation">
       <a href="#" data-action="go-home" class="nav-link">Home</a>
       <a href="index.html#features" class="nav-link">Features</a>
@@ -89,7 +89,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Check if user is already authenticated
-    if (window.SafeSendAPI.isAuthenticated()) {
+    if (window.LunaraAPI.isAuthenticated()) {
         window.location.href = 'dashboard.html';
         return;
     }
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // Authenticate with PostgreSQL-backed API
-            const response = await window.SafeSendAPI.login(email, password);
+            const response = await window.LunaraAPI.login(email, password);
 
             // Show success message
             showToast('Welcome back! Redirecting to dashboard...', 'success');

@@ -1,5 +1,5 @@
 """
-Views for SafeSend user account management.
+Views for Lunara user account management.
 Handles authentication, registration, and profile management with PostgreSQL persistence.
 """
 

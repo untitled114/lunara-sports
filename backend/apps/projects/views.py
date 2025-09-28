@@ -1,5 +1,5 @@
 """
-Views for SafeSend project management.
+Views for Lunara project management.
 Handles projects, milestones, and invitations with PostgreSQL persistence.
 """
 

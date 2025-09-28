@@ -1,5 +1,5 @@
 """
-User and Profile models for SafeSend authentication system.
+User and Profile models for Lunara authentication system.
 """
 
 from django.contrib.auth.models import AbstractUser

@@ -1,5 +1,5 @@
 """
-URL configuration for SafeSend projects API.
+URL configuration for Lunara projects API.
 All project and milestone management endpoints.
 """
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SafeSend - Dashboard</title>
+<title>Lunara - Dashboard</title>
 <!-- Favicon and Icons -->
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
@@ -29,7 +29,7 @@
 
 <header id="header">
   <div class="container">
-    <div class="logo" data-action="dashboard" style="cursor: pointer;">SafeSend</div>
+    <div class="logo" data-action="dashboard" style="cursor: pointer;">Lunara</div>
     <nav class="nav" aria-label="Main navigation">
       <a href="#" class="nav-link active" data-action="dashboard">Dashboard</a>
       <a href="#" class="nav-link" data-action="projects">Projects <span class="nav-badge">7</span></a>
@@ -911,7 +911,7 @@ function updateToastPositions() {
 // Enhanced Dashboard with PostgreSQL Integration
 document.addEventListener('DOMContentLoaded', async function() {
     // Authentication check - redirect if not logged in
-    if (!window.SafeSendAPI || !window.SafeSendAPI.isAuthenticated()) {
+    if (!window.LunaraAPI || !window.LunaraAPI.isAuthenticated()) {
         window.location.href = 'signin.html';
         return;
     }
@@ -932,7 +932,7 @@ async function initializeDashboard() {
         showLoadingState();
 
         // Fetch real data from PostgreSQL-backed API
-        const dashboardData = await window.SafeSendAPI.refreshDashboardData();
+        const dashboardData = await window.LunaraAPI.refreshDashboardData();
 
         // Update all dashboard components with real data
         updateDashboardStats(dashboardData.stats);
@@ -1002,7 +1002,7 @@ function updateProjectsList(projects) {
 }
 
 function updateUserInfo() {
-    const user = window.SafeSendAPI.getCurrentUser();
+    const user = window.LunaraAPI.getCurrentUser();
     if (user) {
         // Update user display elements
         const userNameElement = document.querySelector('[data-user-name]');
@@ -1019,7 +1019,7 @@ function setupAutoRefresh() {
     // Set up real-time updates every 30 seconds
     window.DashboardAutoRefresh.start(async () => {
         try {
-            const dashboardData = await window.SafeSendAPI.refreshDashboardData();
+            const dashboardData = await window.LunaraAPI.refreshDashboardData();
             updateDashboardStats(dashboardData.stats);
             updateProjectsList(dashboardData.projects);
         } catch (error) {
@@ -1053,7 +1053,7 @@ function setupProjectCreation() {
                 submitButton.textContent = 'Creating Project...';
 
                 // Create project in PostgreSQL
-                const newProject = await window.SafeSendAPI.createProject(projectData);
+                const newProject = await window.LunaraAPI.createProject(projectData);
 
                 // Show success message
                 showToast('Project created successfully!', 'success');
@@ -1105,7 +1105,7 @@ function hideLoadingState() {
 
 // Enhanced logout function
 function handleLogout() {
-    window.SafeSendAPI.logout();
+    window.LunaraAPI.logout();
 }
 
 // Update logout button to use the API

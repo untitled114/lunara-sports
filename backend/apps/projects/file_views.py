@@ -1,5 +1,5 @@
 """
-File upload views for SafeSend projects.
+File upload views for Lunara projects.
 Handles file uploads with PostgreSQL storage integration.
 """
 
