@@ -1,5 +1,5 @@
 """
-Production settings for SafeSend project.
+Production settings for Lunara project.
 Azure deployment with PostgreSQL database.
 """
 
@@ -70,7 +70,9 @@ CSRF_COOKIE_HTTPONLY = True
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
-    "https://wonderful-grass-03e5ee00f.1.azurestaticapps.net",  # Current Static Web App
+    "https://wonderful-grass-03e5ee00f.1.azurestaticapps.net",  # Static Web App
+    "https://lunara-app.com",  # Custom domain
+    "https://www.lunara-app.com",  # Custom domain with www
     "http://lunara-app-backend.eastus.azurecontainer.io:8000",  # Backend container
 ]
 
@@ -88,7 +90,7 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'WARNING',
         },
-        'safesend': {
+        'lunara': {
             'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
@@ -103,7 +105,7 @@ EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@safesend.com')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@lunara-app.com')
 
 # Override JWT signing key from environment
 SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
