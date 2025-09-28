@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SafeSend - User Profile</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<!-- Favicon and Icons -->
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<meta name="theme-color" content="#6366f1">
 
 <!-- Essential Meta Tags for Security -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://images.unsplash.com;">
@@ -528,27 +533,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Logo click handler
-  document.querySelector('.logo')?.addEventListener('click', () => {
-    window.location.href = 'dashboard.html';
-  });
+  // Logo click handler removed - already handled by data-action="dashboard" in navigation.js
 
-  // Setup navigation links
-  document.querySelectorAll('.nav-link').forEach(link => {
-    if (link.getAttribute('href').startsWith('#')) return; // Skip anchor links
-
-    link.addEventListener('click', (e) => {
-      const href = link.getAttribute('href');
-
-      if (href === 'projects.html' || href === 'payments.html' || href === 'messages.html') {
-        e.preventDefault();
-        showToast('Loading page...', 'info');
-        setTimeout(() => {
-          window.location.href = href;
-        }, 500);
-      }
-    });
-  });
+  // Navigation links removed - already handled by data-action attributes in navigation.js
 
   // Add toast notification function
   function showToast(message, type = 'info') {
@@ -604,12 +591,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
       e.preventDefault();
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) {
-        target.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        });
+      const href = this.getAttribute('href');
+      if (!href || href === '#' || href.length <= 1) return;
+
+      try {
+        const target = document.querySelector(href);
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      } catch (error) {
+        console.error('Invalid selector:', href, error);
       }
     });
   });

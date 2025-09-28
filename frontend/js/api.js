@@ -2,11 +2,17 @@
  * api.js - Enhanced API Integration Module for SafeSend
  * Handles all API communication with PostgreSQL-backed Django backend
  * Provides real-time data persistence and seamless frontend-backend integration
+ * Updated: Fixed process.env browser compatibility issue + logout flow
  */
 
 class SafeSendAPI {
   constructor() {
-    this.baseURL = process.env.NODE_ENV === 'production'
+    // Detect environment based on hostname
+    const isProduction = window.location.hostname !== 'localhost' &&
+                        window.location.hostname !== '127.0.0.1' &&
+                        !window.location.hostname.includes('192.168');
+
+    this.baseURL = isProduction
       ? 'https://lunara-app-backend.azurecontainer.io/api'  // Production backend URL
       : '/api';  // Local development
     this.tokens = {
@@ -183,9 +189,15 @@ class SafeSendAPI {
       }
     } catch (error) {
       console.error('Logout error:', error);
+      // Continue with logout even if API call fails
     } finally {
       this.clearTokens();
-      window.location.href = '/signin.html';
+      // Use Firefox-compatible navigation
+      if (window.SafeSendNavigate) {
+        window.SafeSendNavigate('index.html');
+      } else {
+        window.location.href = 'index.html';
+      }
     }
   }
 
@@ -414,6 +426,82 @@ class SafeSendAPI {
     }
   }
 
+  // ===== PAYMENT METHODS =====
+
+  async getEscrowAccounts() {
+    const response = await this.apiRequest('/payments/escrow/');
+    return response.json();
+  }
+
+  async getTransactions() {
+    const response = await this.apiRequest('/payments/transactions/');
+    return response.json();
+  }
+
+  async createTransaction(transactionData) {
+    const response = await this.apiRequest('/payments/transactions/', {
+      method: 'POST',
+      body: JSON.stringify(transactionData)
+    });
+    return response.json();
+  }
+
+  async getPaymentMethods() {
+    const response = await this.apiRequest('/payments/payment-methods/');
+    return response.json();
+  }
+
+  async addPaymentMethod(paymentMethodData) {
+    const response = await this.apiRequest('/payments/payment-methods/', {
+      method: 'POST',
+      body: JSON.stringify(paymentMethodData)
+    });
+    return response.json();
+  }
+
+  async removePaymentMethod(paymentMethodId) {
+    const response = await this.apiRequest(`/payments/payment-methods/${paymentMethodId}/`, {
+      method: 'DELETE'
+    });
+    return response.ok;
+  }
+
+  async depositFunds(projectId, amount, paymentMethodId) {
+    const response = await this.apiRequest(`/payments/projects/${projectId}/deposit/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        amount: amount,
+        payment_method_id: paymentMethodId
+      })
+    });
+    return response.json();
+  }
+
+  async releaseMilestonePayment(projectId, milestoneId) {
+    const response = await this.apiRequest(`/payments/projects/${projectId}/milestones/${milestoneId}/release/`, {
+      method: 'POST'
+    });
+    return response.json();
+  }
+
+  async getPaymentDashboard() {
+    const response = await this.apiRequest('/payments/dashboard/');
+    return response.json();
+  }
+
+  async getDisputes() {
+    const response = await this.apiRequest('/payments/disputes/');
+    return response.json();
+  }
+
+  async createDispute(disputeData) {
+    const response = await this.apiRequest('/payments/disputes/', {
+      method: 'POST',
+      body: JSON.stringify(disputeData)
+    });
+    return response.json();
+  }
+
   // ===== FILE UPLOAD METHODS =====
 
   async uploadProjectFile(projectId, file) {
@@ -450,7 +538,12 @@ window.SafeSendAPI = new SafeSendAPI();
 // Enhanced authentication check for protected pages
 function checkAuthentication() {
   if (!window.SafeSendAPI.isAuthenticated()) {
-    window.location.href = '/signin.html';
+    // Use Firefox-compatible navigation
+    if (window.SafeSendNavigate) {
+      window.SafeSendNavigate('signin.html');
+    } else {
+      window.location.href = '/signin.html';
+    }
     return false;
   }
   return true;
@@ -461,40 +554,143 @@ function handleAPIError(error, context = 'API operation') {
   console.error(`${context} failed:`, error);
 
   if (error.message.includes('401')) {
-    showToast('Session expired. Please login again.', 'error');
+    showNotification('Session expired. Please login again.', 'error');
     window.SafeSendAPI.logout();
   } else if (error.message.includes('403')) {
-    showToast('Access denied. You don\'t have permission for this action.', 'error');
+    showNotification('Access denied. You don\'t have permission for this action.', 'error');
   } else if (error.message.includes('404')) {
-    showToast('Resource not found.', 'error');
+    showNotification('Resource not found.', 'error');
   } else if (error.message.includes('500')) {
-    showToast('Server error. Please try again later.', 'error');
+    showNotification('Server error. Please try again later.', 'error');
+  } else if (error.message.includes('Network')) {
+    showNotification('Network error. Please check your connection.', 'error');
   } else {
-    showToast(`${context} failed: ${error.message}`, 'error');
+    showNotification(`${context} failed: ${error.message}`, 'error');
   }
 }
 
-// Auto-refresh functionality for real-time updates
-class DashboardAutoRefresh {
+// Enhanced notification system
+function showNotification(message, type = 'info', duration = 5000) {
+  // Remove existing notifications
+  const existingNotifications = document.querySelectorAll('.notification');
+  existingNotifications.forEach(notification => notification.remove());
+
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  notification.innerHTML = `
+    <div class="notification-content">
+      <span class="notification-message">${message}</span>
+      <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+    </div>
+  `;
+
+  // Add styles if not already present
+  if (!document.getElementById('notification-styles')) {
+    const styles = document.createElement('style');
+    styles.id = 'notification-styles';
+    styles.innerHTML = `
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        min-width: 300px;
+        max-width: 500px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInRight 0.3s ease-out;
+      }
+      .notification-success { background-color: #10b981; }
+      .notification-error { background-color: #ef4444; }
+      .notification-warning { background-color: #f59e0b; }
+      .notification-info { background-color: #3b82f6; }
+      .notification-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .notification-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 0;
+        margin-left: 10px;
+      }
+      @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(styles);
+  }
+
+  // Add to page
+  document.body.appendChild(notification);
+
+  // Auto-remove after duration
+  if (duration > 0) {
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+        setTimeout(() => notification.remove(), 300);
+      }
+    }, duration);
+  }
+}
+
+// Backward compatibility
+function showToast(message, type, duration) {
+  showNotification(message, type, duration);
+}
+
+// Enhanced real-time update system
+class RealTimeUpdates {
   constructor(intervalMs = 30000) {
     this.interval = intervalMs;
     this.intervalId = null;
     this.isActive = false;
+    this.callbacks = new Map();
+    this.lastUpdateTimes = new Map();
+    this.retryCount = 0;
+    this.maxRetries = 3;
   }
 
-  start(callback) {
+  // Register a callback for specific data updates
+  subscribe(key, callback, options = {}) {
+    this.callbacks.set(key, {
+      callback,
+      interval: options.interval || this.interval,
+      lastRun: 0,
+      errorCount: 0
+    });
+  }
+
+  // Unregister a callback
+  unsubscribe(key) {
+    this.callbacks.delete(key);
+  }
+
+  // Start real-time updates
+  start() {
     if (this.isActive) return;
 
     this.isActive = true;
     this.intervalId = setInterval(async () => {
-      try {
-        await callback();
-      } catch (error) {
-        console.error('Auto-refresh error:', error);
-      }
-    }, this.interval);
+      await this.executeCallbacks();
+    }, 5000); // Check every 5 seconds, but respect individual intervals
+
+    // Initial execution
+    this.executeCallbacks();
   }
 
+  // Stop real-time updates
   stop() {
     if (this.intervalId) {
       clearInterval(this.intervalId);
@@ -502,7 +698,140 @@ class DashboardAutoRefresh {
       this.isActive = false;
     }
   }
+
+  // Execute all registered callbacks based on their intervals
+  async executeCallbacks() {
+    const now = Date.now();
+
+    for (const [key, config] of this.callbacks.entries()) {
+      const timeSinceLastRun = now - config.lastRun;
+
+      if (timeSinceLastRun >= config.interval) {
+        try {
+          await config.callback();
+          config.lastRun = now;
+          config.errorCount = 0;
+          this.retryCount = 0;
+        } catch (error) {
+          config.errorCount++;
+          console.error(`Real-time update error for ${key}:`, error);
+
+          // Stop retrying if too many errors
+          if (config.errorCount >= this.maxRetries) {
+            console.warn(`Stopping real-time updates for ${key} due to repeated errors`);
+            this.unsubscribe(key);
+          }
+        }
+      }
+    }
+  }
+
+  // Trigger immediate update for specific key
+  async triggerUpdate(key) {
+    const config = this.callbacks.get(key);
+    if (config) {
+      try {
+        await config.callback();
+        config.lastRun = Date.now();
+        config.errorCount = 0;
+      } catch (error) {
+        console.error(`Manual update error for ${key}:`, error);
+        throw error;
+      }
+    }
+  }
+
+  // Check if updates are active
+  isRunning() {
+    return this.isActive;
+  }
+
+  // Get status of all subscriptions
+  getStatus() {
+    const status = {};
+    for (const [key, config] of this.callbacks.entries()) {
+      status[key] = {
+        lastRun: config.lastRun,
+        errorCount: config.errorCount,
+        interval: config.interval
+      };
+    }
+    return status;
+  }
 }
 
-// Global auto-refresh instance
+// Global real-time updates instance
+window.RealTimeUpdates = new RealTimeUpdates();
+
+// Backward compatibility
+class DashboardAutoRefresh {
+  constructor(intervalMs = 30000) {
+    this.interval = intervalMs;
+  }
+
+  start(callback) {
+    window.RealTimeUpdates.subscribe('dashboard', callback, { interval: this.interval });
+    window.RealTimeUpdates.start();
+  }
+
+  stop() {
+    window.RealTimeUpdates.unsubscribe('dashboard');
+  }
+}
+
+// Global auto-refresh instance for backward compatibility
 window.DashboardAutoRefresh = new DashboardAutoRefresh();
+
+// Enhanced data synchronization utilities
+class DataSync {
+  constructor() {
+    this.cache = new Map();
+    this.cacheTimestamps = new Map();
+    this.cacheTTL = 60000; // 1 minute cache TTL
+  }
+
+  // Get data with caching
+  async getData(key, fetchFunction, forceRefresh = false) {
+    const now = Date.now();
+    const cached = this.cache.get(key);
+    const timestamp = this.cacheTimestamps.get(key);
+
+    // Return cached data if valid and not forcing refresh
+    if (!forceRefresh && cached && timestamp && (now - timestamp) < this.cacheTTL) {
+      return cached;
+    }
+
+    try {
+      const data = await fetchFunction();
+      this.cache.set(key, data);
+      this.cacheTimestamps.set(key, now);
+      return data;
+    } catch (error) {
+      // Return stale data if available
+      if (cached) {
+        console.warn(`Using stale data for ${key} due to fetch error:`, error);
+        return cached;
+      }
+      throw error;
+    }
+  }
+
+  // Clear cache for specific key or all
+  clearCache(key = null) {
+    if (key) {
+      this.cache.delete(key);
+      this.cacheTimestamps.delete(key);
+    } else {
+      this.cache.clear();
+      this.cacheTimestamps.clear();
+    }
+  }
+
+  // Set cache TTL
+  setCacheTTL(ttl) {
+    this.cacheTTL = ttl;
+  }
+}
+
+// Global data sync instance
+window.DataSync = new DataSync();

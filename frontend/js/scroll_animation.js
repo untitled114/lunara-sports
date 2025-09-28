@@ -15,17 +15,28 @@ function initSmoothScroll() {
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
       e.preventDefault();
-      
+
       const targetId = this.getAttribute('href');
-      const target = document.querySelector(targetId);
-      
-      if (target) {
-        target.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      } else {
-        console.warn(`scroll_animations.js: Target not found - ${targetId}`);
+
+      // Skip empty hash or invalid selectors
+      if (!targetId || targetId === '#' || targetId.length <= 1) {
+        console.warn(`scroll_animations.js: Invalid or empty target - ${targetId}`);
+        return;
+      }
+
+      try {
+        const target = document.querySelector(targetId);
+
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        } else {
+          console.warn(`scroll_animations.js: Target not found - ${targetId}`);
+        }
+      } catch (error) {
+        console.error(`scroll_animations.js: Invalid selector - ${targetId}`, error);
       }
     });
   });

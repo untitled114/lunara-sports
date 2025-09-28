@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sign In - SafeSend</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<!-- Favicon and Icons -->
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<meta name="theme-color" content="#6366f1">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/mobile-nav.css">
@@ -85,7 +90,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Check if user is already authenticated
     if (window.SafeSendAPI.isAuthenticated()) {
-        window.location.href = '/dashboard.html';
+        window.location.href = 'dashboard.html';
         return;
     }
 
@@ -112,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Redirect to dashboard after successful login
             setTimeout(() => {
-                window.location.href = '/dashboard.html';
+                window.location.href = 'dashboard.html';
             }, 1000);
 
         } catch (error) {

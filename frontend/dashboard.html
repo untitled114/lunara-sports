@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SafeSend - Dashboard</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<!-- Favicon and Icons -->
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<meta name="theme-color" content="#6366f1">
 
 <!-- Essential Meta Tags for Security -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://images.unsplash.com;">
@@ -527,10 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.alert-banner').style.display = 'none';
   });
 
-  // Logo click handler
-  document.querySelector('.logo')?.addEventListener('click', () => {
-    window.location.href = 'dashboard.html';
-  });
+  // Logo click handler removed - handled by data-action="dashboard" in navigation.js
 
   // Update current time every minute
   updateCurrentTime();
@@ -636,33 +638,7 @@ function setupCardInteractions() {
 
 // Setup navigation between pages
 function setupNavigation() {
-  // Navigation links
-  document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', (e) => {
-      const href = link.getAttribute('href');
-
-      if (href === 'projects.html') {
-        e.preventDefault();
-        showToast('Loading projects page...', 'info');
-        setTimeout(() => {
-          window.location.href = 'projects.html';
-        }, 500);
-      } else if (href === 'payments.html') {
-        e.preventDefault();
-        showToast('Loading payments page...', 'info');
-        setTimeout(() => {
-          window.location.href = 'payments.html';
-        }, 500);
-      } else if (href === 'messages.html') {
-        e.preventDefault();
-        showToast('Loading messages page...', 'info');
-        setTimeout(() => {
-          window.location.href = 'messages.html';
-        }, 500);
-      }
-      // Let dashboard.html and other links work normally without preventDefault
-    });
-  });
+  // Navigation links removed - handled by data-action attributes in navigation.js
 
   // Alert banner actions
   document.querySelector('.alert-action')?.addEventListener('click', () => {
@@ -935,7 +911,8 @@ function updateToastPositions() {
 // Enhanced Dashboard with PostgreSQL Integration
 document.addEventListener('DOMContentLoaded', async function() {
     // Authentication check - redirect if not logged in
-    if (!checkAuthentication()) {
+    if (!window.SafeSendAPI || !window.SafeSendAPI.isAuthenticated()) {
+        window.location.href = 'signin.html';
         return;
     }
 

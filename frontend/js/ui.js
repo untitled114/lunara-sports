@@ -211,10 +211,20 @@
      Updated with your specific sections
      ------------------------- */
   function initCTAButtons() {
+    // Only attach listeners to scroll actions, not navigation actions
+    const scrollActions = ['start-project', 'how-it-works', 'start-freelancing', 'hire-talent'];
+
     document.querySelectorAll('[data-action]').forEach(el => {
+      const action = el.dataset.action && el.dataset.action.trim();
+
+      // Skip if not a scroll action (let navigation.js handle navigation)
+      if (!scrollActions.includes(action) && !action?.startsWith('#')) {
+        return;
+      }
+
+      // Only attach listener for scroll actions
       el.addEventListener('click', (e) => {
         e.preventDefault();
-        const action = el.dataset.action && el.dataset.action.trim();
         
         switch (action) {
           case 'start-project':

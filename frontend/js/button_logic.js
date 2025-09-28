@@ -20,7 +20,12 @@
   function navigate(url) {
     try {
       if (url && typeof url === 'string') {
-        window.location.href = url;
+        // Use Firefox-compatible navigation helper
+        if (window.SafeSendNavigate) {
+          window.SafeSendNavigate(url);
+        } else {
+          window.location.href = url;
+        }
       } else {
         console.error('button_logic.js: Invalid URL for navigation:', url);
       }
@@ -118,7 +123,8 @@
           return;
         }
 
-        // Add visual feedback
+        // Only handle visual feedback, don't prevent default
+        // (let navigation.js handle the actual navigation)
         addButtonFeedback(button);
 
         // Handle the action

@@ -125,6 +125,7 @@ STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Additional static files directories
 STATICFILES_DIRS = [
+    BASE_DIR / 'static',  # Backend static files (includes favicons)
     BASE_DIR.parent / 'frontend' / 'css',
     BASE_DIR.parent / 'frontend' / 'js',
     BASE_DIR.parent / 'css',

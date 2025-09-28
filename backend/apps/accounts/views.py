@@ -139,7 +139,7 @@ def check_username_availability(request):
 
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.AllowAny])  # Allow logout without authentication
 def logout_view(request):
     """
     Logout user by blacklisting refresh token.
@@ -150,9 +150,12 @@ def logout_view(request):
         if refresh_token:
             token = RefreshToken(refresh_token)
             token.blacklist()
-        return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
+            return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': 'No token provided, logout successful'}, status=status.HTTP_200_OK)
     except Exception as e:
-        return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+        # Even if token blacklisting fails, consider logout successful on frontend
+        return Response({'message': 'Logout completed'}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

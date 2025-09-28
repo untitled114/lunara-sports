@@ -535,7 +535,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Intersection observer for animations
-const observerOptions = {
+const userProfileObserverOptions = {
   threshold: 0.1,
   rootMargin: '0px 0px -100px 0px'
 };
@@ -546,7 +546,7 @@ const observer = new IntersectionObserver((entries) => {
       entry.target.style.animationPlayState = 'running';
     }
   });
-}, observerOptions);
+}, userProfileObserverOptions);
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {

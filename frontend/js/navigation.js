@@ -3,8 +3,35 @@
  * Handles page transitions and navigation for the entire application
  */
 
+// Global navigation helper with Firefox compatibility
+window.SafeSendNavigate = (function() {
+    let isNavigating = false;
+
+    return function(page) {
+        // Prevent multiple rapid navigation calls
+        if (isNavigating) {
+            console.log('Navigation already in progress, ignoring');
+            return;
+        }
+
+        isNavigating = true;
+        console.log('Navigating to:', page);
+
+        // Firefox-specific: Use delay to prevent NS_BINDING_ABORTED
+        const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+        if (isFirefox) {
+            setTimeout(() => {
+                window.location.href = page;
+            }, 100); // 100ms delay for Firefox
+        } else {
+            window.location.href = page;
+        }
+    };
+})();
+
 class SafeSendNavigation {
     constructor() {
+        this.isNavigating = false;
         this.init();
     }
 
@@ -29,6 +56,9 @@ class SafeSendNavigation {
             const link = e.target.closest('a[href]');
             if (!link) return;
 
+            // Skip if this link has a data-action (already handled by first listener)
+            if (link.hasAttribute('data-action')) return;
+
             const href = link.getAttribute('href');
 
             // Skip if it's a hash link for same page
@@ -44,6 +74,7 @@ class SafeSendNavigation {
 
     handleAction(action, event, element) {
         event.preventDefault();
+        event.stopPropagation(); // Prevent other listeners from firing
 
         switch (action) {
             case 'sign-in':
@@ -142,7 +173,8 @@ class SafeSendNavigation {
     }
 
     navigateToPage(page) {
-        window.location.href = page;
+        // Use global navigation helper
+        window.SafeSendNavigate(page);
     }
 
     checkAuthAndNavigate(page) {
@@ -174,9 +206,22 @@ class SafeSendNavigation {
         if (window.SafeSendAPI) {
             window.SafeSendAPI.logout().then(() => {
                 this.showToast('Logged out successfully', 'success');
+                // Clear any cached data
+                if (window.DataSync) {
+                    window.DataSync.clearCache();
+                }
+                // Stop real-time updates
+                if (window.RealTimeUpdates) {
+                    window.RealTimeUpdates.stop();
+                }
                 this.navigateToPage('index.html');
-            }).catch(() => {
+            }).catch((error) => {
+                console.error('Logout error:', error);
                 this.showToast('Logout failed', 'error');
+                // Force redirect even if logout API fails
+                setTimeout(() => {
+                    this.navigateToPage('index.html');
+                }, 1000);
             });
         } else {
             this.navigateToPage('index.html');
