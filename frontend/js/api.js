@@ -13,7 +13,7 @@ class LunaraAPI {
                         !window.location.hostname.includes('192.168');
 
     this.baseURL = isProduction
-      ? 'https://lunara-app-backend.azurecontainer.io/api'  // Production backend URL
+      ? 'http://lunara-app-backend.eastus.azurecontainer.io:8000/api'  // Production backend URL
       : '/api';  // Local development
     this.tokens = {
       access: localStorage.getItem('lunara_access_token'),
