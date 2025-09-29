@@ -6,13 +6,58 @@
       "statusCode": 200
     },
     {
+      "route": "/index.html",
+      "serve": "/index.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/signin.html",
+      "serve": "/signin.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/signup.html",
+      "serve": "/signup.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/dashboard.html",
+      "serve": "/dashboard.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/projects.html",
+      "serve": "/projects.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/user_profile.html",
+      "serve": "/user_profile.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/messages.html",
+      "serve": "/messages.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/payments.html",
+      "serve": "/payments.html",
+      "statusCode": 200
+    },
+    {
       "route": "/api/*",
       "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/*",
+      "serve": "/index.html",
+      "statusCode": 200
     }
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/css/*", "/js/*", "/images/*", "/favicon.ico", "/apple-touch-icon.png", "/favicon-*.png", "*.{css,js,jpg,png,gif,ico,svg,html}"]
+    "exclude": ["/css/*", "/js/*", "/images/*", "*.{css,js,jpg,png,gif,ico,svg}"]
   },
   "mimeTypes": {
     ".json": "application/json"
