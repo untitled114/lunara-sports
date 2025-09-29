@@ -16,8 +16,9 @@
       "/css/*",
       "/js/*",
       "/images/*",
+      "/fonts/*",
       "/favicon.ico",
-      "*.{jpg,png,gif,svg,woff,woff2,ttf,eot}"
+      "*.{jpg,jpeg,png,gif,svg,webp,woff,woff2,ttf,eot,mp4,json}"
     ]
   },
   "responseOverrides": {
@@ -37,11 +38,22 @@
   "globalHeaders": {
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "strict-origin-when-cross-origin"
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.lunara-app.com; frame-ancestors 'none';",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload"
   },
   "mimeTypes": {
     ".woff2": "font/woff2",
     ".woff": "font/woff",
-    ".ttf": "font/ttf"
-  }
+    ".ttf": "font/ttf",
+    ".eot": "application/vnd.ms-fontobject",
+    ".svg": "image/svg+xml"
+  },
+  "redirects": [
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "statusCode": 301
+    }
+  ]
 }
