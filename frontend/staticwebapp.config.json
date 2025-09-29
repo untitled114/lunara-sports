@@ -1,6 +1,46 @@
 {
   "routes": [
     {
+      "route": "/",
+      "serve": "/index.html"
+    },
+    {
+      "route": "/index.html",
+      "serve": "/index.html"
+    },
+    {
+      "route": "/dashboard.html",
+      "serve": "/dashboard.html"
+    },
+    {
+      "route": "/signin.html",
+      "serve": "/signin.html"
+    },
+    {
+      "route": "/signup.html",
+      "serve": "/signup.html"
+    },
+    {
+      "route": "/projects.html",
+      "serve": "/projects.html"
+    },
+    {
+      "route": "/messages.html",
+      "serve": "/messages.html"
+    },
+    {
+      "route": "/user_profile.html",
+      "serve": "/user_profile.html"
+    },
+    {
+      "route": "/payments.html",
+      "serve": "/payments.html"
+    },
+    {
+      "route": "/support.html",
+      "serve": "/support.html"
+    },
+    {
       "route": "/api/*",
       "allowedRoles": ["anonymous"]
     }
@@ -13,7 +53,7 @@
       "/images/*",
       "/assets/*",
       "/favicon.*",
-      "*.{css,js,json,jpg,jpeg,png,gif,ico,svg,webp,woff,woff2,ttf,eot,mp4}"
+      "*.{css,js,json,jpg,jpeg,png,gif,ico,svg,webp,woff,woff2,ttf,eot,mp4,html}"
     ]
   },
   "mimeTypes": {
