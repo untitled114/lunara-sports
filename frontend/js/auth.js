@@ -1,5 +1,5 @@
 /**
- * Authentication handlers for SafeSend
+ * Authentication handlers for Lunara
  * Handles sign-in, sign-up, and authentication flow
  */
 
