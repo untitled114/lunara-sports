@@ -8,7 +8,7 @@ on:
 env:
   RESOURCE_GROUP: lunara-app-rg
   REGISTRY_NAME: lunaraappregistry
-  CONTAINER_NAME: lunara-app-backend
+  CONTAINER_APP_NAME: lunara-backend  # Container Apps name (not Container Instance)
   IMAGE_NAME: lunara-backend
   STATIC_APP_LOCATION: ./frontend
 
@@ -33,25 +33,16 @@ jobs:
           docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest
 
-      - name: Deploy to Azure Container Instance
+      - name: Deploy to Azure Container Apps
         run: |
-          ACR_USERNAME=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query username -o tsv)
-          ACR_PASSWORD=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query passwords[0].value -o tsv)
           ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer -o tsv)
 
-          az container create \
+          # Update Container App with new image
+          az containerapp update \
+            --name ${{ env.CONTAINER_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.CONTAINER_NAME }} \
             --image $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest \
-            --os-type Linux \
-            --cpu 1 \
-            --memory 1 \
-            --registry-login-server $ACR_LOGIN_SERVER \
-            --registry-username $ACR_USERNAME \
-            --registry-password $ACR_PASSWORD \
-            --dns-name-label ${{ env.CONTAINER_NAME }} \
-            --ports 8000 \
-            --environment-variables \
+            --set-env-vars \
               SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
               DEBUG="False" \
               DB_NAME="${{ secrets.DB_NAME }}" \
@@ -59,17 +50,14 @@ jobs:
               DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
               DB_HOST="${{ secrets.DB_HOST }}" \
               DB_PORT="${{ secrets.DB_PORT }}" \
-              DJANGO_SETTINGS_MODULE="safesend.settings.production" \
-            --location eastus \
-            --restart-policy Always \
-            --no-wait
+              DJANGO_SETTINGS_MODULE="safesend.settings.production"
 
       - name: Verify backend
         run: |
           sleep 60
-          FQDN=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --query ipAddress.fqdn -o tsv)
-          echo "Backend URL: https://$FQDN:8000"
-          curl -f "https://$FQDN:8000/health/" || echo "⚠️ Health check failed"
+          FQDN=$(az containerapp show --name ${{ env.CONTAINER_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Backend URL: https://$FQDN"
+          curl -f "https://$FQDN/health/" || echo "⚠️ Health check failed"
 
   deploy-frontend:
     needs: deploy-backend

@@ -1,61 +1,37 @@
 {
   "routes": [
     {
-      "route": "/",
-      "serve": "/index.html",
-      "statusCode": 200
-    },
-    {
-      "route": "/index.html",
-      "serve": "/index.html",
-      "statusCode": 200
-    },
-    {
       "route": "/api/*",
       "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/signin.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/signup.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/dashboard.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/user_profile.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/projects.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/messages.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/*",
-      "serve": "/index.html",
-      "statusCode": 200
     }
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/css/*", "/js/*", "/images/*", "*.{css,js,jpg,png,gif,ico,svg}"]
+    "exclude": [
+      "/css/*",
+      "/js/*",
+      "/images/*",
+      "/assets/*",
+      "/favicon.*",
+      "*.{css,js,json,jpg,jpeg,png,gif,ico,svg,webp,woff,woff2,ttf,eot,mp4}"
+    ]
   },
   "mimeTypes": {
-    ".json": "application/json"
+    ".css": "text/css",
+    ".js": "application/javascript",
+    ".json": "application/json",
+    ".woff2": "font/woff2",
+    ".woff": "font/woff",
+    ".ttf": "font/ttf",
+    ".eot": "application/vnd.ms-fontobject",
+    ".svg": "image/svg+xml"
   },
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "X-XSS-Protection": "1; mode=block",
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: https://lunara-backend.gentlemoss-6a60b505.eastus.azurecontainerapps.io"
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss: https://lunara-backend.gentlemoss-6a60b505.eastus.azurecontainerapps.io; frame-ancestors 'none';"
   },
   "responseOverrides": {
     "401": {
@@ -67,11 +43,8 @@
       "statusCode": 302
     },
     "404": {
-      "serve": "/index.html",
+      "rewrite": "/index.html",
       "statusCode": 200
     }
-  },
-  "platform": {
-    "apiRuntime": "node:18"
   }
 }
