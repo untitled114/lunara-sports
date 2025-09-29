@@ -28,8 +28,9 @@ COPY . /app/
 # Create media and static directories
 RUN mkdir -p /app/media /app/staticfiles
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+# Copy and set up entrypoint script
+COPY entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
@@ -42,6 +43,9 @@ EXPOSE 8000
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health/ || exit 1
+
+# Set entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Run the application
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120", "safesend.wsgi:application"]
