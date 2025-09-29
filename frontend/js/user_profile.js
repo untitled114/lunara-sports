@@ -258,7 +258,7 @@ class UserProfileManager {
         amount: '+$1,400',
         description: 'Mobile Banking App - 50% milestone',
         date: 'Dec 8, 2024',
-        method: 'SafeSend Wallet'
+        method: 'Lunara Wallet'
       }
     ];
 

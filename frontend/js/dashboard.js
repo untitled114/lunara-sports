@@ -1,5 +1,5 @@
 /* ===================== DASHBOARD UTILITIES ===================== */
-/* Enhanced functionality for SafeSend Dashboard */
+/* Enhanced functionality for Lunara Dashboard */
 
 /* ===================== DATA MANAGEMENT ===================== */
 class DashboardData {
