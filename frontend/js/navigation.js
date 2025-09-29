@@ -367,16 +367,15 @@ class LunaraNavigation {
     }
 }
 
-// Initialize navigation when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.LunaraNavigation = new LunaraNavigation();
-});
-
-// Also initialize if the script loads after DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+// Initialize navigation when DOM is ready (prevent duplicate initialization)
+if (!window.LunaraNavigation) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!window.LunaraNavigation) {
+                window.LunaraNavigation = new LunaraNavigation();
+            }
+        });
+    } else {
         window.LunaraNavigation = new LunaraNavigation();
-    });
-} else {
-    window.LunaraNavigation = new LunaraNavigation();
+    }
 }

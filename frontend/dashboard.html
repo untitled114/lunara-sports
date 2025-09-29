@@ -910,9 +910,26 @@ function updateToastPositions() {
 <script>
 // Enhanced Dashboard with PostgreSQL Integration
 document.addEventListener('DOMContentLoaded', async function() {
+    // Wait for API to be fully loaded before checking authentication
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (!window.LunaraAPI && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+
     // Authentication check - redirect if not logged in
     if (!window.LunaraAPI || !window.LunaraAPI.isAuthenticated()) {
-        window.location.href = 'signin.html';
+        // Give the API one more moment to initialize from localStorage
+        setTimeout(() => {
+            if (!window.LunaraAPI || !window.LunaraAPI.isAuthenticated()) {
+                window.location.href = 'signin.html';
+            } else {
+                // API is ready now, initialize dashboard
+                initializeDashboard();
+            }
+        }, 200);
         return;
     }
 
