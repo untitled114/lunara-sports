@@ -1,0 +1,12 @@
+Frontend can’t reliably talk to backend
+
+Because the Azure Static Web App has no linked backend and
+your backend container is on a separate ACI instance.
+CORS issues, mixed content errors, or failed API calls.
+Deployment is fragmented
+Frontend and backend are on separate CI/CD pipelines, 
+so the frontend may point to an old backend URL if you redeploy the backend.
+
+Manual intervention required
+You are manually updating api.js or waiting for FQDNs, 
+which is tedious and error-prone.

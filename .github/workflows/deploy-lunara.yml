@@ -1,0 +1,89 @@
+name: Deploy Lunara App (Frontend + Backend)
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  RESOURCE_GROUP: lunara-app-rg
+  REGISTRY_NAME: lunaraappregistry
+  CONTAINER_NAME: lunara-app-backend
+  IMAGE_NAME: lunara-backend
+  STATIC_APP_LOCATION: ./frontend
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and push Docker image
+        run: |
+          az acr login --name ${{ env.REGISTRY_NAME }}
+          ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer -o tsv)
+          docker build -t $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }} ./backend/
+          docker tag $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }} $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest
+          docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest
+
+      - name: Deploy to Azure Container Instance
+        run: |
+          ACR_USERNAME=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query passwords[0].value -o tsv)
+          ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer -o tsv)
+
+          az container create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --image $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest \
+            --os-type Linux \
+            --cpu 1 \
+            --memory 1 \
+            --registry-login-server $ACR_LOGIN_SERVER \
+            --registry-username $ACR_USERNAME \
+            --registry-password $ACR_PASSWORD \
+            --dns-name-label ${{ env.CONTAINER_NAME }} \
+            --ports 8000 \
+            --environment-variables \
+              SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+              DEBUG="False" \
+              DB_NAME="${{ secrets.DB_NAME }}" \
+              DB_USER="${{ secrets.DB_USER }}" \
+              DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+              DB_HOST="${{ secrets.DB_HOST }}" \
+              DB_PORT="${{ secrets.DB_PORT }}" \
+              DJANGO_SETTINGS_MODULE="safesend.settings.production" \
+            --location eastus \
+            --restart-policy Always \
+            --no-wait
+
+      - name: Verify backend
+        run: |
+          sleep 60
+          FQDN=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME }} --query ipAddress.fqdn -o tsv)
+          echo "Backend URL: https://$FQDN:8000"
+          curl -f "https://$FQDN:8000/health/" || echo "⚠️ Health check failed"
+
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and Deploy Frontend
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "${{ env.STATIC_APP_LOCATION }}"
+          api_location: ""
+          output_location: ""
+          production_branch: "master"
