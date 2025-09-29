@@ -6,47 +6,13 @@
       "statusCode": 200
     },
     {
-      "route": "/index.html",
-      "serve": "/index.html",
-      "statusCode": 200
-    },
-    {
       "route": "/api/*",
       "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/signin.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/signup.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/dashboard.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/user_profile.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/projects.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/messages.html",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/*",
-      "serve": "/index.html",
-      "statusCode": 200
     }
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/css/*", "/js/*", "/images/*", "*.{css,js,jpg,png,gif,ico,svg}"]
+    "exclude": ["/css/*", "/js/*", "/images/*", "/favicon.ico", "/apple-touch-icon.png", "/favicon-*.png", "*.{css,js,jpg,png,gif,ico,svg,html}"]
   },
   "mimeTypes": {
     ".json": "application/json"
@@ -55,7 +21,8 @@
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "X-XSS-Protection": "1; mode=block",
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: https://lunara-backend.gentlemoss-6a60b505.eastus.azurecontainerapps.io"
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: https://lunara-backend.gentlemoss-6a60b505.eastus.azurecontainerapps.io",
+    "Cache-Control": "public, max-age=300, must-revalidate"
   },
   "responseOverrides": {
     "401": {
