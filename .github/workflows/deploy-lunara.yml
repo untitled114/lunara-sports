@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
 
 env:
-  RESOURCE_GROUP: lunara-app-rg
-  REGISTRY_NAME: lunaraappregistry
-  CONTAINER_APP_NAME: lunara-backend  # Container Apps name (not Container Instance)
+  RESOURCE_GROUP: lunara-production-rg
+  REGISTRY_NAME: lunararegistry
+  CONTAINER_APP_NAME: lunara-api  # NEW Container Apps name
   IMAGE_NAME: lunara-backend
   STATIC_APP_LOCATION: ./frontend
 
