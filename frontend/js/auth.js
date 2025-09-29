@@ -29,7 +29,7 @@ class AuthManager {
 
     checkAuthenticationStatus() {
         // Check if user is already authenticated
-        if (window.SafeSendAPI && window.SafeSendAPI.isAuthenticated()) {
+        if (window.LunaraAPI && window.LunaraAPI.isAuthenticated()) {
             const currentPage = window.location.pathname.split('/').pop();
 
             // Redirect authenticated users away from auth pages
@@ -66,7 +66,7 @@ class AuthManager {
 
         try {
             // Attempt login
-            const response = await window.SafeSendAPI.login(email, password);
+            const response = await window.LunaraAPI.login(email, password);
 
             // Success
             this.showSuccess('Welcome back! Redirecting to dashboard...');
@@ -120,7 +120,7 @@ class AuthManager {
 
         try {
             // Attempt registration
-            const response = await window.SafeSendAPI.register(formData);
+            const response = await window.LunaraAPI.register(formData);
 
             // Success
             this.showSuccess('Account created successfully! Redirecting to dashboard...');
@@ -209,8 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // Global function for logout (used by navigation)
 window.performLogout = async function() {
     try {
-        if (window.SafeSendAPI) {
-            await window.SafeSendAPI.logout();
+        if (window.LunaraAPI) {
+            await window.LunaraAPI.logout();
         }
         window.location.href = 'index.html';
     } catch (error) {
