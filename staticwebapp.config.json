@@ -7,16 +7,18 @@
     {
       "route": "/admin/*",
       "allowedRoles": ["administrator"]
-    },
-    {
-      "route": "/*",
-      "serve": "/index.html",
-      "statusCode": 200
     }
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/api/*", "*.{css,js,jpg,png,gif,ico,svg,woff,woff2,ttf,eot}"]
+    "exclude": [
+      "/api/*",
+      "/css/*",
+      "/js/*",
+      "/images/*",
+      "/favicon.ico",
+      "*.{jpg,png,gif,svg,woff,woff2,ttf,eot}"
+    ]
   },
   "responseOverrides": {
     "401": {
