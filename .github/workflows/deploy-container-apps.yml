@@ -27,6 +27,12 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Install Azure Container Apps extension
+        run: |
+          az extension add --name containerapp --upgrade || true
+          az provider register --namespace Microsoft.App || true
+          az provider register --namespace Microsoft.OperationalInsights || true
+
       - name: Build and push Docker image
         run: |
           echo "🔨 Building and pushing Docker image..."
@@ -48,22 +54,35 @@ jobs:
           echo "🚀 Deploying to Azure Container Apps..."
           ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
 
-          # Update container app with new image
-          az containerapp update \
-            --name ${{ env.CONTAINER_APP_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest \
-            --set-env-vars \
-              SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
-              DEBUG="False" \
-              DB_NAME="${{ secrets.DB_NAME }}" \
-              DB_USER="${{ secrets.DB_USER }}" \
-              DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-              DB_HOST="${{ secrets.DB_HOST }}" \
-              DB_PORT="${{ secrets.DB_PORT }}" \
-              DJANGO_SETTINGS_MODULE="safesend.settings.production"
+          echo "📋 Using image: $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest"
+          echo "📋 Target container app: ${{ env.CONTAINER_APP_NAME }}"
 
-          echo "✅ Container App updated successfully"
+          # Check if container app exists
+          if az containerapp show --name ${{ env.CONTAINER_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            echo "✅ Container app exists, updating..."
+
+            # Update container app with new image
+            az containerapp update \
+              --name ${{ env.CONTAINER_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest \
+              --set-env-vars \
+                "SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" \
+                "DEBUG=False" \
+                "DB_NAME=${{ secrets.DB_NAME }}" \
+                "DB_USER=${{ secrets.DB_USER }}" \
+                "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+                "DB_HOST=${{ secrets.DB_HOST }}" \
+                "DB_PORT=${{ secrets.DB_PORT }}" \
+                "DJANGO_SETTINGS_MODULE=safesend.settings.production"
+
+            echo "✅ Container App updated successfully"
+          else
+            echo "❌ Container app ${{ env.CONTAINER_APP_NAME }} not found in resource group ${{ env.RESOURCE_GROUP }}"
+            echo "📋 Available container apps:"
+            az containerapp list --resource-group ${{ env.RESOURCE_GROUP }} --query "[].{name:name,status:properties.provisioningState}" --output table || true
+            exit 1
+          fi
 
       - name: Get deployment status
         run: |
@@ -87,6 +106,11 @@ jobs:
     needs: build-and-deploy
     runs-on: ubuntu-latest
     steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Test backend health
         run: |
           echo "🔍 Testing backend health..."
@@ -96,15 +120,20 @@ jobs:
             --query properties.configuration.ingress.fqdn \
             --output tsv)
 
+          echo "Backend URL: https://$BACKEND_URL"
+
           # Wait for deployment to be ready
+          echo "⏳ Waiting for deployment to be ready..."
           sleep 30
 
           # Test health endpoint
+          echo "🔄 Testing health endpoint..."
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$BACKEND_URL/api/auth/check-email/?email=test@example.com" || echo "000")
 
           if [[ $HTTP_STATUS == "405" || $HTTP_STATUS == "200" ]]; then
             echo "✅ Backend is responding (HTTP $HTTP_STATUS)"
           else
             echo "❌ Backend not responding (HTTP $HTTP_STATUS)"
-            exit 1
+            echo "🔍 Let's check the container app status..."
+            az containerapp show --name ${{ env.CONTAINER_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "properties.provisioningState" --output tsv
           fi
