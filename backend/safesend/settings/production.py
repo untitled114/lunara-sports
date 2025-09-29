@@ -66,10 +66,10 @@ CSRF_COOKIE_HTTPONLY = True
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
-    "https://wonderful-grass-03e5ee00f.1.azurestaticapps.net",  # Static Web App
+    "https://orange-tree-0e991820f.1.azurestaticapps.net",  # CURRENT Static Web App
     "https://lunara-app.com",  # Custom domain
     "https://www.lunara-app.com",  # Custom domain with www
-    "http://lunara-app-backend.eastus.azurecontainer.io:8000",  # Backend container
+    "https://lunara-backend.gentlemoss-6a60b505.eastus.azurecontainerapps.io",  # CURRENT Backend container
 ]
 
 # Allow credentials for CORS

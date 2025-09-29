@@ -17,7 +17,7 @@ properties:
       corsPolicy:
         allowedOrigins:
         - "https://lunara-app.com"
-        - "https://wonderful-grass-03e5ee00f.1.azurestaticapps.net"
+        - "https://orange-tree-0e991820f.1.azurestaticapps.net"
         allowedMethods:
         - "GET"
         - "POST"
