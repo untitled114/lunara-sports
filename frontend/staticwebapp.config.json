@@ -14,19 +14,19 @@
     },
     {
       "route": "/dashboard.html",
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["anonymous"]
     },
     {
       "route": "/user_profile.html",
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["anonymous"]
     },
     {
       "route": "/projects.html",
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["anonymous"]
     },
     {
       "route": "/messages.html",
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["anonymous"]
     },
     {
       "route": "/*",
