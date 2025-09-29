@@ -1,0 +1,91 @@
+apiVersion: 2019-12-01
+location: eastus
+name: lunara-backend-ssl
+properties:
+  containers:
+  - name: nginx-ssl
+    properties:
+      image: nginx:alpine
+      ports:
+      - port: 80
+        protocol: TCP
+      - port: 443
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 0.5
+          memoryInGb: 0.5
+      volumeMounts:
+      - name: nginx-config
+        mountPath: /etc/nginx/nginx.conf
+        subPath: nginx.conf
+  - name: django-backend
+    properties:
+      image: lunaraappregistry.azurecr.io/lunara-backend:latest
+      ports:
+      - port: 8000
+        protocol: TCP
+      environmentVariables:
+      - name: SECRET_KEY
+        value: "RglSPABALP5hJ%w5CsM(E)a%nU)@7shorZ%9yxUSdugqD\\MRKP"
+      - name: DEBUG
+        value: "False"
+      - name: DB_NAME
+        value: "neondb"
+      - name: DB_USER
+        value: "neondb_owner"
+      - name: DB_PASSWORD
+        value: "npg_i8Po2sLuDUJl"
+      - name: DB_HOST
+        value: "ep-cold-night-a8z0ndqj-pooler.eastus2.azure.neon.tech"
+      - name: DB_PORT
+        value: "5432"
+      - name: DJANGO_SETTINGS_MODULE
+        value: "safesend.settings.production"
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGb: 1.5
+  imageRegistryCredentials:
+  - server: lunaraappregistry.azurecr.io
+    username: lunaraappregistry
+  osType: Linux
+  restartPolicy: Always
+  ipAddress:
+    type: Public
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+    dnsNameLabel: lunara-api
+  volumes:
+  - name: nginx-config
+    configMap:
+      items:
+        nginx.conf: |
+          events {
+              worker_connections 1024;
+          }
+          http {
+              upstream backend {
+                  server localhost:8000;
+              }
+              server {
+                  listen 80;
+                  server_name lunara-api.eastus.azurecontainer.io;
+                  location / {
+                      proxy_pass http://backend;
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                      add_header Access-Control-Allow-Origin "https://lunara-app.com";
+                      add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH";
+                      add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization";
+                      add_header Access-Control-Allow-Credentials "true";
+                  }
+              }
+          }
+tags: {}
+type: Microsoft.ContainerInstance/containerGroups
