@@ -21,8 +21,8 @@
     try {
       if (url && typeof url === 'string') {
         // Use Firefox-compatible navigation helper
-        if (window.SafeSendNavigate) {
-          window.SafeSendNavigate(url);
+        if (window.LunaraNavigate) {
+          window.LunaraNavigate(url);
         } else {
           window.location.href = url;
         }

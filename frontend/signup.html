@@ -95,11 +95,7 @@
 <script>
 // Enhanced Sign-up Form Handler with PostgreSQL Integration
 document.addEventListener('DOMContentLoaded', function() {
-    // Redirect to dashboard if already authenticated
-    if (window.LunaraAPI && window.LunaraAPI.isAuthenticated()) {
-        window.location.href = 'dashboard.html';
-        return;
-    }
+    // Note: Auth check is handled by navigation.js to prevent conflicts
 
     const signupForm = document.getElementById('signup-form');
     const submitButton = signupForm.querySelector('button[type="submit"]');
@@ -149,7 +145,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Redirect to dashboard after successful registration
             setTimeout(() => {
-                window.location.href = 'dashboard.html';
+                if (window.LunaraNavigate) {
+                    window.LunaraNavigate('dashboard.html');
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
             }, 1000);
 
         } catch (error) {

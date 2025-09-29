@@ -88,11 +88,7 @@
 <script src="js/button_logic.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if user is already authenticated
-    if (window.LunaraAPI.isAuthenticated()) {
-        window.location.href = 'dashboard.html';
-        return;
-    }
+    // Note: Auth check is handled by navigation.js to prevent conflicts
 
     const signinForm = document.getElementById('signin-form');
     const submitButton = signinForm.querySelector('button[type="submit"]');
@@ -117,7 +113,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Redirect to dashboard after successful login
             setTimeout(() => {
-                window.location.href = 'dashboard.html';
+                if (window.LunaraNavigate) {
+                    window.LunaraNavigate('dashboard.html');
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
             }, 1000);
 
         } catch (error) {
