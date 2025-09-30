@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#6366f1">
 
 <!-- Essential Meta Tags for Security -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://images.unsplash.com https://lunara-backend.gentlemoss-6a60b505.eastus.azurecontainerapps.io;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; connect-src 'self' https://images.unsplash.com https://lunara-backend.gentlemoss-6a60b505.eastus.azurecontainerapps.io;">
 <meta name="robots" content="noindex, nofollow">
 
 <!-- Fonts -->
@@ -22,6 +22,42 @@
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/dashboard.css">
 <link rel="stylesheet" href="/css/dashboard-authentic.css">
+<meta name="view-transition" content="same-origin">
+
+<!-- Turbo for SPA-like navigation -->
+<script type="module">
+  import hotwiredTurbo from 'https://cdn.skypack.dev/@hotwired/turbo';
+</script>
+
+<!-- View Transitions API styles -->
+<style>
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.3s;
+  }
+
+  ::view-transition-old(root) {
+    animation-name: fade-out;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: fade-in;
+  }
+
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>
 </head>
 <body>
 

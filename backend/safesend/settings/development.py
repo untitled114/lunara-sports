@@ -100,7 +100,12 @@ LOGGING = {
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Disable CSRF protection for development API endpoints
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8080',
+    'http://localhost:8080'
+]
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 
@@ -128,8 +133,6 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',  # Backend static files (includes favicons)
     BASE_DIR.parent / 'frontend' / 'css',
     BASE_DIR.parent / 'frontend' / 'js',
-    BASE_DIR.parent / 'css',
-    BASE_DIR.parent / 'js',
 ]
 
 # Media files (uploads)

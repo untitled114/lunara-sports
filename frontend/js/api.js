@@ -14,7 +14,7 @@ class LunaraAPI {
 
     this.baseURL = isProduction
       ? 'https://lunara-api.thankfulhill-c6015f7f.eastus.azurecontainerapps.io/api'  // NEW Production HTTPS backend URL
-      : '/api';  // Local development
+      : 'http://127.0.0.1:8000/api';  // Local development - Django backend
     this.tokens = {
       access: localStorage.getItem('lunara_access_token'),
       refresh: localStorage.getItem('lunara_refresh_token')

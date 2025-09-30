@@ -12,8 +12,9 @@
 <meta name="theme-color" content="#6366f1">
 
 <!-- Essential Meta Tags for Security -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://images.unsplash.com https://lunara-api.thankfulhill-c6015f7f.eastus.azurecontainerapps.io https://api.lunara-app.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://cdn.skypack.dev; connect-src 'self' http://127.0.0.1:8000 http://localhost:8000 https://images.unsplash.com https://lunara-api.thankfulhill-c6015f7f.eastus.azurecontainerapps.io https://api.lunara-app.com;">
 <meta name="robots" content="noindex, nofollow">
+<meta name="view-transition" content="same-origin">
 
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -22,6 +23,36 @@
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/dashboard.css">
 <link rel="stylesheet" href="/css/dashboard-authentic.css">
+
+<!-- Turbo for SPA-like navigation -->
+<script type="module">
+  import hotwiredTurbo from 'https://cdn.skypack.dev/@hotwired/turbo';
+</script>
+
+<!-- View Transitions API styles -->
+<style>
+  @view-transition {
+    navigation: auto;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.3s;
+  }
+  ::view-transition-old(root) {
+    animation-name: fade-out;
+  }
+  ::view-transition-new(root) {
+    animation-name: fade-in;
+  }
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>
 </head>
 <body>
 
@@ -32,9 +63,9 @@
     <div class="logo" data-action="dashboard" style="cursor: pointer;">Lunara</div>
     <nav class="nav" aria-label="Main navigation">
       <a href="#" class="nav-link active" data-action="dashboard">Dashboard</a>
-      <a href="#" class="nav-link" data-action="projects">Projects <span class="nav-badge">7</span></a>
-      <a href="#" class="nav-link" data-action="payments">Payments <span class="nav-badge urgent">2</span></a>
-      <a href="#" class="nav-link" data-action="messages">Messages <span class="nav-badge">12</span></a>
+      <a href="#" class="nav-link" data-action="projects">Projects <span class="nav-badge" id="projects-badge" style="display: none;">0</span></a>
+      <a href="#" class="nav-link" data-action="payments">Payments <span class="nav-badge urgent" id="payments-badge" style="display: none;">0</span></a>
+      <a href="#" class="nav-link" data-action="messages">Messages <span class="nav-badge" id="messages-badge" style="display: none;">0</span></a>
     </nav>
     <div class="header-buttons">
       <button class="btn-icon notification-btn urgent-pulse" title="Urgent notifications" aria-label="5 urgent notifications" data-action="notifications">
@@ -42,10 +73,8 @@
         <span class="notification-badge urgent">5</span>
       </button>
       <a href="#" class="profile-mini" aria-label="View profile" data-action="profile">
-        <!-- PLACEHOLDER: Replace with actual user avatar from secure storage -->
-        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="Jordan Chen - Freelance Developer" loading="lazy" crossorigin="anonymous">
-        <!-- PLACEHOLDER: Replace with actual user name from session -->
-        <span data-user-name>Jordan</span>
+        <img id="user-avatar-header" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="User Avatar" loading="lazy" crossorigin="anonymous">
+        <span id="user-name-header" data-user-name>Loading...</span>
       </a>
       <a href="#" class="btn btn-secondary" data-action="logout">Logout</a>
     </div>
@@ -69,32 +98,125 @@
   </div>
 </div>
 
-<main class="dashboard-main">
   <!-- Hero Welcome Section -->
   <section class="dashboard-hero">
     <div class="container">
-      <div class="welcome-card">
-        <div class="welcome-content">
-          <!-- PLACEHOLDER: Replace with actual user first name from session -->
-          <h1>Thursday grind, <span data-user-firstname>Jordan</span>! ⚡</h1>
-          <p>You've got 3 client check-ins today and a milestone deadline tonight</p>
-          <!-- PLACEHOLDER: Add last login time from user session -->
-          <span class="last-login">Last active: <time datetime="2024-12-15T14:23:00">2 hours ago from Coffee Bean WiFi</time></span>
+            
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunara - Dashboard</title>
+<!-- Favicon and Icons -->
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<meta name="theme-color" content="#6366f1">
+
+<!-- Essential Meta Tags for Security -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; connect-src 'self' http://127.0.0.1:8000 http://localhost:8000 https://images.unsplash.com https://lunara-api.thankfulhill-c6015f7f.eastus.azurecontainerapps.io https://api.lunara-app.com;">
+<meta name="robots" content="noindex, nofollow">
+<meta name="view-transition" content="same-origin">
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Core Stylesheets -->
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="/css/dashboard-authentic.css">
+
+<!-- Turbo for SPA-like navigation -->
+<script type="module">
+  import hotwiredTurbo from 'https://cdn.skypack.dev/@hotwired/turbo';
+</script>
+
+<!-- View Transitions API styles -->
+<style>
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.3s;
+  }
+
+  ::view-transition-old(root) {
+    animation-name: fade-out;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: fade-in;
+  }
+
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PLACEHOLDER: User authentication should be verified server-side before rendering this page -->
+
+<header id="header">
+  <div class="container">
+    <div class="logo" data-action="dashboard" style="cursor: pointer;">Lunara</div>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#" class="nav-link active" data-action="dashboard">Dashboard</a>
+      <a href="#" class="nav-link" data-action="projects">Projects <span class="nav-badge" id="projects-badge" style="display: none;">0</span></a>
+      <a href="#" class="nav-link" data-action="payments">Payments <span class="nav-badge urgent" id="payments-badge" style="display: none;">0</span></a>
+      <a href="#" class="nav-link" data-action="messages">Messages <span class="nav-badge" id="messages-badge" style="display: none;">0</span></a>
+    </nav>
+    <div class="header-buttons">
+      <button class="btn-icon notification-btn urgent-pulse" title="Urgent notifications" aria-label="5 urgent notifications" data-action="notifications">
+        🚨
+        <span class="notification-badge urgent">5</span>
+      </button>
+      <a href="#" class="profile-mini" aria-label="View profile" data-action="profile">
+        <img id="user-avatar-header" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="User Avatar" loading="lazy" crossorigin="anonymous">
+        <span id="user-name-header" data-user-name>Loading...</span>
+      </a>
+      <a href="#" class="btn btn-secondary" data-action="logout">Logout</a>
+    </div>
+    <button id="mobile-menu" class="mobile-menu" aria-label="Toggle mobile menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+</header>
+
+
+<main class="dashboard-main">
+  <!-- Hero Welcome Section -->
+  <section class="dashboard-hero">
+    <div class="welcome-card container">
+      <div class="welcome-content">
+        <h1 id="dashboard-greeting">Loading... ⚡</h1>
+        <p>You've got 3 client check-ins today and a milestone deadline tonight</p>
+        <span class="last-login">Last active: <time datetime="2024-12-15T14:23:00">2 hours ago from Coffee Bean WiFi</time></span>
+      </div>
+      <div class="quick-stats">
+        <div class="stat-item urgent" data-stat="overdue-tasks">
+          <span class="stat-value" data-count="0">-</span>
+          <span class="stat-label">Overdue</span>
         </div>
-        <div class="quick-stats">
-          <!-- PLACEHOLDER: These stats should be dynamically loaded from API -->
-          <div class="stat-item urgent" data-stat="overdue-tasks">
-            <span class="stat-value" data-count="2">2</span>
-            <span class="stat-label">Overdue</span>
-          </div>
-          <div class="stat-item warning" data-stat="due-today">
-            <span class="stat-value" data-count="3">3</span>
-            <span class="stat-label">Due Today</span>
-          </div>
-          <div class="stat-item success" data-stat="weekly-progress">
-            <span class="stat-value" data-percentage="76">76%</span>
-            <span class="stat-label">Week Progress</span>
-          </div>
+        <div class="stat-item warning" data-stat="due-today">
+          <span class="stat-value" data-count="0">-</span>
+          <span class="stat-label">Due Today</span>
+        </div>
+        <div class="stat-item success" data-stat="weekly-progress">
+          <span class="stat-value" data-percentage="0">-</span>
+          <span class="stat-label">Week Progress</span>
         </div>
       </div>
     </div>
@@ -146,115 +268,16 @@
           <div class="widget active-projects">
             <div class="widget-header">
               <h2>Projects in Progress</h2>
-              <a href="projects.html" class="view-all">View All (7)</a>
+              <a href="projects.html" class="view-all" id="view-all-projects" style="display: none;">View All</a>
             </div>
-            <div class="project-list">
-
-              <!-- PLACEHOLDER: Project data should be loaded from secure API endpoint -->
-              <div class="project-card critical-deadline" data-project-id="proj_ha_001" role="article">
-                <div class="project-header">
-                  <div class="project-info">
-                    <h3>HealthApp Patient Portal - Mobile First</h3>
-                    <!-- PLACEHOLDER: Client name should be sanitized before display -->
-                    <span class="client-name verified" data-client="healthtech">HealthTech Solutions ✓</span>
-                  </div>
-                  <span class="project-status in-progress critical" aria-label="Project status: Critical - Due Tonight">
-                    <span class="status-icon pulse">🔥</span> DUE TONIGHT
-                  </span>
-                </div>
-                <div class="project-progress">
-                  <div class="progress-info">
-                    <span>UI Mockups - Final Review Phase</span>
-                    <span class="progress-percentage critical">85%</span>
-                  </div>
-                  <div class="progress-bar critical" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100">
-                    <div class="progress-fill" style="width: 85%"></div>
-                  </div>
-                </div>
-                <div class="project-meta">
-                  <span class="project-value" data-amount="1800">$1,800</span>
-                  <!-- PLACEHOLDER: Deadline should be calculated from server time -->
-                  <span class="project-deadline critical-time" data-deadline="2024-12-15T23:59:00">
-                    <span class="deadline-icon pulse">⏰</span> 6 hours left
-                  </span>
-                </div>
-                <div class="project-recent-activity">
-                  <span class="recent-activity">💬 Client messaged 2h ago: "Looking forward to seeing the designs!"</span>
-                </div>
-                <div class="project-actions">
-                  <button class="btn-sm btn-primary pulse" onclick="viewProject('proj_ha_001')">Continue Work</button>
-                  <button class="btn-sm btn-secondary" onclick="contactClient('healthtech')">Update Client</button>
-                </div>
+            <div id="project-list-container" class="project-list">
+              <!-- Projects will be dynamically loaded here -->
+              <div class="empty-state" id="projects-empty-state">
+                <div class="empty-icon">📋</div>
+                <h3>No Active Projects</h3>
+                <p>Create your first project to start collaborating with clients or freelancers.</p>
+                <button class="btn btn-primary" onclick="showModal('new-project')">Create First Project</button>
               </div>
-
-              <div class="project-card payment-pending" data-project-id="proj_tf_002" role="article">
-                <div class="project-header">
-                  <div class="project-info">
-                    <h3>TechFlow Analytics Dashboard - Backend API</h3>
-                    <span class="client-name problematic" data-client="techflow">TechFlow Ltd. ⚠️ Late payer</span>
-                  </div>
-                  <span class="project-status completed warning" aria-label="Project status: Completed - Payment Overdue">
-                    <span class="status-icon">✅</span> AWAITING PAYMENT
-                  </span>
-                </div>
-                <div class="project-progress">
-                  <div class="progress-info">
-                    <span>Completed 3 days ago - Payment overdue</span>
-                    <span class="progress-percentage">100%</span>
-                  </div>
-                  <div class="progress-bar completed" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
-                    <div class="progress-fill" style="width: 100%"></div>
-                  </div>
-                </div>
-                <div class="project-meta">
-                  <span class="project-value overdue" data-amount="2400">$2,400</span>
-                  <span class="project-deadline overdue" data-status="overdue">
-                    <span class="deadline-icon">💸</span> 3 days overdue
-                  </span>
-                </div>
-                <div class="project-recent-activity">
-                  <span class="recent-activity warning">📧 No response to 2 payment reminders</span>
-                </div>
-                <div class="project-actions">
-                  <button class="btn-sm btn-warning" onclick="chasePayment('proj_tf_002')">Chase Payment</button>
-                  <button class="btn-sm btn-secondary" onclick="viewProject('proj_tf_002')">View Details</button>
-                </div>
-              </div>
-
-              <div class="project-card smooth-sailing" data-project-id="proj_ec_003" role="article">
-                <div class="project-header">
-                  <div class="project-info">
-                    <h3>EcoTech Sustainability Tracker - Full Stack</h3>
-                    <span class="client-name great" data-client="ecotech">EcoTech Inc. 🌟 Great client</span>
-                  </div>
-                  <span class="project-status in-progress" aria-label="Project status: In Progress - On Track">
-                    <span class="status-icon">🚀</span> ON TRACK
-                  </span>
-                </div>
-                <div class="project-progress">
-                  <div class="progress-info">
-                    <span>Milestone 2 of 4 - Database Schema Complete</span>
-                    <span class="progress-percentage">42%</span>
-                  </div>
-                  <div class="progress-bar" role="progressbar" aria-valuenow="42" aria-valuemin="0" aria-valuemax="100">
-                    <div class="progress-fill" style="width: 42%"></div>
-                  </div>
-                </div>
-                <div class="project-meta">
-                  <span class="project-value" data-amount="4200">$4,200</span>
-                  <span class="project-deadline normal" data-deadline="2024-12-28">
-                    <span class="deadline-icon">📅</span> Due Dec 28
-                  </span>
-                </div>
-                <div class="project-recent-activity">
-                  <span class="recent-activity positive">✅ Milestone payment received yesterday</span>
-                </div>
-                <div class="project-actions">
-                  <button class="btn-sm btn-primary" onclick="viewProject('proj_ec_003')">Continue</button>
-                  <button class="btn-sm btn-secondary" onclick="contactClient('ecotech')">Check In</button>
-                </div>
-              </div>
-
             </div>
           </div>
 
@@ -666,6 +689,66 @@ function updateCurrentTime() {
   }
 }
 
+// Chaos feed items interactive
+document.querySelectorAll('.chaos-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const title = item.querySelector('.chaos-title').textContent;
+    showToast(`Activity: ${title}`, 'info');
+
+    // Simulate marking as read
+    setTimeout(() => {
+      item.style.opacity = '0.6';
+      item.style.pointerEvents = 'none';
+    }, 500);
+  });
+});
+
+// Stats interactive
+document.querySelectorAll('.stat-item').forEach(stat => {
+  stat.addEventListener('click', () => {
+    const label = stat.querySelector('.stat-label').textContent;
+    const value = stat.querySelector('.stat-value').textContent;
+
+    if (label === 'Overdue') {
+      window.location.href = 'projects.html?filter=overdue';
+    } else if (label === 'Due Today') {
+      window.location.href = 'projects.html?filter=due-today';
+    } else if (label === 'Week Progress') {
+      showToast(`This week: ${value} of goals completed`, 'info');
+    }
+  });
+});
+
+// Setup navigation between pages
+function setupNavigation() {
+  // Navigation links removed - handled by data-action attributes in navigation.js
+
+  // Alert banner actions
+  document.querySelector('.alert-action')?.addEventListener('click', () => {
+    showToast('Opening payment discussion...', 'warning');
+    setTimeout(() => {
+      window.location.href = 'messages.html?client=techflow&urgent=payment';
+    }, 1000);
+  });
+
+  // Profile navigation
+  document.querySelector('.profile-mini')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showToast('Loading your profile...', 'info');
+    setTimeout(() => {
+      window.location.href = 'user_profile.html';
+    }, 500);
+  });
+}
+
+function updateCurrentTime() {
+  const timeElement = document.querySelector('.current-time');
+  if (timeElement) {
+    const now = new Date();
+    timeElement.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }
+}
+
 // Modal functions with accessibility support
 function showModal(modalId) {
   const modal = document.getElementById(`${modalId}-modal`);
@@ -992,7 +1075,9 @@ function updateDashboardStats(stats) {
 }
 
 function updateAdditionalStats(stats) {
-    // Update any additional stat displays
+    // Update navigation badges with real counts
+    updateNavigationBadges(stats);
+
     const additionalStats = {
         totalProjects: stats.total_projects,
         activeProjects: stats.active_projects,
@@ -1002,32 +1087,204 @@ function updateAdditionalStats(stats) {
         successRate: stats.success_rate
     };
 
-    // You can use these stats to update other parts of the dashboard
     console.log('Additional stats from PostgreSQL:', additionalStats);
 }
 
-function updateProjectsList(projects) {
-    // Update project cards with real data from PostgreSQL
-    // This would replace the static project cards with dynamic ones
-    if (projects && projects.length > 0) {
-        // For now, log the real projects data
-        console.log('Real projects from PostgreSQL:', projects);
-
-        // TODO: Replace static project cards with dynamic rendering
-        // This would involve updating the project cards HTML with real data
+function updateNavigationBadges(stats) {
+    // Update Projects badge
+    const projectsBadge = document.getElementById('projects-badge');
+    if (projectsBadge && stats.active_projects > 0) {
+        projectsBadge.textContent = stats.active_projects;
+        projectsBadge.style.display = 'inline-block';
     }
+
+    // Update Payments badge (urgent if there are pending payments)
+    const paymentsBadge = document.getElementById('payments-badge');
+    if (paymentsBadge && stats.pending_payments > 0) {
+        paymentsBadge.textContent = stats.pending_payments;
+        paymentsBadge.style.display = 'inline-block';
+        // Keep urgent class if there are overdue payments
+        if (stats.overdue_tasks > 0) {
+            paymentsBadge.classList.add('urgent');
+        }
+    }
+
+    // Messages badge will be updated when we add messaging system
+    // For now, hide it
+    const messagesBadge = document.getElementById('messages-badge');
+    if (messagesBadge) {
+        messagesBadge.style.display = 'none';
+    }
+}
+
+function updateProjectsList(projects) {
+    const container = document.getElementById('project-list-container');
+    const emptyState = document.getElementById('projects-empty-state');
+    const viewAllLink = document.getElementById('view-all-projects');
+
+    if (!projects || projects.length === 0) {
+        // Show empty state
+        if (emptyState) emptyState.style.display = 'block';
+        if (viewAllLink) viewAllLink.style.display = 'none';
+        console.log('No projects to display');
+        return;
+    }
+
+    // Hide empty state and show view all link
+    if (emptyState) emptyState.style.display = 'none';
+    if (viewAllLink) {
+        viewAllLink.textContent = `View All (${projects.length})`;
+        viewAllLink.style.display = 'inline-block';
+    }
+
+    // Clear container except empty state
+    Array.from(container.children).forEach(child => {
+        if (child.id !== 'projects-empty-state') {
+            child.remove();
+        }
+    });
+
+    // Render each project
+    projects.forEach(project => {
+        const projectCard = createProjectCard(project);
+        container.appendChild(projectCard);
+    });
+
+    console.log('Rendered projects from PostgreSQL:', projects);
+}
+
+function createProjectCard(project) {
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    card.dataset.projectId = project.id;
+    card.setAttribute('role', 'article');
+
+    // Determine status styling
+    const statusClass = getStatusClass(project.status);
+    card.classList.add(statusClass);
+
+    // Format currency
+    const amount = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: project.currency || 'USD'
+    }).format(project.total_amount);
+
+    // Format deadline
+    const deadline = new Date(project.deadline);
+    const now = new Date();
+    const daysUntil = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+    const deadlineText = formatDeadline(daysUntil, deadline);
+
+    // Get client/freelancer name
+    const otherParty = project.client || project.freelancer || { username: 'Unknown' };
+    const otherPartyName = otherParty.first_name
+        ? `${otherParty.first_name} ${otherParty.last_name || ''}`.trim()
+        : otherParty.username;
+
+    card.innerHTML = `
+        <div class="project-header">
+            <div class="project-info">
+                <h3>${escapeHtml(project.title)}</h3>
+                <span class="client-name">${escapeHtml(otherPartyName)}</span>
+            </div>
+            <span class="project-status ${project.status}">
+                ${getStatusIcon(project.status)} ${project.status.toUpperCase().replace('_', ' ')}
+            </span>
+        </div>
+        <div class="project-progress">
+            <div class="progress-info">
+                <span>${escapeHtml(project.description).substring(0, 60)}${project.description.length > 60 ? '...' : ''}</span>
+                <span class="progress-percentage">${project.progress_percentage || 0}%</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuenow="${project.progress_percentage || 0}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-fill" style="width: ${project.progress_percentage || 0}%"></div>
+            </div>
+        </div>
+        <div class="project-meta">
+            <span class="project-value">${amount}</span>
+            <span class="project-deadline ${daysUntil < 0 ? 'overdue' : daysUntil < 3 ? 'critical-time' : 'normal'}">
+                ${deadlineText}
+            </span>
+        </div>
+        <div class="project-actions">
+            <button class="btn-sm btn-primary" onclick="viewProject('${project.id}')">View Project</button>
+        </div>
+    `;
+
+    return card;
+}
+
+function getStatusClass(status) {
+    const statusMap = {
+        'draft': 'draft',
+        'active': 'smooth-sailing',
+        'completed': 'payment-pending',
+        'cancelled': 'cancelled',
+        'paused': 'paused'
+    };
+    return statusMap[status] || '';
+}
+
+function getStatusIcon(status) {
+    const iconMap = {
+        'draft': '📝',
+        'active': '🚀',
+        'completed': '✅',
+        'cancelled': '❌',
+        'paused': '⏸️'
+    };
+    return iconMap[status] || '📋';
+}
+
+function formatDeadline(daysUntil, deadline) {
+    if (daysUntil < 0) {
+        return `<span class="deadline-icon">💸</span> ${Math.abs(daysUntil)} days overdue`;
+    } else if (daysUntil === 0) {
+        return `<span class="deadline-icon pulse">⏰</span> Due today`;
+    } else if (daysUntil === 1) {
+        return `<span class="deadline-icon pulse">⏰</span> Due tomorrow`;
+    } else if (daysUntil < 7) {
+        return `<span class="deadline-icon">⏰</span> Due in ${daysUntil} days`;
+    } else {
+        return `<span class="deadline-icon">📅</span> Due ${deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function updateUserInfo() {
     const user = window.LunaraAPI.getCurrentUser();
     if (user) {
-        // Update user display elements
-        const userNameElement = document.querySelector('[data-user-name]');
-        if (userNameElement) {
-            userNameElement.textContent = user.first_name || user.username;
+        // Update header user name
+        const userNameHeader = document.getElementById('user-name-header');
+        if (userNameHeader) {
+            userNameHeader.textContent = user.first_name || user.username;
         }
 
-        // Update any other user-related UI elements
+        // Update header avatar
+        const userAvatarHeader = document.getElementById('user-avatar-header');
+        if (userAvatarHeader && user.profile && user.profile.avatar) {
+            userAvatarHeader.src = user.profile.avatar;
+            userAvatarHeader.alt = `${user.first_name || user.username}'s avatar`;
+        }
+
+        // Update dashboard greeting
+        const greeting = document.getElementById('dashboard-greeting');
+        if (greeting) {
+            const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+            const greetings = [
+                `${dayOfWeek} grind, ${user.first_name || user.username}! ⚡`,
+                `Happy ${dayOfWeek}, ${user.first_name || user.username}! 🚀`,
+                `Let's crush ${dayOfWeek}, ${user.first_name || user.username}! 💪`,
+                `${dayOfWeek} hustle, ${user.first_name || user.username}! ✨`
+            ];
+            greeting.textContent = greetings[Math.floor(Math.random() * greetings.length)];
+        }
+
         console.log('Current user from PostgreSQL:', user);
     }
 }
@@ -1099,47 +1356,143 @@ function setupProjectCreation() {
     }
 }
 
+// Modal management with accessibility: focus trap
 function closeProjectModal() {
-    const modal = document.querySelector('.create-project-modal');
-    if (modal) {
-        modal.style.display = 'none';
+  const modal = document.querySelector('.create-project-modal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = 'auto';
+    // Remove focus trap
+    document.removeEventListener('keydown', trapModalFocus);
+  }
+}
+
+function trapModalFocus(e) {
+  const modal = document.querySelector('.create-project-modal[aria-hidden="false"]');
+  if (!modal) return;
+  const focusable = modal.querySelectorAll('input, button, textarea, [tabindex]:not([tabindex="-1"])');
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.key === 'Tab') {
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
     }
+  }
 }
 
+function openProjectModal() {
+  const modal = document.querySelector('.create-project-modal');
+  if (modal) {
+    modal.style.display = 'block';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    // Focus trap
+    document.addEventListener('keydown', trapModalFocus);
+    // Focus first input
+    const firstInput = modal.querySelector('input, button, textarea');
+    firstInput?.focus();
+  }
+}
+
+// Show loading indicators using dashboardState
 function showLoadingState() {
-    // Show loading indicators
-    document.querySelectorAll('.stat-value').forEach(el => {
-        el.style.opacity = '0.5';
-    });
+  dashboardState.loading = true;
+  document.querySelectorAll('.stat-value').forEach(el => {
+    el.style.opacity = '0.5';
+  });
 }
 
+// Hide loading indicators using dashboardState
 function hideLoadingState() {
-    // Hide loading indicators
-    document.querySelectorAll('.stat-value').forEach(el => {
-        el.style.opacity = '1';
-    });
+  dashboardState.loading = false;
+  document.querySelectorAll('.stat-value').forEach(el => {
+    el.style.opacity = '1';
+  });
 }
 
-// Enhanced logout function
+// Enhanced logout function with error handling
 function handleLogout() {
+  try {
     window.LunaraAPI.logout();
+  } catch (error) {
+    showToast('Logout failed. Please try again.', 'error');
+  }
 }
 
 // Update logout button to use the API
 document.addEventListener('DOMContentLoaded', function() {
-    const logoutButton = document.querySelector('.btn-secondary[href="index.html"]');
-    if (logoutButton) {
-        logoutButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            handleLogout();
-        });
-    }
+  const logoutButton = document.querySelector('.btn-secondary[href="index.html"]');
+  logoutButton?.addEventListener('click', function(e) {
+    e.preventDefault();
+    handleLogout();
+  });
 });
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
-    window.DashboardAutoRefresh.stop();
+  window.DashboardAutoRefresh?.stop();
 });
+
+// Central dashboard state object
+const dashboardState = {
+  loading: false,
+  stats: {},
+  projects: [],
+  user: null
+};
+
+// Toast notification with aria-live
+function showToast(message, type = 'info') {
+  const existingToasts = document.querySelectorAll('.toast');
+  const toastHeight = 60;
+  const topOffset = 20 + (existingToasts.length * toastHeight);
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'polite');
+  Object.assign(toast.style, {
+    position: 'fixed',
+    top: `${topOffset}px`,
+    right: '20px',
+    padding: '12px 20px',
+    backgroundColor: type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : '#6366f1',
+    color: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    zIndex: '10000',
+    transform: 'translateX(100%)',
+    transition: 'all 0.3s ease',
+    maxWidth: '300px',
+    fontSize: '14px',
+    marginBottom: '8px'
+  });
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.transform = 'translateX(0)'; }, 100);
+  setTimeout(() => {
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+        updateToastPositions();
+      }
+    }, 300);
+  }, 4000);
+}
+
+function updateToastPositions() {
+  const remainingToasts = document.querySelectorAll('.toast');
+  const toastHeight = 60;
+  remainingToasts.forEach((toast, index) => {
+    const newTop = 20 + (index * toastHeight);
+    toast.style.top = `${newTop}px`;
+  });
+}
 </script>
 
 </body>

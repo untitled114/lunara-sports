@@ -72,6 +72,42 @@ header .logo:hover {
     height: 4px;
     background: var(--primary);
     border-radius: 50%;
+    box-shadow: 0 0 10px var(--primary);
+}
+
+.nav-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: var(--text-primary);
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 10px;
+    margin-left: 0.25rem;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+.nav-badge.urgent {
+    background: linear-gradient(135deg, var(--error), var(--warning));
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+    animation: urgentPulse 1s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes urgentPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 30px rgba(239, 68, 68, 0.9);
+    }
 }
 
 .header-buttons {
