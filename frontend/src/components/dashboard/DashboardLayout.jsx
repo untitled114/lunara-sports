@@ -38,13 +38,13 @@ const DashboardLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <header id="header" role="banner" className="bg-white shadow-lg fixed top-0 w-full z-40 transition-shadow duration-300">
+      <header id="header" role="banner" className="bg-gray-800/95 backdrop-blur-sm shadow-lg shadow-black/20 fixed top-0 w-full z-40 transition-shadow duration-300 border-b border-gray-700/50">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <Link to="/dashboard" className="text-2xl font-bold text-gray-800 tracking-tight">
+            <Link to="/dashboard" className="text-2xl font-bold text-white tracking-tight">
               Lunara
             </Link>
 
@@ -53,7 +53,7 @@ const DashboardLayout = () => {
               <Link
                 to="/dashboard"
                 className={`nav-link px-3 py-2 text-sm font-medium rounded-lg transition duration-150 ${
-                  isActive('/dashboard') ? 'active bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
+                  isActive('/dashboard') ? 'active bg-indigo-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
                 }`}
               >
                 Dashboard
@@ -61,7 +61,7 @@ const DashboardLayout = () => {
               <Link
                 to="/projects"
                 className={`nav-link px-3 py-2 text-sm font-medium rounded-lg transition duration-150 relative ${
-                  isActive('/projects') ? 'active bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
+                  isActive('/projects') ? 'active bg-indigo-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
                 }`}
               >
                 Projects <span className="nav-badge ml-1 bg-indigo-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">7</span>
@@ -69,7 +69,7 @@ const DashboardLayout = () => {
               <Link
                 to="/payments"
                 className={`nav-link px-3 py-2 text-sm font-medium rounded-lg transition duration-150 relative ${
-                  isActive('/payments') ? 'active bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
+                  isActive('/payments') ? 'active bg-indigo-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
                 }`}
               >
                 Payments <span className="nav-badge urgent ml-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">2</span>
@@ -77,7 +77,7 @@ const DashboardLayout = () => {
               <Link
                 to="/messages"
                 className={`nav-link px-3 py-2 text-sm font-medium rounded-lg transition duration-150 relative ${
-                  isActive('/messages') ? 'active bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
+                  isActive('/messages') ? 'active bg-indigo-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
                 }`}
               >
                 Messages <span className="ml-1 bg-indigo-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>
@@ -88,29 +88,29 @@ const DashboardLayout = () => {
             <div className="hidden md:flex items-center space-x-4">
               {/* User ID Display */}
               {userId && (
-                <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-300 bg-gray-700/50 px-3 py-1.5 rounded-lg border border-gray-600">
                   <span className="font-medium">User: </span>
                   <span className="font-mono text-xs">{userId.substring(0, 8)}...</span>
-                  {isAnonymous && <span className="ml-1 text-xs text-orange-600">(Guest)</span>}
+                  {isAnonymous && <span className="ml-1 text-xs text-orange-400">(Guest)</span>}
                 </div>
               )}
 
               {/* Notifications */}
               <button
-                className="relative p-2 rounded-full hover:bg-gray-100 transition duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="relative p-2 rounded-full hover:bg-gray-700/50 transition duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 title={`${urgentCount} urgent notifications`}
                 aria-label={`${urgentCount} urgent notifications`}
               >
                 🚨
                 {urgentCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full ring-2 ring-white">
+                  <span className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full ring-2 ring-gray-800">
                     {urgentCount}
                   </span>
                 )}
               </button>
 
               {/* Profile */}
-              <Link to="/profile" className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition duration-150">
+              <Link to="/profile" className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-700/50 transition duration-150">
                 <img
                   src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face"
                   alt="User Avatar"
@@ -118,13 +118,13 @@ const DashboardLayout = () => {
                   loading="lazy"
                   crossOrigin="anonymous"
                 />
-                <span className="text-sm font-medium text-gray-700">Profile</span>
+                <span className="text-sm font-medium text-gray-300">Profile</span>
               </Link>
 
               {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="btn btn-secondary px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition duration-150 shadow-sm"
+                className="btn btn-secondary px-3 py-1.5 text-sm font-medium text-gray-300 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition duration-150 shadow-sm"
               >
                 Logout
               </button>
@@ -156,24 +156,24 @@ const DashboardLayout = () => {
           ></div>
 
           {/* Slide-out Menu */}
-          <div className="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white md:hidden z-40 shadow-2xl animate-slideInRight overflow-y-auto">
+          <div className="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-gray-800 md:hidden z-40 shadow-2xl animate-slideInRight overflow-y-auto">
             {/* Menu Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Menu</h2>
+                <h2 className="text-lg font-bold text-white">Menu</h2>
                 {userId && (
-                  <p className="text-xs text-gray-500 font-mono mt-1">
+                  <p className="text-xs text-gray-400 font-mono mt-1">
                     {userId.substring(0, 12)}...
-                    {isAnonymous && <span className="ml-1 text-orange-600">(Guest)</span>}
+                    {isAnonymous && <span className="ml-1 text-orange-400">(Guest)</span>}
                   </p>
                 )}
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
+                className="p-2 rounded-lg hover:bg-gray-700 transition"
                 aria-label="Close menu"
               >
-                <span className="text-2xl text-gray-600">×</span>
+                <span className="text-2xl text-gray-300">×</span>
               </button>
             </div>
 
@@ -183,7 +183,7 @@ const DashboardLayout = () => {
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
                 className={`text-lg p-3 rounded-lg transition duration-150 ${
-                  isActive('/dashboard') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-gray-700 hover:bg-gray-100'
+                  isActive('/dashboard') ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700'
                 }`}
               >
                 Dashboard
@@ -192,7 +192,7 @@ const DashboardLayout = () => {
                 to="/projects"
                 onClick={() => setMobileMenuOpen(false)}
                 className={`text-lg p-3 rounded-lg transition duration-150 flex items-center justify-between ${
-                  isActive('/projects') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-gray-700 hover:bg-gray-100'
+                  isActive('/projects') ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700'
                 }`}
               >
                 <span>Projects</span>
@@ -202,7 +202,7 @@ const DashboardLayout = () => {
                 to="/payments"
                 onClick={() => setMobileMenuOpen(false)}
                 className={`text-lg p-3 rounded-lg transition duration-150 flex items-center justify-between ${
-                  isActive('/payments') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-gray-700 hover:bg-gray-100'
+                  isActive('/payments') ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700'
                 }`}
               >
                 <span>Payments</span>
@@ -212,7 +212,7 @@ const DashboardLayout = () => {
                 to="/messages"
                 onClick={() => setMobileMenuOpen(false)}
                 className={`text-lg p-3 rounded-lg transition duration-150 flex items-center justify-between ${
-                  isActive('/messages') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-gray-700 hover:bg-gray-100'
+                  isActive('/messages') ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700'
                 }`}
               >
                 <span>Messages</span>
@@ -221,11 +221,11 @@ const DashboardLayout = () => {
             </nav>
 
             {/* Menu Footer */}
-            <div className="border-t border-gray-200 p-4 space-y-3 mt-auto">
+            <div className="border-t border-gray-700 p-4 space-y-3 mt-auto">
               <Link
                 to="/profile"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center px-4 py-3 font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition duration-150"
+                className="block text-center px-4 py-3 font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition duration-150"
               >
                 Profile
               </Link>
@@ -241,9 +241,31 @@ const DashboardLayout = () => {
       )}
 
       {/* Main Content */}
-      <main className="pt-16">
+      <main className="pt-16 pb-20">
         <Outlet />
       </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-800/95 backdrop-blur-sm border-t border-gray-700/50 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-center md:text-left">
+              <p className="text-gray-400 text-sm">
+                © 2025 Lunara. Secure freelancing with verified escrow.
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                Powered by Stripe Connect • Ably • 100ms
+              </p>
+            </div>
+            <div className="flex gap-6">
+              <a href="#" className="text-gray-400 hover:text-indigo-400 text-sm transition">Help Center</a>
+              <a href="#" className="text-gray-400 hover:text-indigo-400 text-sm transition">Privacy</a>
+              <a href="#" className="text-gray-400 hover:text-indigo-400 text-sm transition">Terms</a>
+              <a href="#" className="text-gray-400 hover:text-indigo-400 text-sm transition">Status</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

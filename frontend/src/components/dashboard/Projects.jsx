@@ -42,8 +42,8 @@ const Projects = () => {
       case 'active': return 'bg-green-100 text-green-800';
       case 'review': return 'bg-yellow-100 text-yellow-800';
       case 'completed': return 'bg-blue-100 text-blue-800';
-      case 'paused': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'paused': return 'bg-gray-100 text-white';
+      default: return 'bg-gray-100 text-white';
     }
   };
 
@@ -53,12 +53,12 @@ const Projects = () => {
       case 'high': return 'text-orange-600';
       case 'medium': return 'text-yellow-600';
       case 'low': return 'text-green-600';
-      default: return 'text-gray-600';
+      default: return 'text-gray-400';
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-transparent py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="bg-indigo-600 text-white rounded-xl shadow-xl p-6 md:p-8 mb-8">
@@ -93,29 +93,48 @@ const Projects = () => {
           </div>
         </div>
 
+        {/* Search & Sort */}
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow-lg p-4 mb-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="🔍 Search projects by name, client, or description..."
+                className="w-full px-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              />
+            </div>
+            <select className="px-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+              <option>Sort: Priority</option>
+              <option>Sort: Deadline</option>
+              <option>Sort: Progress</option>
+              <option>Sort: Value</option>
+            </select>
+          </div>
+        </div>
+
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-2">
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow p-4 mb-6 flex flex-wrap gap-2">
           <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">All Projects</button>
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition">Active</button>
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition">In Review</button>
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition">Completed</button>
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition">Overdue</button>
+          <button className="px-4 py-2 bg-gray-700/50 text-gray-300 border border-gray-600 rounded-lg font-medium hover:bg-gray-700 transition">Active</button>
+          <button className="px-4 py-2 bg-gray-700/50 text-gray-300 border border-gray-600 rounded-lg font-medium hover:bg-gray-700 transition">In Review</button>
+          <button className="px-4 py-2 bg-gray-700/50 text-gray-300 border border-gray-600 rounded-lg font-medium hover:bg-gray-700 transition">Completed</button>
+          <button className="px-4 py-2 bg-gray-700/50 text-gray-300 border border-gray-600 rounded-lg font-medium hover:bg-gray-700 transition">Overdue</button>
         </div>
 
         {/* Projects List */}
         <div className="space-y-6">
           {projects.map((project) => (
-            <div key={project.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition duration-300 overflow-hidden">
+            <div key={project.id} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg hover:shadow-xl transition duration-300 overflow-hidden">
               <div className="p-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-bold text-gray-800">{project.title}</h3>
+                      <h3 className="text-xl font-bold text-white">{project.title}</h3>
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(project.status)}`}>
                         {project.status.toUpperCase()}
                       </span>
                     </div>
-                    <p className="text-gray-600 mb-2">{project.description}</p>
+                    <p className="text-gray-400 mb-2">{project.description}</p>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span>👤 Client: <strong>{project.client}</strong></span>
                       <span className={getPriorityColor(project.priority)}>
@@ -138,8 +157,8 @@ const Projects = () => {
                 {/* Progress Bar */}
                 <div className="mb-4">
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Progress</span>
-                    <span className="font-semibold text-gray-800">{project.progress}%</span>
+                    <span className="text-gray-400">Progress</span>
+                    <span className="font-semibold text-white">{project.progress}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                     <div
@@ -172,10 +191,10 @@ const Projects = () => {
         </div>
 
         {/* Empty State (if no projects) */}
-        {/* <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+        {/* <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-12 text-center">
           <div className="text-6xl mb-4">📋</div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">No Projects Yet</h3>
-          <p className="text-gray-600 mb-6">Start your first project to begin tracking progress and managing deliverables.</p>
+          <h3 className="text-2xl font-bold text-white mb-2">No Projects Yet</h3>
+          <p className="text-gray-400 mb-6">Start your first project to begin tracking progress and managing deliverables.</p>
           <button className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
             Create Your First Project
           </button>

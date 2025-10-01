@@ -75,30 +75,31 @@ const CustomModal = ({ isOpen, title, message, confirmText, cancelText, onConfir
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-scaleIn"
+        className="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-scaleIn"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="border-b border-gray-200 px-6 py-4">
-          <h3 id="modal-title" className="text-xl font-bold text-gray-900">{title}</h3>
+        <div className="border-b border-gray-700 px-6 py-4">
+          <h3 id="modal-title" className="text-xl font-bold text-white">{title}</h3>
         </div>
 
         {/* Modal Body */}
         <div className="px-6 py-6">
-          <p id="modal-description" className="text-gray-700 text-base leading-relaxed whitespace-pre-wrap">{message}</p>
+          <p id="modal-description" className="text-gray-300 text-base leading-relaxed whitespace-pre-wrap">{message}</p>
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 rounded-b-2xl">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-900/50 rounded-b-2xl">
           <button
             onClick={onCancel}
-            className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:border-gray-400 active:bg-gray-200 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+            className="px-5 py-2.5 text-sm font-semibold text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 hover:border-gray-500 active:bg-gray-600/80 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
           >
             {cancelText || 'Cancel'}
           </button>
           <button
             onClick={onConfirm}
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-all duration-150 shadow-lg shadow-indigo-600/30 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            ref={confirmButtonRef}
+            className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-all duration-150 shadow-lg shadow-indigo-600/30 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-800"
           >
             {confirmText || 'Confirm'}
           </button>

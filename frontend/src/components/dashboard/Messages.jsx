@@ -10,7 +10,7 @@ const Messages = () => {
   const { unreadCount, urgentCount } = useMessageContext();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-transparent">
       {/* Custom Modal */}
       <CustomModal
         isOpen={modalState.isOpen}
@@ -62,41 +62,68 @@ const Messages = () => {
               {/* Sidebar */}
               <div className="lg:col-span-1 mt-8 lg:mt-0 space-y-8">
                 {/* Message Stats */}
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-100 pb-3">📊 Message Stats</h3>
+                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 border-b border-gray-700 pb-3">📊 Message Stats</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Today's Messages</span>
-                      <span className="font-bold text-yellow-600">12</span>
+                      <span className="text-gray-400">Today's Messages</span>
+                      <span className="font-bold text-yellow-400">12</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Unread</span>
-                      <span className="font-bold text-red-600">{unreadCount}</span>
+                      <span className="text-gray-400">Unread</span>
+                      <span className="font-bold text-red-400">{unreadCount}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Response Time Avg</span>
-                      <span className="font-bold text-green-600">2.3h</span>
+                      <span className="text-gray-400">Response Time Avg</span>
+                      <span className="font-bold text-green-400">2.3h</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Active Conversations</span>
-                      <span className="font-bold text-indigo-600">5</span>
+                      <span className="text-gray-400">Active Conversations</span>
+                      <span className="font-bold text-indigo-400">5</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-100 pb-3">⚡ Quick Message Actions</h3>
+                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 border-b border-gray-700 pb-3">⚡ Quick Message Actions</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <button className="flex flex-col items-center justify-center p-4 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <button className="flex flex-col items-center justify-center p-4 bg-red-900/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-900/30 transition duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                       <div className="text-2xl mb-1">📧</div>
                       <span className="text-sm font-medium">Reply to All</span>
-                      <small className="text-xs">({unreadCount} unread)</small>
+                      <small className="text-xs text-gray-400">({unreadCount} unread)</small>
                     </button>
-                    <button className="flex flex-col items-center justify-center p-4 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button className="flex flex-col items-center justify-center p-4 bg-indigo-900/20 text-indigo-400 border border-indigo-500/30 rounded-lg hover:bg-indigo-900/30 transition duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                       <div className="text-2xl mb-1">📣</div>
                       <span className="text-sm font-medium">Send Update</span>
-                      <small className="text-xs">(All clients)</small>
+                      <small className="text-xs text-gray-400">(All clients)</small>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Compose New Message */}
+                <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 backdrop-blur-sm border border-purple-500/30 rounded-xl shadow-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 border-b border-purple-500/30 pb-3">✉️ Compose New Message</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">To</label>
+                      <input
+                        type="text"
+                        placeholder="Select client or project..."
+                        className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Message</label>
+                      <textarea
+                        rows="3"
+                        placeholder="Type your message..."
+                        className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-sm resize-none"
+                      ></textarea>
+                    </div>
+                    <button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all flex items-center justify-center gap-2">
+                      <span>Send Message</span>
+                      <span className="text-lg">→</span>
                     </button>
                   </div>
                 </div>

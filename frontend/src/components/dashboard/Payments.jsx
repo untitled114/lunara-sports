@@ -39,7 +39,7 @@ const Payments = () => {
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'overdue': return 'bg-red-100 text-red-800 border-red-200';
       case 'processing': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-gray-100 text-white border-gray-700';
     }
   };
 
@@ -58,16 +58,16 @@ const Payments = () => {
   const totalOverdue = payments.filter(p => p.daysOverdue).reduce((sum, p) => sum + p.amount, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-transparent py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header with Alert */}
         {totalOverdue > 0 && (
-          <div className="bg-red-50 border-l-4 border-red-600 p-4 mb-6 rounded-lg">
+          <div className="bg-red-900/20 border-l-4 border-red-600 p-4 mb-6 rounded-lg border border-red-500/30">
             <div className="flex items-center">
               <span className="text-2xl mr-3">⚠️</span>
               <div>
-                <h3 className="text-red-800 font-semibold">Payment Overdue</h3>
-                <p className="text-red-700 text-sm">TechFlow's milestone payment is 3 days late. Automatic escrow release in 4 days.</p>
+                <h3 className="text-red-400 font-semibold">Payment Overdue</h3>
+                <p className="text-gray-400 text-sm">TechFlow's milestone payment is 3 days late. Automatic escrow release in 4 days.</p>
               </div>
               <button className="ml-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">
                 Contact Client
@@ -109,29 +109,29 @@ const Payments = () => {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6 p-1 flex gap-2 overflow-x-auto">
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow mb-6 p-1 flex gap-2 overflow-x-auto">
           <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium whitespace-nowrap">All Payments</button>
-          <button className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium whitespace-nowrap">Paid</button>
-          <button className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium whitespace-nowrap">Pending</button>
-          <button className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium whitespace-nowrap">Overdue</button>
-          <button className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium whitespace-nowrap">Invoices</button>
+          <button className="px-4 py-2 text-gray-300 hover:bg-gray-700/50 rounded-lg font-medium whitespace-nowrap">Paid</button>
+          <button className="px-4 py-2 text-gray-300 hover:bg-gray-700/50 rounded-lg font-medium whitespace-nowrap">Pending</button>
+          <button className="px-4 py-2 text-gray-300 hover:bg-gray-700/50 rounded-lg font-medium whitespace-nowrap">Overdue</button>
+          <button className="px-4 py-2 text-gray-300 hover:bg-gray-700/50 rounded-lg font-medium whitespace-nowrap">Invoices</button>
         </div>
 
         {/* Payments List */}
         <div className="space-y-4">
           {payments.map((payment) => (
-            <div key={payment.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition duration-300 p-6">
+            <div key={payment.id} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg hover:shadow-xl transition duration-300 p-6">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 {/* Left Section */}
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-3xl">{getStatusIcon(payment.status)}</span>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800">{payment.project}</h3>
-                      <p className="text-gray-600 text-sm">Client: {payment.client}</p>
+                      <h3 className="text-xl font-bold text-white">{payment.project}</h3>
+                      <p className="text-gray-400 text-sm">Client: {payment.client}</p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600 ml-12">
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-400 ml-12">
                     <span>📄 {payment.invoice}</span>
                     <span>💳 {payment.method}</span>
                     <span>📅 {new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
@@ -143,7 +143,7 @@ const Payments = () => {
 
                 {/* Center - Amount */}
                 <div className="text-center lg:mx-6">
-                  <div className="text-3xl font-bold text-gray-800">${payment.amount.toLocaleString()}</div>
+                  <div className="text-3xl font-bold text-white">${payment.amount.toLocaleString()}</div>
                   <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)}`}>
                     {payment.status.toUpperCase()}
                   </span>
@@ -160,7 +160,7 @@ const Payments = () => {
                     </button>
                   )}
                   {payment.status === 'paid' && (
-                    <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition text-sm">
+                    <button className="px-4 py-2 bg-gray-700 text-gray-300 border border-gray-600 rounded-lg font-medium hover:bg-gray-200 transition text-sm">
                       Download Receipt
                     </button>
                   )}
@@ -172,73 +172,104 @@ const Payments = () => {
 
         {/* Payment Methods Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">💳 Payment Methods</h3>
+          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-bold text-white mb-4">💳 Payment Methods</h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🏦</span>
                   <div>
-                    <div className="font-semibold text-gray-800">Bank Transfer</div>
-                    <div className="text-xs text-gray-600">Primary method</div>
+                    <div className="font-semibold text-white">Bank Transfer</div>
+                    <div className="text-xs text-gray-400">Primary method</div>
                   </div>
                 </div>
-                <span className="text-green-600 font-bold">$8,200</span>
+                <span className="text-green-400 font-bold">$8,200</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">💰</span>
                   <div>
-                    <div className="font-semibold text-gray-800">Lunara Wallet</div>
-                    <div className="text-xs text-gray-600">Fast & secure</div>
+                    <div className="font-semibold text-white">Lunara Wallet</div>
+                    <div className="text-xs text-gray-400">Fast & secure</div>
                   </div>
                 </div>
-                <span className="text-blue-600 font-bold">$6,400</span>
+                <span className="text-blue-400 font-bold">$6,400</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">📱</span>
                   <div>
-                    <div className="font-semibold text-gray-800">PayPal</div>
-                    <div className="text-xs text-gray-600">International</div>
+                    <div className="font-semibold text-white">PayPal</div>
+                    <div className="text-xs text-gray-400">International</div>
                   </div>
                 </div>
-                <span className="text-purple-600 font-bold">$3,900</span>
+                <span className="text-purple-400 font-bold">$3,900</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">📊 Payment Analytics</h3>
+          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-bold text-white mb-4">📊 Payment Analytics</h3>
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Average Invoice Value</span>
-                  <span className="font-bold text-gray-800">$2,800</span>
+                  <span className="text-gray-400">Average Invoice Value</span>
+                  <span className="font-bold text-white">$2,800</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-indigo-600 h-2 rounded-full" style={{ width: '70%' }}></div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full" style={{ width: '70%' }}></div>
                 </div>
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Payment Success Rate</span>
-                  <span className="font-bold text-green-600">94%</span>
+                  <span className="text-gray-400">Payment Success Rate</span>
+                  <span className="font-bold text-green-400">94%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-700 rounded-full h-2">
                   <div className="bg-green-600 h-2 rounded-full" style={{ width: '94%' }}></div>
                 </div>
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Avg Payment Time</span>
-                  <span className="font-bold text-yellow-600">8.5 days</span>
+                  <span className="text-gray-400">Avg Payment Time</span>
+                  <span className="font-bold text-yellow-400">8.5 days</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-700 rounded-full h-2">
                   <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '58%' }}></div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Monthly Revenue Chart */}
+        <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 backdrop-blur-sm border border-indigo-500/30 rounded-xl shadow-lg p-6 mt-8">
+          <h3 className="text-lg font-bold text-white mb-6">📈 Monthly Revenue Breakdown</h3>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
+              const heights = ['60%', '75%', '45%', '85%', '70%', '90%'];
+              const amounts = ['$2.1K', '$2.8K', '$1.9K', '$3.2K', '$2.6K', '$3.5K'];
+              return (
+                <div key={month} className="flex flex-col items-center">
+                  <div className="w-full flex items-end justify-center h-32 mb-2">
+                    <div
+                      className="w-12 bg-gradient-to-t from-indigo-600 to-purple-500 rounded-t-lg transition-all hover:from-indigo-500 hover:to-purple-400 cursor-pointer"
+                      style={{ height: heights[index] }}
+                      title={`${month}: ${amounts[index]}`}
+                    ></div>
+                  </div>
+                  <div className="text-xs font-semibold text-gray-400">{month}</div>
+                  <div className="text-sm font-bold text-indigo-300">{amounts[index]}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-6 flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-500"></div>
+              <span className="text-gray-400">Revenue Trend</span>
+            </div>
+            <div className="text-green-400 font-semibold">↗ +18% this quarter</div>
           </div>
         </div>
       </div>
