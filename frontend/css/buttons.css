@@ -28,24 +28,29 @@
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: var(--text-primary);
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    background: linear-gradient(135deg, var(--accent), #059669);
+    color: white;
+    box-shadow: 0 4px 20px var(--accent-glow);
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
 .btn-primary:hover {
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 8px 30px var(--accent-glow), 0 0 40px rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, #059669, var(--accent));
 }
 
 .btn-secondary {
     background: var(--glass-bg);
     color: var(--text-primary);
-    border: 1px solid var(--glass-border);
+    border: 2px solid rgba(99, 102, 241, 0.5);
     backdrop-filter: blur(10px);
 }
 
 .btn-secondary:hover {
     background: var(--surface-hover);
+    border-color: var(--primary);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
 }
 
 .btn-block {

@@ -135,6 +135,16 @@
 .urgent-item.critical {
   background: rgba(239, 68, 68, 0.05);
   border-left-color: var(--error);
+  animation: critical-pulse 3s ease-in-out infinite;
+}
+
+@keyframes critical-pulse {
+  0%, 100% {
+    background: rgba(239, 68, 68, 0.05);
+  }
+  50% {
+    background: rgba(239, 68, 68, 0.02);
+  }
 }
 
 .urgent-item.warning {
@@ -173,7 +183,7 @@
 .btn-urgent {
   background: var(--primary);
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
@@ -186,6 +196,35 @@
 .btn-urgent:hover {
   background: var(--primary-dark);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* Critical urgent button - nuclear option styling */
+.urgent-item.critical .btn-urgent {
+  background: linear-gradient(135deg, var(--critical), #dc2626);
+  box-shadow: 0 4px 16px var(--critical-glow);
+  border-color: rgba(255, 255, 255, 0.3);
+  font-weight: 700;
+}
+
+.urgent-item.critical .btn-urgent:hover {
+  background: linear-gradient(135deg, #dc2626, var(--critical));
+  box-shadow: 0 6px 20px var(--critical-glow), 0 0 30px rgba(239, 68, 68, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Non-critical buttons use outline style */
+.urgent-item.warning .btn-urgent,
+.urgent-item.info .btn-urgent {
+  background: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+}
+
+.urgent-item.warning .btn-urgent:hover,
+.urgent-item.info .btn-urgent:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: var(--primary-dark);
 }
 
 /* ===================== PROJECT CARD VARIATIONS ===================== */
@@ -387,6 +426,26 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  border: 3px solid;
+  padding: 2px;
+  background: var(--glass-bg);
+}
+
+/* Color-coded avatar rings for maximum clarity */
+.client-item.happy .client-avatar {
+  border-color: var(--success);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+
+.client-item.neutral .client-avatar,
+.client-item .client-avatar {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+}
+
+.client-item.problematic .client-avatar {
+  border-color: var(--error);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
 }
 
 .client-info {
@@ -408,26 +467,38 @@
 
 .client-health-score {
   font-weight: 700;
-  font-size: 0.9rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.5rem;
-  min-width: 35px;
+  font-size: 0.95rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  min-width: 45px;
   text-align: center;
+  border: 2px solid;
+  box-shadow: 0 4px 12px;
+  letter-spacing: 0.02em;
 }
 
 .client-health-score.green {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--success);
+  background: rgba(16, 185, 129, 0.25);
+  color: white;
+  border-color: var(--success);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
 }
 
 .client-health-score.yellow {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--warning);
+  background: rgba(245, 158, 11, 0.25);
+  color: white;
+  border-color: var(--warning);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
 }
 
 .client-health-score.red {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--error);
+  background: rgba(239, 68, 68, 0.25);
+  color: white;
+  border-color: var(--error);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
 }
 
 /* ===================== SURVIVAL ACTIONS ===================== */

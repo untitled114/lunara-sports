@@ -65,6 +65,24 @@ def serve_js_file(request, filename):
     else:
         return HttpResponse('File not found', status=404)
 
+@never_cache
+def serve_jsx_file(request, filename):
+    """Serve JSX files with correct content type for Babel transformation"""
+    file_path = settings.BASE_DIR.parent / 'frontend' / 'react-components' / filename
+    if file_path.exists():
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        # Use text/babel for JSX files so Babel can transform them
+        response = HttpResponse(content, content_type='text/babel')
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        # Add CORS headers for development
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    else:
+        return HttpResponse('JSX file not found', status=404)
+
 urlpatterns = [
     # Health check for container monitoring
     path('health/', health_check, name='health'),
@@ -117,3 +135,8 @@ if settings.DEBUG:
         path('js/<str:filename>', serve_js_file, name='serve_js'),
     ]
     urlpatterns += static('/js/', document_root=settings.BASE_DIR.parent / 'frontend' / 'js')
+
+    # Serve React JSX components with proper MIME type
+    urlpatterns += [
+        path('react-components/<str:filename>', serve_jsx_file, name='serve_jsx'),
+    ]

@@ -1,6 +1,6 @@
 /**
  * Lunara Navigation System
- * Handles page transitions and navigation for the entire application
+ * Handles page transitions, scroll spy, and navigation for hybrid React/static pages
  */
 
 // Global navigation helper with Firefox compatibility
@@ -8,7 +8,6 @@ window.LunaraNavigate = (function() {
     let isNavigating = false;
 
     return function(page) {
-        // Prevent multiple rapid navigation calls
         if (isNavigating) {
             console.log('Navigation already in progress, ignoring');
             return;
@@ -17,12 +16,11 @@ window.LunaraNavigate = (function() {
         isNavigating = true;
         console.log('Navigating to:', page);
 
-        // Firefox-specific: Use delay to prevent NS_BINDING_ABORTED
         const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
         if (isFirefox) {
             setTimeout(() => {
                 window.location.href = page;
-            }, 100); // 100ms delay for Firefox
+            }, 100);
         } else {
             window.location.href = page;
         }
@@ -31,18 +29,29 @@ window.LunaraNavigate = (function() {
 
 class LunaraNavigation {
     constructor() {
+        this.activeSection = null;
+        this.observer = null;
+        this._onScroll = null;
         this.isNavigating = false;
         this.init();
     }
 
     init() {
+        // Prevent browser from restoring scroll position
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+
         this.setupNavigation();
+        this.observeReactSections();
+        this.handleInitialHash();
+        // Don't call setupScrollSpy here - let MutationObserver do it after React renders
         this.setupAuthCheck();
         this.setupPlaceholderMessages();
     }
 
     setupNavigation() {
-        // Handle all navigation clicks
+        // Handle all navigation clicks with data-action
         document.addEventListener('click', (e) => {
             const target = e.target.closest('[data-action]');
             if (!target) return;
@@ -51,13 +60,23 @@ class LunaraNavigation {
             this.handleAction(action, e, target);
         });
 
+        // Handle section navigation with data-section attribute
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('[data-section]');
+            if (!link) return;
+
+            e.preventDefault();
+            const sectionId = link.getAttribute('data-section');
+            this.scrollToSectionWhenReady(sectionId);
+        });
+
         // Handle regular href navigation with validation
         document.addEventListener('click', (e) => {
             const link = e.target.closest('a[href]');
             if (!link) return;
 
-            // Skip if this link has a data-action (already handled by first listener)
-            if (link.hasAttribute('data-action')) return;
+            // Skip if this link has a data-action or data-section (already handled)
+            if (link.hasAttribute('data-action') || link.hasAttribute('data-section')) return;
 
             const href = link.getAttribute('href');
 
@@ -72,113 +91,194 @@ class LunaraNavigation {
         });
     }
 
+    observeReactSections() {
+        // Watch react-root for section insertions
+        const reactRoot = document.getElementById('react-root');
+        if (!reactRoot) return;
+
+        this.observer = new MutationObserver(() => {
+            console.log('🔄 React sections changed, refreshing scroll spy...');
+            // Wait a bit for layout to stabilize
+            setTimeout(() => {
+                this.setupScrollSpy();
+                // Force scroll to top if we're supposed to be at home
+                if (!window.location.hash || window.location.hash === '#home') {
+                    window.scrollTo(0, 0);
+                }
+            }, 100);
+        });
+
+        this.observer.observe(reactRoot, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    scrollToSectionWhenReady(sectionId, maxAttempts = 30, attemptDelay = 50) {
+        let attempts = 0;
+
+        const tryScroll = () => {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                this.smoothScrollToSection(section, sectionId);
+                return true;
+            }
+            return false;
+        };
+
+        // Try immediately
+        if (tryScroll()) return;
+
+        // Poll until section appears
+        const interval = setInterval(() => {
+            attempts++;
+            if (tryScroll() || attempts >= maxAttempts) {
+                clearInterval(interval);
+                if (attempts >= maxAttempts) {
+                    console.warn(`Section #${sectionId} not found after ${maxAttempts} attempts`);
+                }
+            }
+        }, attemptDelay);
+    }
+
+    smoothScrollToSection(section, sectionId) {
+        const header = document.getElementById('header');
+        const headerHeight = header ? header.offsetHeight : 0;
+
+        // Wait for next paint cycle to ensure layout is stable (fixes React sections)
+        requestAnimationFrame(() => {
+            const sectionTop = section.getBoundingClientRect().top + window.pageYOffset;
+            const offsetPosition = sectionTop - headerHeight - 80; // Consistent 80px padding for all
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+
+            // Update URL hash without triggering page jump
+            if (window.history && window.history.pushState) {
+                window.history.pushState(null, null, `#${sectionId}`);
+            }
+        });
+    }
+
+    setupScrollSpy() {
+        const sections = document.querySelectorAll('main section[id]');
+        const navLinks = document.querySelectorAll('nav [data-section]');
+
+        if (!sections.length) {
+            console.log('No sections found for scroll spy');
+            return;
+        }
+
+        // Remove old listener if exists
+        if (this._onScroll) {
+            window.removeEventListener('scroll', this._onScroll);
+        }
+
+        this._onScroll = () => {
+            let current = null;
+            const headerHeight = document.getElementById('header')?.offsetHeight || 0;
+
+            sections.forEach((section) => {
+                const rect = section.getBoundingClientRect();
+                // Check if section is in viewport (with header offset)
+                if (rect.top <= headerHeight + 100 && rect.bottom > headerHeight + 100) {
+                    current = section.id;
+                }
+            });
+
+            if (current && current !== this.activeSection) {
+                this.activeSection = current;
+                navLinks.forEach((link) => {
+                    const isActive = link.getAttribute('data-section') === current;
+                    link.classList.toggle('active', isActive);
+                });
+            }
+        };
+
+        window.addEventListener('scroll', this._onScroll);
+        this._onScroll(); // Run once immediately
+    }
+
+    handleInitialHash() {
+        // Force scroll to top immediately to prevent any auto-scroll
+        window.scrollTo(0, 0);
+
+        // Handle hash in URL if present
+        if (window.location.hash && window.location.hash !== '#') {
+            const sectionId = window.location.hash.substring(1);
+
+            // Special handling for 'home' - just stay at top
+            if (sectionId === 'home') {
+                window.history.replaceState(null, null, '#home');
+                return;
+            }
+
+            // For other sections, wait for React to render then scroll
+            setTimeout(() => this.scrollToSectionWhenReady(sectionId), 800);
+        } else {
+            // No hash - ensure we stay at top and set home as active
+            window.history.replaceState(null, null, '#home');
+        }
+    }
+
     handleAction(action, event, element) {
         event.preventDefault();
-        event.stopPropagation(); // Prevent other listeners from firing
+        event.stopPropagation();
 
         switch (action) {
             case 'sign-in':
                 this.navigateToPage('signin.html');
                 break;
-
             case 'sign-up':
-            case 'start-project':
-            case 'start-freelancing':
-            case 'hire-talent':
                 this.navigateToPage('signup.html');
                 break;
-
             case 'go-home':
                 this.navigateToPage('index.html');
                 break;
-
-            case 'dashboard':
+            case 'go-dashboard':
                 this.checkAuthAndNavigate('dashboard.html');
                 break;
-
-            case 'projects':
+            case 'go-projects':
                 this.checkAuthAndNavigate('projects.html');
                 break;
-
-            case 'messages':
-                this.checkAuthAndNavigate('messages.html');
-                break;
-
-            case 'payments':
+            case 'go-payments':
                 this.checkAuthAndNavigate('payments.html');
                 break;
-
-            case 'profile':
+            case 'go-messages':
+                this.checkAuthAndNavigate('messages.html');
+                break;
+            case 'go-profile':
                 this.checkAuthAndNavigate('user_profile.html');
                 break;
-
-            case 'support':
-                this.navigateToPage('support.html');
-                break;
-
             case 'logout':
                 this.handleLogout();
                 break;
-
-            case 'how-it-works':
-                this.scrollToSection('how-it-works');
-                break;
-
-            // Placeholder actions for features in development
-            case 'file-upload':
-                this.showPlaceholder('File Upload', 'This feature is coming soon! You\'ll be able to upload and manage project files securely.');
-                break;
-
-            case 'video-call':
-                this.showPlaceholder('Video Calls', 'Video conferencing integration is in development. Stay tuned for seamless collaboration!');
-                break;
-
-            case 'advanced-search':
-                this.showPlaceholder('Advanced Search', 'Enhanced search and filtering capabilities are coming soon!');
-                break;
-
-            case 'notifications':
-                this.showPlaceholder('Notifications', 'Real-time notification system is being implemented. You\'ll get instant updates soon!');
-                break;
-
-            case 'analytics':
-                this.showPlaceholder('Analytics', 'Detailed analytics and reporting features are in development!');
-                break;
-
             default:
-                console.log(`Unhandled action: ${action}`);
-                this.showPlaceholder('Feature Coming Soon', `The "${action}" feature is being developed. Check back soon!`);
-        }
-    }
-
-    validateAndNavigate(href, event) {
-        // List of valid pages
-        const validPages = [
-            'index.html', 'signin.html', 'signup.html', 'dashboard.html',
-            'projects.html', 'messages.html', 'payments.html',
-            'user_profile.html', 'support.html'
-        ];
-
-        // Extract page name from href
-        const pageName = href.split('/').pop() || 'index.html';
-
-        if (validPages.includes(pageName)) {
-            // Page exists, allow navigation
-            return;
-        } else {
-            // Page doesn't exist, show placeholder
-            event.preventDefault();
-            this.showPlaceholder('Page Coming Soon', `The page "${pageName}" is currently in development.`);
+                console.warn('Unknown action:', action);
         }
     }
 
     navigateToPage(page) {
-        // Use global navigation helper
-        window.LunaraNavigate(page);
+        if (typeof window.LunaraNavigate === 'function') {
+            window.LunaraNavigate(page);
+        } else {
+            window.location.href = page;
+        }
+    }
+
+    validateAndNavigate(href, event) {
+        // Basic validation - check if it looks like a valid HTML file
+        if (href.endsWith('.html') || href === '/' || href === '') {
+            return; // Let browser handle it
+        }
+
+        // For other paths, validate before navigating
+        console.log('Navigating to:', href);
     }
 
     checkAuthAndNavigate(page) {
-        // Check if user is authenticated
         if (window.LunaraAPI && window.LunaraAPI.isAuthenticated()) {
             this.navigateToPage(page);
         } else {
@@ -194,7 +294,6 @@ class LunaraNavigation {
     }
 
     setupAuthCheck() {
-        // Redirect to dashboard if already authenticated and on signin/signup pages
         const currentPage = window.location.pathname.split('/').pop();
         if ((currentPage === 'signin.html' || currentPage === 'signup.html') &&
             window.LunaraAPI && window.LunaraAPI.isAuthenticated()) {
@@ -206,176 +305,32 @@ class LunaraNavigation {
         if (window.LunaraAPI) {
             window.LunaraAPI.logout().then(() => {
                 this.showToast('Logged out successfully', 'success');
-                // Clear any cached data
-                if (window.DataSync) {
-                    window.DataSync.clearCache();
-                }
-                // Stop real-time updates
-                if (window.RealTimeUpdates) {
-                    window.RealTimeUpdates.stop();
-                }
-                this.navigateToPage('index.html');
-            }).catch((error) => {
-                console.error('Logout error:', error);
-                this.showToast('Logout failed', 'error');
-                // Force redirect even if logout API fails
                 setTimeout(() => {
                     this.navigateToPage('index.html');
-                }, 1000);
+                }, 500);
             });
-        } else {
-            this.navigateToPage('index.html');
         }
     }
 
     showAuthRequired() {
-        this.showToast('Please sign in to access this feature', 'warning');
+        this.showToast('Please sign in to access this page', 'warning');
         setTimeout(() => {
             this.navigateToPage('signin.html');
         }, 1500);
     }
 
-    showPlaceholder(title, message) {
-        // Create and show modal for placeholder features
-        const modal = document.createElement('div');
-        modal.className = 'placeholder-modal';
-        modal.innerHTML = `
-            <div class="placeholder-modal-content">
-                <div class="placeholder-icon">🚧</div>
-                <h3>${title}</h3>
-                <p>${message}</p>
-                <button class="btn btn-primary" onclick="this.closest('.placeholder-modal').remove()">
-                    Got it!
-                </button>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (modal.parentNode) {
-                modal.remove();
-            }
-        }, 5000);
-    }
-
     showToast(message, type = 'info') {
-        // Create toast notification
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.textContent = message;
-
-        document.body.appendChild(toast);
-
-        // Trigger animation
-        setTimeout(() => toast.classList.add('show'), 100);
-
-        // Remove after 3 seconds
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        // Could implement actual toast UI here
     }
 
     setupPlaceholderMessages() {
-        // Add CSS for modals and toasts if not already present
-        if (!document.getElementById('navigation-styles')) {
-            const styles = document.createElement('style');
-            styles.id = 'navigation-styles';
-            styles.textContent = `
-                .placeholder-modal {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 10000;
-                    animation: fadeIn 0.3s ease;
-                }
-
-                .placeholder-modal-content {
-                    background: white;
-                    padding: 2rem;
-                    border-radius: 12px;
-                    text-align: center;
-                    max-width: 400px;
-                    margin: 1rem;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-                }
-
-                .placeholder-icon {
-                    font-size: 3rem;
-                    margin-bottom: 1rem;
-                }
-
-                .placeholder-modal h3 {
-                    margin: 0 0 1rem 0;
-                    color: #333;
-                }
-
-                .placeholder-modal p {
-                    margin: 0 0 1.5rem 0;
-                    color: #666;
-                    line-height: 1.5;
-                }
-
-                .toast {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    padding: 1rem 1.5rem;
-                    border-radius: 8px;
-                    color: white;
-                    font-weight: 500;
-                    z-index: 10001;
-                    transform: translateX(100%);
-                    transition: transform 0.3s ease;
-                }
-
-                .toast.show {
-                    transform: translateX(0);
-                }
-
-                .toast-success {
-                    background: #10b981;
-                }
-
-                .toast-error {
-                    background: #ef4444;
-                }
-
-                .toast-warning {
-                    background: #f59e0b;
-                }
-
-                .toast-info {
-                    background: #3b82f6;
-                }
-
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: scale(0.9); }
-                    to { opacity: 1; transform: scale(1); }
-                }
-            `;
-            document.head.appendChild(styles);
-        }
+        // Placeholder for future functionality
     }
 }
 
-// Initialize navigation when DOM is ready (prevent duplicate initialization)
-if (!window.LunaraNavigation) {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!window.LunaraNavigation) {
-                window.LunaraNavigation = new LunaraNavigation();
-            }
-        });
-    } else {
-        window.LunaraNavigation = new LunaraNavigation();
-    }
-}
+// Initialize navigation
+const navigation = new LunaraNavigation();
+
+// Expose to window for React integration
+window.navigation = navigation;

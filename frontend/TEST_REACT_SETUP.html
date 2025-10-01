@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Setup Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .pass { color: #10b981; font-weight: bold; }
+        .fail { color: #ef4444; font-weight: bold; }
+        h1 { color: #6366f1; }
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #4f46e5;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 React Setup Diagnostic Test</h1>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results">Running tests...</div>
+        <p style="color: #666; font-size: 14px; margin-top: 10px;">
+            ⚠️ If tests fail but Django logs show 200 OK, hard refresh this page: <strong>Ctrl+Shift+R</strong> (or Cmd+Shift+R on Mac)
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>Actions</h2>
+        <button onclick="runTests()">🔄 Re-run Tests</button>
+        <button onclick="testJSXLoad()">📥 Test JSX Load</button>
+        <button onclick="showConsole()">🖥️ View Console</button>
+        <button onclick="clearCacheAndTest()">🗑️ Clear Cache & Test</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Console Output</h2>
+        <pre id="console-output">Waiting for test results...</pre>
+    </div>
+
+    <!-- Load React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script>
+        let logs = [];
+
+        // Capture console output
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        console.log = function(...args) {
+            logs.push({ type: 'log', message: args.join(' ') });
+            originalLog.apply(console, args);
+            updateConsoleDisplay();
+        };
+
+        console.error = function(...args) {
+            logs.push({ type: 'error', message: args.join(' ') });
+            originalError.apply(console, args);
+            updateConsoleDisplay();
+        };
+
+        function updateConsoleDisplay() {
+            const output = logs.map(log => {
+                const prefix = log.type === 'error' ? '❌ ERROR: ' : '✅ LOG: ';
+                return prefix + log.message;
+            }).join('\n');
+            document.getElementById('console-output').textContent = output || 'No console output yet';
+        }
+
+        async function runTests() {
+            logs = [];
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Running diagnostic tests...</p>';
+
+            let html = '<ul>';
+
+            // Test 1: React loaded
+            const reactLoaded = typeof React !== 'undefined';
+            html += `<li>React Library: ${reactLoaded ? '<span class="pass">✅ LOADED</span>' : '<span class="fail">❌ FAILED</span>'}</li>`;
+            console.log('Test 1:', reactLoaded ? 'React loaded' : 'React NOT loaded');
+
+            // Test 2: ReactDOM loaded
+            const reactDOMLoaded = typeof ReactDOM !== 'undefined';
+            html += `<li>ReactDOM Library: ${reactDOMLoaded ? '<span class="pass">✅ LOADED</span>' : '<span class="fail">❌ FAILED</span>'}</li>`;
+            console.log('Test 2:', reactDOMLoaded ? 'ReactDOM loaded' : 'ReactDOM NOT loaded');
+
+            // Test 3: Babel loaded
+            const babelLoaded = typeof Babel !== 'undefined';
+            html += `<li>Babel Transformer: ${babelLoaded ? '<span class="pass">✅ LOADED</span>' : '<span class="fail">❌ FAILED</span>'}</li>`;
+            console.log('Test 3:', babelLoaded ? 'Babel loaded' : 'Babel NOT loaded');
+
+            // Test 4: Can fetch Hero.jsx
+            let heroAccessible = false;
+            try {
+                const response = await fetch('/react-components/Hero.jsx', {
+                    cache: 'no-cache',
+                    headers: {
+                        'Accept': 'text/babel, text/javascript, application/javascript, */*'
+                    }
+                });
+                heroAccessible = response.ok;
+                const contentType = response.headers.get('content-type');
+                html += `<li>Hero.jsx Accessible: ${heroAccessible ? '<span class="pass">✅ HTTP 200 (' + contentType + ')</span>' : '<span class="fail">❌ HTTP ' + response.status + '</span>'}</li>`;
+                console.log('Test 4: Hero.jsx', heroAccessible ? 'accessible - Content-Type: ' + contentType : 'NOT accessible - Status: ' + response.status);
+            } catch (error) {
+                html += `<li>Hero.jsx Accessible: <span class="fail">❌ FETCH ERROR: ${error.message}</span></li>`;
+                console.error('Test 4 Error:', error.message);
+            }
+
+            // Test 5: Can fetch Features.jsx
+            let featuresAccessible = false;
+            try {
+                const response = await fetch('/react-components/Features.jsx', {
+                    cache: 'no-cache',
+                    headers: {
+                        'Accept': 'text/babel, text/javascript, application/javascript, */*'
+                    }
+                });
+                featuresAccessible = response.ok;
+                const contentType = response.headers.get('content-type');
+                html += `<li>Features.jsx Accessible: ${featuresAccessible ? '<span class="pass">✅ HTTP 200 (' + contentType + ')</span>' : '<span class="fail">❌ HTTP ' + response.status + '</span>'}</li>`;
+                console.log('Test 5: Features.jsx', featuresAccessible ? 'accessible - Content-Type: ' + contentType : 'NOT accessible - Status: ' + response.status);
+            } catch (error) {
+                html += `<li>Features.jsx Accessible: <span class="fail">❌ FETCH ERROR: ${error.message}</span></li>`;
+                console.error('Test 5 Error:', error.message);
+            }
+
+            html += '</ul>';
+
+            // Summary
+            const allPassed = reactLoaded && reactDOMLoaded && babelLoaded && heroAccessible && featuresAccessible;
+
+            if (allPassed) {
+                html += '<h3 style="color: #10b981;">✅ All Tests Passed!</h3>';
+                html += '<p>Your React setup is working correctly. The main index.html should load fine.</p>';
+                html += '<p><strong>Next step:</strong> Refresh your main page (http://127.0.0.1:8000/) and check the console.</p>';
+            } else {
+                html += '<h3 style="color: #ef4444;">❌ Some Tests Failed</h3>';
+                html += '<p>Check the failed items above. Common fixes:</p>';
+                html += '<ul>';
+                html += '<li>If React/ReactDOM/Babel failed: Check your internet connection (loading from CDN)</li>';
+                html += '<li>If .jsx files failed: Check Django urls.py has react-components static path</li>';
+                html += '<li>If .jsx files failed: Check file permissions (should be 644)</li>';
+                html += '</ul>';
+            }
+
+            results.innerHTML = html;
+            updateConsoleDisplay();
+        }
+
+        function testJSXLoad() {
+            console.log('Testing JSX file load...');
+
+            const script = document.createElement('script');
+            script.type = 'text/babel';
+            script.src = '/react-components/Hero.jsx';
+            script.onload = () => {
+                console.log('✅ Hero.jsx loaded successfully');
+                setTimeout(() => {
+                    if (typeof window.Hero !== 'undefined') {
+                        console.log('✅ Hero component is available:', typeof window.Hero);
+                    } else {
+                        console.error('❌ Hero component not available after load');
+                    }
+                }, 1000);
+            };
+            script.onerror = (error) => {
+                console.error('❌ Failed to load Hero.jsx:', error);
+            };
+
+            document.body.appendChild(script);
+        }
+
+        function showConsole() {
+            document.getElementById('console-output').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearCacheAndTest() {
+            // Clear browser cache for this domain
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => caches.delete(name));
+                });
+            }
+
+            // Force reload from server
+            window.location.reload(true);
+        }
+
+        // Auto-run tests on load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Add timestamp to prevent caching
+            console.log('Test page loaded at:', new Date().toISOString());
+            setTimeout(runTests, 500);
+        });
+    </script>
+</body>
+</html>

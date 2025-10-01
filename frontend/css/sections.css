@@ -7,9 +7,14 @@
 .section-title {
     text-align: center;
     font-size: var(--font-size-4xl);
-    font-weight: 700;
-    margin-bottom: var(--space-sm);
-    line-height: 1.2;
+    font-weight: 800;
+    margin-bottom: var(--space-md);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .section-subtitle {
@@ -17,7 +22,8 @@
     color: var(--text-secondary);
     margin-bottom: 4rem;
     font-size: var(--font-size-lg);
-    max-width: 600px;
+    max-width: 650px;
     margin-left: auto;
     margin-right: auto;
+    line-height: 1.7;
 }

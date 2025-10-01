@@ -160,14 +160,29 @@
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+.stat-item.urgent:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(245, 158, 11, 0.2));
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+}
+
 .stat-item.warning {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(234, 179, 8, 0.1));
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+.stat-item.warning:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 179, 8, 0.2));
+  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+}
+
 .stat-item.success {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.1));
   border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.stat-item.success:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.2));
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
 }
 
 .stat-value {
