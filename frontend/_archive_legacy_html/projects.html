@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunara - Projects</title>
+<!-- Favicon and Icons -->
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<meta name="theme-color" content="#6366f1">
+
+<!-- Essential Meta Tags for Security -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; connect-src 'self' https://images.unsplash.com https://lunara-backend.gentlemoss-6a60b505.eastus.azurecontainerapps.io;">
+<meta name="robots" content="noindex, nofollow">
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Core Stylesheets -->
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="/css/dashboard-authentic.css">
+<meta name="view-transition" content="same-origin">
+
+<!-- Turbo for SPA-like navigation -->
+<script type="module">
+  import hotwiredTurbo from 'https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.12/+esm';
+</script>
+
+<!-- View Transitions API styles -->
+<style>
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.3s;
+  }
+
+  ::view-transition-old(root) {
+    animation-name: fade-out;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: fade-in;
+  }
+
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PLACEHOLDER: User authentication should be verified server-side before rendering this page -->
+
+<header id="header">
+  <div class="container">
+    <div class="logo" data-action="dashboard" style="cursor: pointer;">Lunara</div>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#" data-action="dashboard" class="nav-link">Dashboard</a>
+      <a href="#" data-action="projects" class="nav-link active">Projects <span class="nav-badge">7</span></a>
+      <a href="#" data-action="payments" class="nav-link">Payments <span class="nav-badge urgent">2</span></a>
+      <a href="#" data-action="messages" class="nav-link">Messages <span class="nav-badge">12</span></a>
+    </nav>
+    <div class="header-buttons">
+      <button class="btn-icon notification-btn urgent-pulse" title="Urgent notifications" data-action="notifications" aria-label="5 urgent notifications">
+        🚨
+        <span class="notification-badge urgent">5</span>
+      </button>
+      <a href="#" data-action="profile" class="profile-mini" aria-label="View profile">
+        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="Jordan Chen - Freelance Developer" loading="lazy" crossorigin="anonymous">
+        <span data-user-name>Jordan</span>
+      </a>
+      <a href="#" data-action="logout" class="btn btn-secondary">Logout</a>
+    </div>
+    <button id="mobile-menu" class="mobile-menu" aria-label="Toggle mobile menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+</header>
+
+<main class="dashboard-main">
+  <section class="dashboard-hero">
+    <div class="container">
+      <div class="welcome-card">
+        <div class="welcome-content">
+          <h1>🚧 Projects Page - Coming Soon!</h1>
+          <p>Your cousin is working hard on this page. Check back soon!</p>
+          <span class="last-login">This page will include: Project management, timelines, deliverables, and client collaboration tools</span>
+        </div>
+        <div class="quick-stats">
+          <div class="stat-item" data-action="dashboard">
+            <span class="stat-value">←</span>
+            <span class="stat-label">Back to Dashboard</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-content">
+    <div class="container">
+      <div class="widget">
+        <h2>🎯 What's Coming to Projects Page</h2>
+        <div class="feature-preview">
+          <div class="preview-item">
+            <div class="preview-icon">📋</div>
+            <div class="preview-content">
+              <h3>Project Management</h3>
+              <p>Full project lifecycle management with milestones, deadlines, and progress tracking</p>
+            </div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-icon">📊</div>
+            <div class="preview-content">
+              <h3>Analytics & Reports</h3>
+              <p>Detailed project analytics, time tracking, and performance reports</p>
+            </div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-icon">🤝</div>
+            <div class="preview-content">
+              <h3>Client Collaboration</h3>
+              <p>Shared workspaces, file sharing, feedback collection, and approval workflows</p>
+            </div>
+          </div>
+          <div class="preview-item">
+            <div class="preview-icon">💰</div>
+            <div class="preview-content">
+              <h3>Payment Integration</h3>
+              <p>Seamless integration with Lunara's escrow system and milestone-based payments</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem; text-align: center;">
+          <p style="color: var(--text-muted); margin-bottom: 1rem;">
+            💡 <strong>For Developers:</strong> URL parameters are set up for deep linking:<br>
+            <code>?id=proj_123</code> for specific projects, <code>?filter=overdue</code> for filters
+          </p>
+          <button data-action="dashboard" class="btn btn-primary">
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Mobile Navigation Overlay -->
+<div class="mobile-nav-overlay">
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <a href="#" data-action="dashboard" class="mobile-nav-link">Dashboard</a>
+    <a href="#" data-action="projects" class="mobile-nav-link active">Projects <span class="nav-badge">7</span></a>
+    <a href="#" data-action="payments" class="mobile-nav-link">Payments <span class="nav-badge urgent">2</span></a>
+    <a href="#" data-action="messages" class="mobile-nav-link">Messages <span class="nav-badge">12</span></a>
+    <div class="mobile-nav-buttons">
+      <a href="#" data-action="profile" class="btn btn-secondary">Profile</a>
+      <a href="#" data-action="logout" class="btn btn-primary">Logout</a>
+    </div>
+  </nav>
+</div>
+
+<script>
+// Mobile menu functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const mobileMenu = document.getElementById('mobile-menu');
+  const mobileOverlay = document.querySelector('.mobile-nav-overlay');
+
+  mobileMenu?.addEventListener('click', () => {
+    mobileOverlay.classList.toggle('active');
+    const isExpanded = mobileMenu.getAttribute('aria-expanded') === 'true';
+    mobileMenu.setAttribute('aria-expanded', !isExpanded);
+  });
+
+  mobileOverlay?.addEventListener('click', (e) => {
+    if (e.target === mobileOverlay) {
+      mobileOverlay.classList.remove('active');
+      mobileMenu?.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Show URL parameters if any
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.toString()) {
+    const toast = document.createElement('div');
+    toast.textContent = `URL Parameters detected: ${urlParams.toString()}`;
+    toast.style.cssText = `
+      position: fixed; top: 20px; right: 20px; background: #6366f1; color: white;
+      padding: 12px 20px; border-radius: 8px; z-index: 10000; font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      document.body.removeChild(toast);
+    }, 4000);
+  }
+});
+</script>
+
+<script src="/js/ui.js"></script>
+<script src="/js/button_logic.js"></script>
+
+<script src="/js/api.js"></script>
+<script src="/js/navigation.js"></script>
+</body>
+</html>

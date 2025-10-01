@@ -237,20 +237,31 @@ class LunaraNavigation {
             case 'go-home':
                 this.navigateToPage('index.html');
                 break;
+            // Dashboard actions (both with and without 'go-' prefix)
+            case 'dashboard':
             case 'go-dashboard':
                 this.checkAuthAndNavigate('dashboard.html');
                 break;
+            case 'projects':
             case 'go-projects':
                 this.checkAuthAndNavigate('projects.html');
                 break;
+            case 'payments':
             case 'go-payments':
                 this.checkAuthAndNavigate('payments.html');
                 break;
+            case 'messages':
             case 'go-messages':
                 this.checkAuthAndNavigate('messages.html');
                 break;
+            case 'profile':
             case 'go-profile':
                 this.checkAuthAndNavigate('user_profile.html');
+                break;
+            case 'notifications':
+                // Placeholder for notifications feature
+                console.log('Notifications feature coming soon');
+                alert('Notifications system is under development by your cousin!');
                 break;
             case 'logout':
                 this.handleLogout();

@@ -1,35 +1,23 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
-import './legacy-imports.js';
+import './index.css';
+import './styles.css';
+import App from './App.jsx';
 
-// Wait for DOM to be ready
-const initReactApp = () => {
-  const rootElement = document.getElementById('react-root');
+const rootElement = document.getElementById('react-root');
 
-  if (!rootElement) {
-    console.error('❌ React root element not found');
-    return;
-  }
-
-  console.log('🚀 Initializing React app with Vite...');
-
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(<App />);
-
-  console.log('✅ React app mounted successfully');
-
-  // Refresh scroll spy after React sections are mounted
-  setTimeout(() => {
-    if (window.navigation?.setupScrollSpy) {
-      window.navigation.setupScrollSpy();
-    }
-  }, 300);
-};
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initReactApp);
+if (!rootElement) {
+    // This should never happen in a standard Vite setup
+    console.error('❌ React root element not found.');
 } else {
-  initReactApp();
+    console.log('🚀 Starting Lunara App via Vite...');
+    
+    // The main React rendering call
+    ReactDOM.createRoot(rootElement).render(
+        <React.StrictMode>
+            <App />
+        </React.StrictMode>
+    );
+
+    console.log('✅ React app rendered.');
 }
