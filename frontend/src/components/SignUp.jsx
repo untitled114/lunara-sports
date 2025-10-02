@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, AtSign, Key, User, Rocket, Loader2 } from 'lucide-react';
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth, isFirebaseAvailable } from '../config/firebase';
+import { authAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
 const SignUp = () => {
@@ -47,46 +46,25 @@ const SignUp = () => {
     setLoading(true);
 
     try {
-      // Check if Firebase is available
-      if (!isFirebaseAvailable || !auth) {
-        // Fallback to localStorage auth for development
-        console.log('Using localStorage auth for:', formData.email);
-
-        const mockToken = btoa(JSON.stringify({
-          email: formData.email,
-          name: formData.fullName,
-          timestamp: Date.now()
-        }));
-
-        localStorage.setItem('auth_token', mockToken);
-        localStorage.setItem('user_email', formData.email);
-        localStorage.setItem('user_name', formData.fullName);
-
-        showSuccess('Account created! Redirecting to dashboard...');
-
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1000);
-        return;
-      }
-
-      // Use Firebase authentication
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-
-      // Update user profile with name
-      await updateProfile(userCredential.user, {
-        displayName: formData.fullName
+      // Call backend auth API
+      const response = await authAPI.signup({
+        email: formData.email,
+        password: formData.password,
+        name: formData.fullName,
+        username: formData.email.split('@')[0], // Generate username from email
       });
 
-      // Store auth token
-      const token = await userCredential.user.getIdToken();
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user_email', formData.email);
-      localStorage.setItem('user_name', formData.fullName);
+      // Store auth token and user info
+      if (response.token) {
+        localStorage.setItem('auth_token', response.token);
+      }
+      if (response.user) {
+        localStorage.setItem('user_email', response.user.email || formData.email);
+        localStorage.setItem('user_name', response.user.name || formData.fullName);
+        if (response.user.id) {
+          localStorage.setItem('user_id', response.user.id);
+        }
+      }
 
       showSuccess('Account created! Redirecting to dashboard...');
 
@@ -99,12 +77,17 @@ const SignUp = () => {
 
       let errorMessage = 'Sign up failed. Please try again.';
 
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'An account with this email already exists.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak. Use at least 6 characters.';
+      // Handle specific API error messages
+      if (error.status === 400) {
+        if (error.data && error.data.email) {
+          errorMessage = 'An account with this email already exists.';
+        } else if (error.data && error.data.message) {
+          errorMessage = error.data.message;
+        }
+      } else if (error.data && error.data.message) {
+        errorMessage = error.data.message;
+      } else if (error.isNetworkError) {
+        errorMessage = 'Network error. Please check your connection and try again.';
       }
 
       showError(errorMessage);

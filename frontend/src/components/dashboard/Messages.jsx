@@ -6,6 +6,7 @@ import UrgentAlertBanner from '../UrgentAlertBanner';
 import UrgentMessageList from '../UrgentMessageList';
 import { useMessageContext } from '../../contexts/MessageContext';
 import { useToast } from '../../contexts/ToastContext';
+import { messagesAPI } from '../../services/api';
 
 const Messages = () => {
   const { modalState, openModal, handleResolution } = usePromiseModal();
@@ -37,20 +38,11 @@ const Messages = () => {
     setSending(true);
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/messages', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-      //   },
-      //   body: JSON.stringify(messageForm)
-      // });
-
-      // if (!response.ok) throw new Error('Failed to send message');
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await messagesAPI.send({
+        recipient: messageForm.to,
+        subject: 'New Message',
+        content: messageForm.message,
+      });
 
       showSuccess(`Message sent to ${messageForm.to}!`);
 
@@ -62,20 +54,41 @@ const Messages = () => {
 
     } catch (error) {
       console.error('Send message error:', error);
-      showError(error.message || 'Failed to send message. Please try again.');
+      let errorMessage = 'Failed to send message. Please try again.';
+      if (error.data && error.data.message) {
+        errorMessage = error.data.message;
+      } else if (error.isNetworkError) {
+        errorMessage = 'Network error. Please check your connection.';
+      }
+      showError(errorMessage);
     } finally {
       setSending(false);
     }
   };
 
-  const handleReplyToAll = () => {
-    showInfo(`Preparing batch reply to ${unreadCount} unread messages...`);
-    // TODO: Implement batch reply modal
+  const handleReplyToAll = async () => {
+    try {
+      await messagesAPI.batchReply({
+        message: 'Thank you for your message. I will respond shortly.',
+      });
+      showSuccess(`Batch reply sent to ${unreadCount} unread messages!`);
+    } catch (error) {
+      console.error('Batch reply error:', error);
+      showError('Failed to send batch replies. Please try again.');
+    }
   };
 
-  const handleSendUpdate = () => {
-    showInfo('Opening broadcast message modal...');
-    // TODO: Implement broadcast modal
+  const handleSendUpdate = async () => {
+    try {
+      await messagesAPI.broadcast({
+        subject: 'Project Update',
+        content: 'Sending update to all clients...',
+      });
+      showSuccess('Broadcast message sent to all clients!');
+    } catch (error) {
+      console.error('Broadcast error:', error);
+      showError('Failed to send broadcast. Please try again.');
+    }
   };
 
   return (

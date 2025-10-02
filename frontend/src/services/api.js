@@ -112,6 +112,30 @@ const baseFetch = async (endpoint, options = {}) => {
       data = await response.text();
     }
 
+    // Handle 401 Unauthorized - redirect to signin
+    if (response.status === 401) {
+      // Clear auth tokens
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_id');
+
+      // Store current path for redirect after login
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/signin' && currentPath !== '/signup') {
+        localStorage.setItem('redirect_after_login', currentPath);
+      }
+
+      // Redirect to signin
+      window.location.href = '/signin';
+
+      throw new APIError(
+        'Session expired. Please sign in again.',
+        401,
+        data
+      );
+    }
+
     // Handle non-2xx responses
     if (!response.ok) {
       throw new APIError(

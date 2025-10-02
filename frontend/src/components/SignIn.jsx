@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, AtSign, Key, Rocket, LogIn, Loader2 } from 'lucide-react';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, isFirebaseAvailable } from '../config/firebase';
+import { authAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
 const SignIn = () => {
@@ -28,38 +27,20 @@ const SignIn = () => {
     setLoading(true);
 
     try {
-      // Check if Firebase is available
-      if (!isFirebaseAvailable || !auth) {
-        // Fallback to localStorage auth for development
-        console.log('Using localStorage auth for:', formData.email);
+      // Call backend auth API
+      const response = await authAPI.login(formData.email, formData.password);
 
-        const mockToken = btoa(JSON.stringify({
-          email: formData.email,
-          timestamp: Date.now()
-        }));
-
-        localStorage.setItem('auth_token', mockToken);
-        localStorage.setItem('user_email', formData.email);
-
-        showSuccess('Welcome back! Redirecting to dashboard...');
-
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1000);
-        return;
+      // Store auth token and user info
+      if (response.token) {
+        localStorage.setItem('auth_token', response.token);
       }
-
-      // Use Firebase authentication
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-
-      // Store auth token
-      const token = await userCredential.user.getIdToken();
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user_email', formData.email);
+      if (response.user) {
+        localStorage.setItem('user_email', response.user.email || formData.email);
+        localStorage.setItem('user_name', response.user.name || response.user.username || '');
+        if (response.user.id) {
+          localStorage.setItem('user_id', response.user.id);
+        }
+      }
 
       showSuccess('Welcome back! Redirecting to dashboard...');
 
@@ -72,14 +53,17 @@ const SignIn = () => {
 
       let errorMessage = 'Login failed. Please check your credentials.';
 
-      if (error.code === 'auth/user-not-found') {
+      // Handle specific API error messages
+      if (error.status === 401) {
+        errorMessage = 'Invalid email or password.';
+      } else if (error.status === 404) {
         errorMessage = 'No account found with this email.';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Invalid password.';
-      } else if (error.code === 'auth/too-many-requests') {
+      } else if (error.status === 429) {
         errorMessage = 'Too many failed attempts. Please try again later.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
+      } else if (error.data && error.data.message) {
+        errorMessage = error.data.message;
+      } else if (error.isNetworkError) {
+        errorMessage = 'Network error. Please check your connection and try again.';
       }
 
       showError(errorMessage);

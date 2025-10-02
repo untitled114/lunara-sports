@@ -1,7 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { profileAPI } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
+import { Loader2 } from 'lucide-react';
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('activity');
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { showSuccess, showError } = useToast();
+
+  // Fetch profile data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const data = await profileAPI.get();
+        setProfile(data);
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+        showError('Failed to load profile data');
+        // Use fallback data for development
+        setProfile({
+          name: 'Alex Taylor',
+          username: 'alexthedev',
+          bio: 'Full-stack developer & UI/UX designer specializing in modern web applications.',
+          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+          verified: true,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [showError]);
 
   const stats = [
     { icon: '📊', label: 'Total Projects', value: '24', subtext: '+3 this month', color: 'bg-blue-900/20 border-blue-500/30' },
@@ -82,6 +114,27 @@ const Profile = () => {
     { name: 'TypeScript', level: 92, category: 'Frontend', color: 'from-blue-600 to-indigo-600' },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-400">Failed to load profile</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-transparent">
       {/* Profile Hero */}
@@ -91,9 +144,9 @@ const Profile = () => {
             {/* Avatar */}
             <div className="relative">
               <img
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
+                src={profile.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face'}
                 alt="User Avatar"
-                className="w-32 h-32 rounded-full border-4 border-white shadow-xl"
+                className="w-32 h-32 rounded-full border-4 border-white shadow-xl object-cover"
                 crossOrigin="anonymous"
               />
               <div className="absolute bottom-2 right-2 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
@@ -102,11 +155,11 @@ const Profile = () => {
             {/* Info */}
             <div className="flex-1">
               <h1 className="text-4xl font-bold mb-2">
-                Alex Taylor <span className="text-xl bg-white/20 px-3 py-1 rounded-full">✓ Verified</span>
+                {profile.name || 'User'} {profile.verified && <span className="text-xl bg-white/20 px-3 py-1 rounded-full">✓ Verified</span>}
               </h1>
-              <p className="text-indigo-200 text-lg mb-3">@alexthedev</p>
+              <p className="text-indigo-200 text-lg mb-3">@{profile.username || 'user'}</p>
               <p className="text-white/90 mb-4 max-w-2xl">
-                Full-stack developer & UI/UX designer specializing in modern web applications. Passionate about creating seamless user experiences.
+                {profile.bio || 'Welcome to Lunara!'}
               </p>
               <div className="flex flex-wrap gap-2">
                 {['React', 'Node.js', 'UI/UX', 'Python', 'AWS'].map((skill) => (

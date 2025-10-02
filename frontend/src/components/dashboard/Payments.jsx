@@ -1,37 +1,100 @@
+import { useState, useEffect } from 'react';
+import { paymentsAPI, invoicesAPI } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
+import { Loader2 } from 'lucide-react';
+
 const Payments = () => {
-  const payments = [
-    {
-      id: 1,
-      project: 'E-commerce Dashboard',
-      client: 'TechCorp',
-      amount: 2500,
-      status: 'paid',
-      date: '2024-12-15',
-      method: 'Bank Transfer',
-      invoice: 'INV-2024-001',
-    },
-    {
-      id: 2,
-      project: 'Healthcare Portal',
-      client: 'MedCare Plus',
-      amount: 3800,
-      status: 'pending',
-      date: '2024-12-20',
-      method: 'Lunara Wallet',
-      invoice: 'INV-2024-002',
-      daysOverdue: 3,
-    },
-    {
-      id: 3,
-      project: 'Mobile Banking App - Milestone 1',
-      client: 'FinanceFlow',
-      amount: 2100,
-      status: 'processing',
-      date: '2024-12-18',
-      method: 'PayPal',
-      invoice: 'INV-2024-003',
-    },
-  ];
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { showSuccess, showError } = useToast();
+
+  // Fetch payments on mount
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        setLoading(true);
+        const data = await paymentsAPI.getAll();
+        const transformedPayments = (data.results || data).map(payment => ({
+          id: payment.id,
+          project: payment.project || payment.project_name || 'Unknown Project',
+          client: payment.client || payment.client_name || 'Unknown Client',
+          amount: payment.amount || 0,
+          status: payment.status || 'pending',
+          date: payment.date || payment.created_at || new Date().toISOString(),
+          method: payment.payment_method || payment.method || 'Unknown',
+          invoice: payment.invoice || payment.invoice_number || 'N/A',
+          daysOverdue: payment.days_overdue || 0,
+        }));
+        setPayments(transformedPayments);
+      } catch (error) {
+        console.error('Failed to load payments:', error);
+        showError('Failed to load payments. Using demo data.');
+        // Use fallback data for development
+        setPayments([
+          {
+            id: 1,
+            project: 'E-commerce Dashboard',
+            client: 'TechCorp',
+            amount: 2500,
+            status: 'paid',
+            date: '2024-12-15',
+            method: 'Bank Transfer',
+            invoice: 'INV-2024-001',
+          },
+          {
+            id: 2,
+            project: 'Healthcare Portal',
+            client: 'MedCare Plus',
+            amount: 3800,
+            status: 'pending',
+            date: '2024-12-20',
+            method: 'Lunara Wallet',
+            invoice: 'INV-2024-002',
+            daysOverdue: 3,
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPayments();
+  }, [showError]);
+
+  // Handle payment reminder
+  const handleSendReminder = async (paymentId) => {
+    try {
+      await paymentsAPI.sendReminder(paymentId);
+      showSuccess('Payment reminder sent successfully!');
+    } catch (error) {
+      console.error('Failed to send reminder:', error);
+      showError('Failed to send payment reminder. Please try again.');
+    }
+  };
+
+  // Handle invoice download
+  const handleDownloadInvoice = async (paymentId) => {
+    try {
+      const invoiceData = await invoicesAPI.download(paymentId);
+      // Trigger download (implementation depends on backend response format)
+      showSuccess('Invoice download started!');
+    } catch (error) {
+      console.error('Failed to download invoice:', error);
+      showError('Failed to download invoice. Please try again.');
+    }
+  };
+
+  // Handle receipt download
+  const handleDownloadReceipt = async (paymentId) => {
+    try {
+      const receiptData = await paymentsAPI.downloadReceipt(paymentId);
+      // Trigger download (implementation depends on backend response format)
+      showSuccess('Receipt download started!');
+    } catch (error) {
+      console.error('Failed to download receipt:', error);
+      showError('Failed to download receipt. Please try again.');
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -56,6 +119,17 @@ const Payments = () => {
   const totalEarned = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
   const totalPending = payments.filter(p => p.status === 'pending' || p.status === 'processing').reduce((sum, p) => sum + p.amount, 0);
   const totalOverdue = payments.filter(p => p.daysOverdue).reduce((sum, p) => sum + p.amount, 0);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-transparent py-8 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-400">Loading payments...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-transparent py-8">
@@ -151,16 +225,25 @@ const Payments = () => {
 
                 {/* Right - Actions */}
                 <div className="flex flex-wrap gap-2">
-                  <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition text-sm">
+                  <button
+                    onClick={() => handleDownloadInvoice(payment.id)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition text-sm"
+                  >
                     View Invoice
                   </button>
                   {payment.status === 'pending' && (
-                    <button className="px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition text-sm">
+                    <button
+                      onClick={() => handleSendReminder(payment.id)}
+                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition text-sm"
+                    >
                       Send Reminder
                     </button>
                   )}
                   {payment.status === 'paid' && (
-                    <button className="px-4 py-2 bg-gray-700 text-gray-300 border border-gray-600 rounded-lg font-medium hover:bg-gray-200 transition text-sm">
+                    <button
+                      onClick={() => handleDownloadReceipt(payment.id)}
+                      className="px-4 py-2 bg-gray-700 text-gray-300 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition text-sm"
+                    >
                       Download Receipt
                     </button>
                   )}

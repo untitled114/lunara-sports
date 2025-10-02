@@ -1,51 +1,125 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
+import { projectsAPI } from '../../services/api';
+import { Loader2 } from 'lucide-react';
 import NewProjectModal from '../NewProjectModal';
 
 const Projects = () => {
   const navigate = useNavigate();
-  const { showSuccess, showInfo } = useToast();
+  const { showSuccess, showInfo, showError } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('priority');
+  const [allProjects, setAllProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const allProjects = [
-    {
-      id: 1,
-      title: 'E-commerce Dashboard Redesign',
-      client: 'TechCorp',
-      status: 'active',
-      progress: 75,
-      value: '$2,500',
-      deadline: '2 days',
-      priority: 'high',
-      description: 'Modern React dashboard with real-time analytics',
-    },
-    {
-      id: 2,
-      title: 'Mobile Banking App',
-      client: 'FinanceFlow',
-      status: 'active',
-      progress: 45,
-      value: '$4,200',
-      deadline: '1 week',
-      priority: 'medium',
-      description: 'Flutter app with biometric authentication',
-    },
-    {
-      id: 3,
-      title: 'Healthcare Patient Portal',
-      client: 'MedCare Plus',
-      status: 'review',
-      progress: 90,
-      value: '$3,800',
-      deadline: 'Overdue',
-      priority: 'critical',
-      description: 'HIPAA-compliant patient management system',
-    },
-  ];
+  // Fetch projects on mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        const data = await projectsAPI.getAll();
+        // Transform backend data to frontend format
+        const transformedProjects = (data.results || data).map(project => ({
+          id: project.id,
+          title: project.title || project.name,
+          client: project.client || project.client_name || 'Unknown Client',
+          status: project.status || 'active',
+          progress: project.progress || 0,
+          value: project.value || project.budget || '$0',
+          deadline: project.deadline || 'Not set',
+          priority: project.priority || 'medium',
+          description: project.description || '',
+        }));
+        setAllProjects(transformedProjects);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+        showError('Failed to load projects. Using demo data.');
+        // Use fallback data for development
+        setAllProjects([
+          {
+            id: 1,
+            title: 'E-commerce Dashboard Redesign',
+            client: 'TechCorp',
+            status: 'active',
+            progress: 75,
+            value: '$2,500',
+            deadline: '2 days',
+            priority: 'high',
+            description: 'Modern React dashboard with real-time analytics',
+          },
+          {
+            id: 2,
+            title: 'Mobile Banking App',
+            client: 'FinanceFlow',
+            status: 'active',
+            progress: 45,
+            value: '$4,200',
+            deadline: '1 week',
+            priority: 'medium',
+            description: 'Flutter app with biometric authentication',
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, [showError]);
+
+  // Handle project creation
+  const handleCreateProject = async (projectData) => {
+    try {
+      const newProject = await projectsAPI.create(projectData);
+      setAllProjects([...allProjects, {
+        id: newProject.id,
+        title: newProject.title || newProject.name,
+        client: newProject.client || newProject.client_name || 'Unknown Client',
+        status: newProject.status || 'active',
+        progress: newProject.progress || 0,
+        value: newProject.value || newProject.budget || '$0',
+        deadline: newProject.deadline || 'Not set',
+        priority: newProject.priority || 'medium',
+        description: newProject.description || '',
+      }]);
+      showSuccess('Project created successfully!');
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      showError('Failed to create project. Please try again.');
+    }
+  };
+
+  // Handle project update
+  const handleUpdateProject = async (projectId, updates) => {
+    try {
+      const updatedProject = await projectsAPI.update(projectId, updates);
+      setAllProjects(allProjects.map(p => p.id === projectId ? {
+        ...p,
+        ...updates,
+        ...updatedProject,
+      } : p));
+      showSuccess('Project updated successfully!');
+    } catch (error) {
+      console.error('Failed to update project:', error);
+      showError('Failed to update project. Please try again.');
+    }
+  };
+
+  // Handle project deletion
+  const handleDeleteProject = async (projectId) => {
+    try {
+      await projectsAPI.delete(projectId);
+      setAllProjects(allProjects.filter(p => p.id !== projectId));
+      showSuccess('Project deleted successfully!');
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      showError('Failed to delete project. Please try again.');
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -117,9 +191,19 @@ const Projects = () => {
     // TODO: navigate(`/projects/${projectId}`);
   };
 
-  const handleUpdateStatus = (projectId) => {
-    showInfo('Status update modal coming soon!');
-    // TODO: Open status update modal
+  const handleUpdateStatus = async (projectId) => {
+    // Cycle through statuses: active -> review -> completed
+    const project = allProjects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const statusCycle = {
+      'active': 'review',
+      'review': 'completed',
+      'completed': 'active',
+    };
+
+    const newStatus = statusCycle[project.status] || 'active';
+    await handleUpdateProject(projectId, { status: newStatus });
   };
 
   const handleMessageClient = (projectId, clientName) => {
@@ -133,10 +217,21 @@ const Projects = () => {
     // TODO: Open invoice modal
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-transparent py-8 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-400">Loading projects...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-transparent py-8">
       {/* New Project Modal */}
-      <NewProjectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <NewProjectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreate={handleCreateProject} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
