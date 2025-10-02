@@ -8,21 +8,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      
-      // CRITICAL FIX: Alias the problematic module to a mock file
-      // e.g., './src/test/webidl-conversions-mock.js'
       'webidl-conversions': path.resolve(__dirname, './src/test/webidl-conversions-mock.js'),
+      'whatwg-url': path.resolve(__dirname, './src/test/whatwg-url-mock.js'),
     },
   },
-  
-  // CONSOLIDATED AND CORRECTED 'server' BLOCK:
-  // Inline both webidl-conversions and whatwg-url to prevent CJS loading issues
-  server: {
-    deps: {
-      inline: ['webidl-conversions', 'whatwg-url'],
-    },
-  },
-  
+
   test: {
     globals: true,
     environment: 'jsdom',
@@ -35,6 +25,11 @@ export default defineConfig({
     css: true,
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
+    server: {
+      deps: {
+        inline: ['webidl-conversions', 'whatwg-url'],
+      },
+    },
     exclude: [
       '**/node_modules/**',
       '**/dist/**',

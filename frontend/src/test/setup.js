@@ -69,6 +69,53 @@ if (typeof globalThis.URLSearchParams === 'undefined') {
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
+
+// ==============================
+// Mock problematic Node modules first (hoisted by Vitest)
+// ==============================
+vi.mock('webidl-conversions', () => {
+  const conversions = {};
+  conversions.any = (V) => V;
+  conversions.boolean = (V) => !!V;
+  conversions.USVString = (V) => String(V);
+  conversions.DOMString = (V) => String(V);
+  conversions.object = (V) => V;
+  return conversions;
+});
+
+vi.mock('whatwg-url', () => ({
+  URL: class URL {
+    constructor(href, base) {
+      this.href = href || '';
+      this.origin = '';
+      this.protocol = 'http:';
+      this.host = 'localhost';
+      this.hostname = 'localhost';
+      this.port = '';
+      this.pathname = '/';
+      this.search = '';
+      this.hash = '';
+    }
+    toString() { return this.href; }
+  },
+  URLSearchParams: class URLSearchParams {
+    constructor() {
+      this._params = new Map();
+    }
+    get(name) { return this._params.get(name) || null; }
+    set(name, value) { this._params.set(name, value); }
+    has(name) { return this._params.has(name); }
+    delete(name) { this._params.delete(name); }
+    toString() {
+      const parts = [];
+      for (const [key, value] of this._params) {
+        parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+      }
+      return parts.join('&');
+    }
+  },
+}));
+
 // ==============================
 // Mock Sentry
 // ==============================
