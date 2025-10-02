@@ -182,8 +182,8 @@ const fetchWithRetry = async (endpoint, options = {}, retryCount = 0) => {
       logAPIError(error, { url, method, endpoint });
     }
 
-    // Don't retry client errors (4xx)
-    if (error.isClientError) {
+    // Don't retry client errors (4xx) EXCEPT 429 (rate limit - should retry)
+    if (error.isClientError && error.status !== 429) {
       throw error;
     }
 

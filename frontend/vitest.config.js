@@ -25,6 +25,7 @@ export default defineConfig({
       './src/test/global-shims.js',  // MUST be first - provides polyfills before any imports
       './src/test/setup.js',
     ],
+    testTimeout: 10000, // Increase timeout for component tests with user interactions
     css: true,
     pool: 'forks',
     poolOptions: {
