@@ -14,6 +14,12 @@ export default defineConfig({
     },
     setupFiles: './src/test/setup.js',
     css: true,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     exclude: [
       '**/node_modules/**',
       '**/dist/**',

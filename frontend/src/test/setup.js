@@ -2,12 +2,13 @@ import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi, beforeAll } from 'vitest';
 
-// Polyfill for webidl-conversions in Node.js test environment
-if (typeof globalThis.WeakMap === 'undefined') {
-  globalThis.WeakMap = WeakMap;
+// Fix for webidl-conversions module loading in Node environment
+// This must happen before any other imports that might use whatwg-url
+if (typeof global.WeakMap === 'undefined') {
+  global.WeakMap = Map;
 }
-if (typeof globalThis.WeakSet === 'undefined') {
-  globalThis.WeakSet = WeakSet;
+if (typeof global.WeakSet === 'undefined') {
+  global.WeakSet = Set;
 }
 
 // Mock Sentry to prevent errors in tests
