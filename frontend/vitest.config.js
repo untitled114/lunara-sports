@@ -4,16 +4,25 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      
+      // CRITICAL FIX: Alias the problematic module to a mock file
+      // e.g., './src/test/webidl-conversions-mock.js'
+      'webidl-conversions': path.resolve(__dirname, './src/test/webidl-conversions-mock.js'),
     },
   },
+  
+  // CONSOLIDATED AND CORRECTED 'server' BLOCK:
+  // We keep 'whatwg-url' inline as a fallback, but rely on the alias for 'webidl-conversions'.
   server: {
     deps: {
-      inline: ['whatwg-url', 'webidl-conversions'],
+      inline: ['whatwg-url'], 
     },
   },
+  
   test: {
     globals: true,
     environment: 'jsdom',
