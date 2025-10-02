@@ -389,7 +389,7 @@ export const payoutsAPI = {
 export const authAPI = {
   login: (email, password) => api.post('/auth/login/', { email, password }),
 
-  signup: (data) => api.post('/auth/signup/', data),
+  signup: (data) => api.post('/auth/register/', data),
 
   logout: () => api.post('/auth/logout/', {}),
 

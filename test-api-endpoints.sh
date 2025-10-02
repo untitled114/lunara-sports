@@ -57,7 +57,7 @@ test_endpoint() {
 echo "📋 Testing Authentication Endpoints"
 echo "-----------------------------------"
 test_endpoint "POST" "/api/auth/login/" "Login endpoint"
-test_endpoint "POST" "/api/auth/register/" "Registration endpoint (signup)"
+test_endpoint "POST" "/api/auth/register/" "Registration endpoint"
 test_endpoint "POST" "/api/auth/logout/" "Logout endpoint"
 test_endpoint "POST" "/api/auth/refresh/" "Token refresh endpoint"
 
