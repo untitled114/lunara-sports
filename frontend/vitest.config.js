@@ -16,10 +16,10 @@ export default defineConfig({
   },
   
   // CONSOLIDATED AND CORRECTED 'server' BLOCK:
-  // We keep 'whatwg-url' inline as a fallback, but rely on the alias for 'webidl-conversions'.
+  // Inline both webidl-conversions and whatwg-url to prevent CJS loading issues
   server: {
     deps: {
-      inline: ['whatwg-url'], 
+      inline: ['webidl-conversions', 'whatwg-url'],
     },
   },
   
