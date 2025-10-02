@@ -9,6 +9,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    deps: {
+      inline: ['whatwg-url', 'webidl-conversions'],
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
@@ -44,10 +49,6 @@ export default defineConfig({
       functions: 70,
       branches: 70,
       statements: 80,
-    },
-    deps: {
-      // INLINE problematic packages to avoid the 'get' of undefined error
-      inline: ['whatwg-url', 'webidl-conversions'],
     },
   },
 });
