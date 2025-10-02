@@ -5,9 +5,17 @@ import { afterEach, beforeEach, vi } from 'vitest';
 // ==============================
 // Fix for webidl-conversions errors
 // ==============================
-if (typeof global.WeakMap === 'undefined') global.WeakMap = Map;
-if (typeof global.WeakSet === 'undefined') global.WeakSet = Set;
+if (typeof globalThis.WeakMap === 'undefined') globalThis.WeakMap = Map;
+if (typeof globalThis.WeakSet === 'undefined') globalThis.WeakSet = Set;
+if (typeof globalThis.ArrayBuffer === 'undefined') globalThis.ArrayBuffer = class {};
+if (typeof globalThis.DataView === 'undefined') globalThis.DataView = class {};
 
+// Optional: mock URL class to prevent whatwg-url from crashing
+if (typeof globalThis.URL === 'undefined') {
+  globalThis.URL = class {
+    constructor(href) { this.href = href; }
+  };
+}
 // ==============================
 // Mock Sentry
 // ==============================
