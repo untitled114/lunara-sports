@@ -5,7 +5,7 @@
 
 import * as Sentry from '@sentry/react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // Start with 1 second
 
@@ -288,102 +288,102 @@ export const api = {
 export const projectsAPI = {
   getAll: (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return api.get(`/projects${query ? `?${query}` : ''}`);
+    return api.get(`/projects/${query ? `?${query}` : ''}`);
   },
 
-  getById: (id) => api.get(`/projects/${id}`),
+  getById: (id) => api.get(`/projects/${id}/`),
 
-  create: (data) => api.post('/projects', data),
+  create: (data) => api.post('/projects/', data),
 
-  update: (id, data) => api.patch(`/projects/${id}`, data),
+  update: (id, data) => api.patch(`/projects/${id}/`, data),
 
-  delete: (id) => api.delete(`/projects/${id}`),
+  delete: (id) => api.delete(`/projects/${id}/`),
 
-  updateStatus: (id, status) => api.patch(`/projects/${id}/status`, { status }),
+  updateStatus: (id, status) => api.patch(`/projects/${id}/status/`, { status }),
 };
 
 // Messages API
 export const messagesAPI = {
   getAll: (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return api.get(`/messages${query ? `?${query}` : ''}`);
+    return api.get(`/messages/${query ? `?${query}` : ''}`);
   },
 
-  getById: (id) => api.get(`/messages/${id}`),
+  getById: (id) => api.get(`/messages/${id}/`),
 
-  send: (data) => api.post('/messages', data),
+  send: (data) => api.post('/messages/', data),
 
-  markAsRead: (id) => api.patch(`/messages/${id}/read`, {}),
+  markAsRead: (id) => api.patch(`/messages/${id}/read/`, {}),
 
-  batchReply: (data) => api.post('/messages/batch-reply', data),
+  batchReply: (data) => api.post('/messages/batch-reply/', data),
 
-  broadcast: (data) => api.post('/messages/broadcast', data),
+  broadcast: (data) => api.post('/messages/broadcast/', data),
 };
 
 // Payments API
 export const paymentsAPI = {
   getAll: (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return api.get(`/payments${query ? `?${query}` : ''}`);
+    return api.get(`/payments/${query ? `?${query}` : ''}`);
   },
 
-  getById: (id) => api.get(`/payments/${id}`),
+  getById: (id) => api.get(`/payments/${id}/`),
 
-  sendReminder: (id) => api.post(`/payments/${id}/remind`, {}),
+  sendReminder: (id) => api.post(`/payments/${id}/remind/`, {}),
 
-  downloadReceipt: (id) => api.get(`/payments/${id}/receipt`),
+  downloadReceipt: (id) => api.get(`/payments/${id}/receipt/`),
 };
 
 // Invoices API
 export const invoicesAPI = {
   getAll: (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return api.get(`/invoices${query ? `?${query}` : ''}`);
+    return api.get(`/invoices/${query ? `?${query}` : ''}`);
   },
 
-  getById: (id) => api.get(`/invoices/${id}`),
+  getById: (id) => api.get(`/invoices/${id}/`),
 
-  create: (data) => api.post('/invoices', data),
+  create: (data) => api.post('/invoices/', data),
 
-  download: (id) => api.get(`/invoices/${id}/download`),
+  download: (id) => api.get(`/invoices/${id}/download/`),
 };
 
 // Profile API
 export const profileAPI = {
-  get: () => api.get('/profile'),
+  get: () => api.get('/profile/'),
 
-  update: (data) => api.patch('/profile', data),
+  update: (data) => api.patch('/profile/', data),
 
   uploadAvatar: (file) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    return api.upload('/profile/avatar', formData);
+    return api.upload('/profile/avatar/', formData);
   },
 };
 
 // Payouts API
 export const payoutsAPI = {
-  request: (data) => api.post('/payouts/request', data),
+  request: (data) => api.post('/payouts/request/', data),
 
   getAll: (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return api.get(`/payouts${query ? `?${query}` : ''}`);
+    return api.get(`/payouts/${query ? `?${query}` : ''}`);
   },
 };
 
 // Auth API
 export const authAPI = {
-  login: (email, password) => api.post('/auth/login', { email, password }),
+  login: (email, password) => api.post('/auth/login/', { email, password }),
 
-  signup: (data) => api.post('/auth/signup', data),
+  signup: (data) => api.post('/auth/signup/', data),
 
-  logout: () => api.post('/auth/logout', {}),
+  logout: () => api.post('/auth/logout/', {}),
 
-  refreshToken: () => api.post('/auth/refresh', {}),
+  refreshToken: () => api.post('/auth/refresh/', {}),
 
-  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  forgotPassword: (email) => api.post('/auth/forgot-password/', { email }),
 
-  resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  resetPassword: (token, password) => api.post('/auth/reset-password/', { token, password }),
 };
 
 export default api;
