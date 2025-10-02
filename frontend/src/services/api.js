@@ -112,25 +112,30 @@ const baseFetch = async (endpoint, options = {}) => {
       data = await response.text();
     }
 
-    // Handle 401 Unauthorized - redirect to signin
+    // Handle 401 Unauthorized - redirect to signin (but not for login/signup endpoints)
     if (response.status === 401) {
-      // Clear auth tokens
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user_name');
-      localStorage.removeItem('user_id');
+      // Don't redirect if this is a login or signup request (those are expected to return 401 for bad credentials)
+      const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/signup');
 
-      // Store current path for redirect after login
-      const currentPath = window.location.pathname;
-      if (currentPath !== '/signin' && currentPath !== '/signup') {
-        localStorage.setItem('redirect_after_login', currentPath);
+      if (!isAuthEndpoint) {
+        // Clear auth tokens
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_email');
+        localStorage.removeItem('user_name');
+        localStorage.removeItem('user_id');
+
+        // Store current path for redirect after login
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/signin' && currentPath !== '/signup') {
+          localStorage.setItem('redirect_after_login', currentPath);
+        }
+
+        // Redirect to signin
+        window.location.href = '/signin';
       }
 
-      // Redirect to signin
-      window.location.href = '/signin';
-
       throw new APIError(
-        'Session expired. Please sign in again.',
+        data.message || data.error || 'Unauthorized',
         401,
         data
       );
