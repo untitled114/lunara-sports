@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 const Payments = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
   const { showSuccess, showError } = useToast();
 
   // Fetch payments on mount
@@ -116,6 +117,16 @@ const Payments = () => {
     }
   };
 
+  // Filter payments based on active tab
+  const filteredPayments = payments.filter(payment => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'paid') return payment.status === 'paid';
+    if (activeTab === 'pending') return payment.status === 'pending' || payment.status === 'processing';
+    if (activeTab === 'overdue') return payment.daysOverdue > 0;
+    if (activeTab === 'invoices') return true; // Show all for invoices tab
+    return true;
+  });
+
   const totalEarned = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
   const totalPending = payments.filter(p => p.status === 'pending' || p.status === 'processing').reduce((sum, p) => sum + p.amount, 0);
   const totalOverdue = payments.filter(p => p.daysOverdue).reduce((sum, p) => sum + p.amount, 0);
@@ -190,16 +201,64 @@ const Payments = () => {
 
         {/* Tabs */}
         <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow mb-6 p-1 flex gap-2 overflow-x-auto">
-          <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium whitespace-nowrap">All Payments</button>
-          <button className="px-4 py-2 text-gray-300 hover:bg-gray-700/50 rounded-lg font-medium whitespace-nowrap">Paid</button>
-          <button className="px-4 py-2 text-gray-300 hover:bg-gray-700/50 rounded-lg font-medium whitespace-nowrap">Pending</button>
-          <button className="px-4 py-2 text-gray-300 hover:bg-gray-700/50 rounded-lg font-medium whitespace-nowrap">Overdue</button>
-          <button className="px-4 py-2 text-gray-300 hover:bg-gray-700/50 rounded-lg font-medium whitespace-nowrap">Invoices</button>
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+              activeTab === 'all' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+            }`}
+          >
+            All Payments
+          </button>
+          <button
+            onClick={() => setActiveTab('paid')}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+              activeTab === 'paid' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+            }`}
+          >
+            Paid
+          </button>
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+              activeTab === 'pending' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+            }`}
+          >
+            Pending
+          </button>
+          <button
+            onClick={() => setActiveTab('overdue')}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+              activeTab === 'overdue' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+            }`}
+          >
+            Overdue
+          </button>
+          <button
+            onClick={() => setActiveTab('invoices')}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+              activeTab === 'invoices' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+            }`}
+          >
+            Invoices
+          </button>
         </div>
 
         {/* Payments List */}
         <div className="space-y-4">
-          {payments.map((payment) => (
+          {filteredPayments.length === 0 ? (
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-12 text-center">
+              <div className="text-6xl mb-4">📭</div>
+              <h3 className="text-2xl font-bold text-white mb-2">No Payments Found</h3>
+              <p className="text-gray-400">
+                {activeTab === 'all' && 'You have no payment transactions yet.'}
+                {activeTab === 'paid' && 'You have no paid transactions.'}
+                {activeTab === 'pending' && 'You have no pending payments.'}
+                {activeTab === 'overdue' && 'You have no overdue payments.'}
+                {activeTab === 'invoices' && 'You have no invoices yet.'}
+              </p>
+            </div>
+          ) : (
+            filteredPayments.map((payment) => (
             <div key={payment.id} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg hover:shadow-xl transition duration-300 p-6">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 {/* Left Section */}
@@ -256,7 +315,8 @@ const Payments = () => {
                 </div>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Payment Methods Section */}

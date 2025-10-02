@@ -363,15 +363,15 @@ export const invoicesAPI = {
 
 // Profile API
 export const profileAPI = {
-  // Backend doesn't have /profile/ endpoint yet, use /auth/user/ instead
-  get: () => api.get('/auth/user/'),
+  // Use backend /auth/profile/ endpoint
+  get: () => api.get('/auth/profile/'),
 
-  update: (data) => api.patch('/auth/user/', data),
+  update: (data) => api.patch('/auth/profile/update/', data),
 
   uploadAvatar: (file) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    return api.upload('/auth/user/avatar/', formData);
+    return api.upload('/auth/profile/avatar/', formData);
   },
 };
 

@@ -102,6 +102,35 @@ class ProfileUpdateView(generics.UpdateAPIView):
         serializer.save()
 
 
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def upload_avatar(request):
+    """
+    Upload user avatar image.
+    Handles file upload and saves to user profile.
+    """
+    try:
+        avatar_file = request.FILES.get('avatar')
+        if not avatar_file:
+            return Response({'error': 'No avatar file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get or create profile
+        profile, created = Profile.objects.get_or_create(user=request.user)
+
+        # Save avatar to profile
+        profile.avatar = avatar_file
+        profile.save()
+
+        # Return updated profile with avatar URL
+        serializer = ProfileSerializer(profile)
+        return Response({
+            'avatar': request.build_absolute_uri(profile.avatar.url) if profile.avatar else None,
+            'message': 'Avatar uploaded successfully'
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def check_email_availability(request):

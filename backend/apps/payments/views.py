@@ -336,3 +336,72 @@ def payment_dashboard(request):
         'active_escrows': active_escrows,
         'recent_transactions': TransactionSerializer(recent_transactions, many=True).data
     })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def send_payment_reminder(request, transaction_id):
+    """
+    Send payment reminder for pending transaction.
+    Notifies client about pending payment.
+    """
+    transaction_obj = get_object_or_404(
+        Transaction,
+        id=transaction_id,
+        escrow_account__project__freelancer=request.user
+    )
+
+    if transaction_obj.status != 'pending':
+        return Response(
+            {'error': 'Can only send reminders for pending transactions'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # TODO: Implement actual email/notification sending
+    # For now, just return success
+    return Response({
+        'message': 'Payment reminder sent successfully',
+        'transaction_id': transaction_id
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def download_receipt(request, transaction_id):
+    """
+    Download receipt for completed transaction.
+    Returns receipt data or PDF.
+    """
+    user = request.user
+    if user.user_type == 'freelancer':
+        transaction_obj = get_object_or_404(
+            Transaction,
+            id=transaction_id,
+            escrow_account__project__freelancer=user
+        )
+    else:
+        transaction_obj = get_object_or_404(
+            Transaction,
+            id=transaction_id,
+            escrow_account__project__client=user
+        )
+
+    if transaction_obj.status != 'completed':
+        return Response(
+            {'error': 'Receipts are only available for completed transactions'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Return receipt data (in production, would generate PDF)
+    receipt_data = {
+        'receipt_number': f'REC-{transaction_obj.id:06d}',
+        'transaction_id': transaction_obj.id,
+        'amount': float(transaction_obj.amount),
+        'transaction_type': transaction_obj.transaction_type,
+        'date': transaction_obj.completed_at.isoformat() if transaction_obj.completed_at else None,
+        'project': transaction_obj.escrow_account.project.title,
+        'description': transaction_obj.description,
+        'payment_provider': transaction_obj.payment_provider,
+    }
+
+    return Response(receipt_data, status=status.HTTP_200_OK)

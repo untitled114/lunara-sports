@@ -15,6 +15,8 @@ urlpatterns = [
     # Transaction endpoints
     path('transactions/', views.TransactionListCreateView.as_view(), name='transaction-list-create'),
     path('transactions/<int:pk>/', views.TransactionDetailView.as_view(), name='transaction-detail'),
+    path('<int:transaction_id>/remind/', views.send_payment_reminder, name='send-reminder'),
+    path('<int:transaction_id>/receipt/', views.download_receipt, name='download-receipt'),
 
     # Payment method endpoints
     path('payment-methods/', views.PaymentMethodListCreateView.as_view(), name='payment-method-list-create'),

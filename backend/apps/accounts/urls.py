@@ -20,6 +20,7 @@ urlpatterns = [
     # User profile endpoints
     path('profile/', views.UserProfileView.as_view(), name='profile'),
     path('profile/update/', views.ProfileUpdateView.as_view(), name='profile_update'),
+    path('profile/avatar/', views.upload_avatar, name='upload_avatar'),
 
     # Utility endpoints
     path('check-email/', views.check_email_availability, name='check_email'),
