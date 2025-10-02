@@ -30,9 +30,13 @@ const SignIn = () => {
       // Try backend auth API first
       const response = await authAPI.login(formData.email, formData.password);
 
-      // Store auth token and user info
-      if (response.token) {
-        localStorage.setItem('auth_token', response.token);
+      // Store auth token and user info (Django JWT format uses 'access' not 'token')
+      const token = response.access || response.token;
+      if (token) {
+        localStorage.setItem('auth_token', token);
+      }
+      if (response.refresh) {
+        localStorage.setItem('refresh_token', response.refresh);
       }
       if (response.user) {
         localStorage.setItem('user_email', response.user.email || formData.email);
