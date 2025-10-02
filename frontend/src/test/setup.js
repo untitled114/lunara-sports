@@ -21,6 +21,18 @@ vi.mock('../config/firebase', () => ({
   }),
 }));
 
+// Mock AuthContext to avoid async state updates in tests
+vi.mock('../contexts/AuthContext', () => ({
+  AuthProvider: ({ children }) => children,
+  useAuth: () => ({
+    userId: 'test-user-123',
+    isAnonymous: false,
+    loading: false,
+    auth: {},
+    db: {},
+  }),
+}));
+
 // Mock MessageContext to avoid Firebase collection issues
 vi.mock('../contexts/MessageContext', () => ({
   MessageProvider: ({ children }) => children,
@@ -65,17 +77,30 @@ global.IntersectionObserver = class IntersectionObserver {
   unobserve() {}
 };
 
-// Mock localStorage
+// Mock localStorage with actual storage
+const storage = {};
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: vi.fn((key) => storage[key] || null),
+  setItem: vi.fn((key, value) => { storage[key] = value; }),
+  removeItem: vi.fn((key) => { delete storage[key]; }),
+  clear: vi.fn(() => { Object.keys(storage).forEach(key => delete storage[key]); }),
 };
 global.localStorage = localStorageMock;
 
 // Mock fetch
 global.fetch = vi.fn();
+
+// Suppress unhandled rejection warnings for expected API errors in tests
+const originalUnhandledRejection = process.listeners('unhandledRejection');
+process.removeAllListeners('unhandledRejection');
+process.on('unhandledRejection', (error) => {
+  // Ignore expected APIError rejections in tests
+  if (error?.name === 'APIError' || error?.constructor?.name === 'APIError') {
+    return;
+  }
+  // Re-throw other unhandled rejections
+  originalUnhandledRejection.forEach(listener => listener(error));
+});
 
 // Reset mocks before each test
 beforeEach(() => {

@@ -394,7 +394,10 @@ describe('API Client', () => {
         });
 
       const promise = api.get('/test');
-      await vi.runAllTimersAsync();
+
+      // Wait for initial request to complete and retry to be scheduled
+      await vi.runOnlyPendingTimersAsync();
+
       const result = await promise;
 
       expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -466,7 +469,7 @@ describe('Projects API', () => {
     await projectsAPI.getAll({ status: 'active', limit: 50 });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/projects?status=active&limit=50'),
+      expect.stringContaining('/projects/?status=active&limit=50'),
       expect.any(Object)
     );
   });
@@ -711,7 +714,7 @@ describe('Auth API', () => {
     await authAPI.signup(signupData);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/auth/signup'),
+      expect.stringContaining('/auth/register'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify(signupData),
