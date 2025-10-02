@@ -21,7 +21,10 @@ export default defineConfig({
         url: 'http://localhost:3000',
       },
     },
-    setupFiles: './src/test/setup.js',
+    setupFiles: [
+      './src/test/global-shims.js',  // MUST be first - provides polyfills before any imports
+      './src/test/setup.js',
+    ],
     css: true,
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
