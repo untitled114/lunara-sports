@@ -2,6 +2,14 @@ import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi, beforeAll } from 'vitest';
 
+// Polyfill for webidl-conversions in Node.js test environment
+if (typeof globalThis.WeakMap === 'undefined') {
+  globalThis.WeakMap = WeakMap;
+}
+if (typeof globalThis.WeakSet === 'undefined') {
+  globalThis.WeakSet = WeakSet;
+}
+
 // Mock Sentry to prevent errors in tests
 vi.mock('@sentry/react', () => ({
   init: vi.fn(),
