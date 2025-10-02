@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach, vi, beforeAll } from 'vitest';
+import { afterEach, beforeEach, vi, beforeAll } from 'vitest';
 
 // Mock Sentry to prevent errors in tests
 vi.mock('@sentry/react', () => ({
@@ -8,6 +8,30 @@ vi.mock('@sentry/react', () => ({
   captureException: vi.fn(),
   browserTracingIntegration: vi.fn(),
   replayIntegration: vi.fn(),
+}));
+
+// Mock Firebase config to prevent async auth issues in tests
+vi.mock('../config/firebase', () => ({
+  auth: {},
+  db: {},
+  APP_ID: 'test-app-id',
+  authenticateUser: vi.fn().mockResolvedValue({
+    userId: 'test-user-123',
+    isAnonymous: false,
+  }),
+}));
+
+// Mock MessageContext to avoid Firebase collection issues
+vi.mock('../contexts/MessageContext', () => ({
+  MessageProvider: ({ children }) => children,
+  useMessages: () => ({
+    messages: [],
+    unreadCount: 0,
+    loading: false,
+    error: null,
+    refreshMessages: vi.fn(),
+    markAsRead: vi.fn(),
+  }),
 }));
 
 // Cleanup after each test
