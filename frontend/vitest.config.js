@@ -27,7 +27,12 @@ export default defineConfig({
     ],
     css: true,
     pool: 'forks',
-    poolOptions: { forks: { singleFork: true } },
+    poolOptions: {
+      forks: {
+        singleFork: true,
+        execArgv: ['--require', './vitest-node-setup.cjs'],
+      }
+    },
     server: {
       deps: {
         inline: ['webidl-conversions', 'whatwg-url'],
