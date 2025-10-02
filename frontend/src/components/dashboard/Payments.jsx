@@ -72,28 +72,28 @@ const Payments = () => {
     }
   };
 
-  // Handle invoice download
+  // Handle invoice download - STUB (backend endpoint doesn't exist yet)
   const handleDownloadInvoice = async (paymentId) => {
-    try {
-      const invoiceData = await invoicesAPI.download(paymentId);
-      // Trigger download (implementation depends on backend response format)
-      showSuccess('Invoice download started!');
-    } catch (error) {
-      console.error('Failed to download invoice:', error);
-      showError('Failed to download invoice. Please try again.');
-    }
+    showInfo('Invoice download feature coming soon! Backend endpoint in development.');
+    // TODO: Implement when /api/invoices/download/ endpoint is ready
   };
 
-  // Handle receipt download
+  // Handle receipt download - STUB (backend endpoint doesn't exist yet)
   const handleDownloadReceipt = async (paymentId) => {
-    try {
-      const receiptData = await paymentsAPI.downloadReceipt(paymentId);
-      // Trigger download (implementation depends on backend response format)
-      showSuccess('Receipt download started!');
-    } catch (error) {
-      console.error('Failed to download receipt:', error);
-      showError('Failed to download receipt. Please try again.');
-    }
+    showInfo('Receipt download feature coming soon! Backend endpoint in development.');
+    // TODO: Implement when /api/payments/{id}/receipt/ endpoint is ready
+  };
+
+  // Handle create invoice - STUB
+  const handleCreateInvoice = () => {
+    showInfo('Create invoice feature coming soon! Modal will open here.');
+    // TODO: Open modal to create new invoice
+  };
+
+  // Handle contact client - STUB
+  const handleContactClient = (clientName) => {
+    showInfo(`Contact ${clientName} feature coming soon! Will open messaging.`);
+    // TODO: Navigate to messages with pre-selected client
   };
 
   const getStatusColor = (status) => {
@@ -143,7 +143,10 @@ const Payments = () => {
                 <h3 className="text-red-400 font-semibold">Payment Overdue</h3>
                 <p className="text-gray-400 text-sm">TechFlow's milestone payment is 3 days late. Automatic escrow release in 4 days.</p>
               </div>
-              <button className="ml-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">
+              <button
+                onClick={() => handleContactClient('TechFlow')}
+                className="ml-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
+              >
                 Contact Client
               </button>
             </div>
@@ -157,7 +160,10 @@ const Payments = () => {
               <h1 className="text-3xl sm:text-4xl font-extrabold mb-2">💰 Payments & Earnings</h1>
               <p className="text-green-100 text-lg">Track your income and manage invoices</p>
             </div>
-            <button className="mt-4 md:mt-0 bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-green-50 transition duration-200 shadow-lg">
+            <button
+              onClick={handleCreateInvoice}
+              className="mt-4 md:mt-0 bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-green-50 transition duration-200 shadow-lg"
+            >
               + Create Invoice
             </button>
           </div>

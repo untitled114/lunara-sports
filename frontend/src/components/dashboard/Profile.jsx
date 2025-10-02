@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { profileAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload } from 'lucide-react';
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('activity');
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { showSuccess, showError } = useToast();
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [editedProfile, setEditedProfile] = useState({});
+  const avatarInputRef = useRef(null);
+  const { showSuccess, showError, showInfo } = useToast();
 
   // Fetch profile data on mount
   useEffect(() => {
@@ -34,6 +39,99 @@ const Profile = () => {
 
     fetchProfile();
   }, [showError]);
+
+  // Handle entering edit mode
+  const handleEditProfile = () => {
+    setEditMode(true);
+    setEditedProfile({
+      name: profile.name,
+      bio: profile.bio,
+      username: profile.username,
+    });
+  };
+
+  // Handle canceling edit
+  const handleCancelEdit = () => {
+    setEditMode(false);
+    setEditedProfile({});
+  };
+
+  // Handle saving profile changes
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true);
+      const updatedData = await profileAPI.update(editedProfile);
+      setProfile({ ...profile, ...updatedData });
+      setEditMode(false);
+      showSuccess('Profile updated successfully!');
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      showError('Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle avatar upload
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showError('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showError('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      const data = await profileAPI.uploadAvatar(file);
+      setProfile({ ...profile, avatar: data.avatar || URL.createObjectURL(file) });
+      showSuccess('Avatar updated successfully!');
+    } catch (error) {
+      console.error('Failed to upload avatar:', error);
+      showError('Failed to upload avatar. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  // Stub handlers for features not yet implemented
+  const handleShareProfile = () => {
+    showInfo('Share profile feature coming soon! Will generate shareable link.');
+    // TODO: Implement profile sharing with generated link
+  };
+
+  const handleDownloadResume = () => {
+    showInfo('Resume download feature coming soon! Will generate PDF resume.');
+    // TODO: Generate and download PDF resume
+  };
+
+  const handleContactInfo = () => {
+    showInfo('Contact info modal coming soon! Will show contact details.');
+    // TODO: Open modal with contact information
+  };
+
+  const handleViewPortfolio = () => {
+    showInfo('Portfolio view coming soon! Will open portfolio gallery.');
+    // TODO: Navigate to portfolio page or open gallery modal
+  };
+
+  const handleSetAvailability = () => {
+    showInfo('Set availability feature coming soon! Will open calendar modal.');
+    // TODO: Open calendar modal to set availability
+  };
+
+  const handleEnhanceVerification = () => {
+    showInfo('Enhanced verification coming soon! Will open verification wizard.');
+    // TODO: Open verification flow (ID verification, skills tests, etc.)
+  };
 
   const stats = [
     { icon: '📊', label: 'Total Projects', value: '24', subtext: '+3 this month', color: 'bg-blue-900/20 border-blue-500/30' },
@@ -142,7 +240,7 @@ const Profile = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             {/* Avatar */}
-            <div className="relative">
+            <div className="relative group">
               <img
                 src={profile.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face'}
                 alt="User Avatar"
@@ -150,18 +248,67 @@ const Profile = () => {
                 crossOrigin="anonymous"
               />
               <div className="absolute bottom-2 right-2 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+
+              {/* Avatar upload overlay */}
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition cursor-pointer disabled:cursor-not-allowed"
+                title="Upload new avatar"
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                ) : (
+                  <Upload className="w-8 h-8 text-white" />
+                )}
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
             </div>
 
             {/* Info */}
             <div className="flex-1">
-              <h1 className="text-4xl font-bold mb-2">
-                {profile.name || 'User'} {profile.verified && <span className="text-xl bg-white/20 px-3 py-1 rounded-full">✓ Verified</span>}
-              </h1>
-              <p className="text-indigo-200 text-lg mb-3">@{profile.username || 'user'}</p>
-              <p className="text-white/90 mb-4 max-w-2xl">
-                {profile.bio || 'Welcome to Lunara!'}
-              </p>
-              <div className="flex flex-wrap gap-2">
+              {editMode ? (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={editedProfile.name || ''}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })}
+                    className="text-3xl font-bold bg-white/10 text-white rounded-lg px-4 py-2 w-full border-2 border-white/20 focus:border-white/40 focus:outline-none"
+                    placeholder="Your Name"
+                  />
+                  <input
+                    type="text"
+                    value={editedProfile.username || ''}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, username: e.target.value })}
+                    className="text-lg bg-white/10 text-indigo-200 rounded-lg px-4 py-2 w-full border-2 border-white/20 focus:border-white/40 focus:outline-none"
+                    placeholder="username"
+                  />
+                  <textarea
+                    value={editedProfile.bio || ''}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, bio: e.target.value })}
+                    className="bg-white/10 text-white/90 rounded-lg px-4 py-2 w-full border-2 border-white/20 focus:border-white/40 focus:outline-none resize-none"
+                    rows={3}
+                    placeholder="Tell us about yourself..."
+                  />
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-4xl font-bold mb-2">
+                    {profile.name || 'User'} {profile.verified && <span className="text-xl bg-white/20 px-3 py-1 rounded-full">✓ Verified</span>}
+                  </h1>
+                  <p className="text-indigo-200 text-lg mb-3">@{profile.username || 'user'}</p>
+                  <p className="text-white/90 mb-4 max-w-2xl">
+                    {profile.bio || 'Welcome to Lunara!'}
+                  </p>
+                </>
+              )}
+              <div className="flex flex-wrap gap-2 mt-3">
                 {['React', 'Node.js', 'UI/UX', 'Python', 'AWS'].map((skill) => (
                   <span key={skill} className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
                     {skill}
@@ -172,10 +319,10 @@ const Profile = () => {
 
             {/* Quick Actions */}
             <div className="flex gap-2">
-              <button className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition" title="Share Profile">🔗</button>
-              <button className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition" title="Download Resume">📄</button>
-              <button className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition" title="Contact Info">📞</button>
-              <button className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition" title="Portfolio">🎨</button>
+              <button onClick={handleShareProfile} className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition" title="Share Profile">🔗</button>
+              <button onClick={handleDownloadResume} className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition" title="Download Resume">📄</button>
+              <button onClick={handleContactInfo} className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition" title="Contact Info">📞</button>
+              <button onClick={handleViewPortfolio} className="p-3 bg-white/20 hover:bg-white/30 rounded-lg transition" title="Portfolio">🎨</button>
             </div>
           </div>
 
@@ -193,18 +340,48 @@ const Profile = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-3 mt-6">
-            <button className="px-6 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition shadow-lg">
-              ✏️ Edit Profile
-            </button>
-            <button className="px-6 py-3 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition">
-              🎨 View Portfolio
-            </button>
-            <button className="px-6 py-3 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition">
-              📅 Set Availability
-            </button>
-            <button className="px-6 py-3 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition">
-              🛡️ Enhance Verification
-            </button>
+            {editMode ? (
+              <>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      💾 Save Changes
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={saving}
+                  className="px-6 py-3 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ❌ Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={handleEditProfile} className="px-6 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition shadow-lg">
+                  ✏️ Edit Profile
+                </button>
+                <button onClick={handleViewPortfolio} className="px-6 py-3 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition">
+                  🎨 View Portfolio
+                </button>
+                <button onClick={handleSetAvailability} className="px-6 py-3 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition">
+                  📅 Set Availability
+                </button>
+                <button onClick={handleEnhanceVerification} className="px-6 py-3 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition">
+                  🛡️ Enhance Verification
+                </button>
+              </>
+            )}
           </div>
         </div>
       </section>

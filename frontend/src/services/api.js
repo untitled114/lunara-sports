@@ -327,16 +327,24 @@ export const messagesAPI = {
 
 // Payments API
 export const paymentsAPI = {
+  // Use transactions endpoint which exists in backend
   getAll: (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return api.get(`/payments/${query ? `?${query}` : ''}`);
+    return api.get(`/payments/transactions/${query ? `?${query}` : ''}`);
   },
 
-  getById: (id) => api.get(`/payments/${id}/`),
+  getById: (id) => api.get(`/payments/transactions/${id}/`),
 
   sendReminder: (id) => api.post(`/payments/${id}/remind/`, {}),
 
   downloadReceipt: (id) => api.get(`/payments/${id}/receipt/`),
+
+  // Payment methods (backend has this)
+  getPaymentMethods: () => api.get('/payments/payment-methods/'),
+
+  addPaymentMethod: (data) => api.post('/payments/payment-methods/', data),
+
+  removePaymentMethod: (id) => api.delete(`/payments/payment-methods/${id}/`),
 };
 
 // Invoices API
@@ -355,14 +363,15 @@ export const invoicesAPI = {
 
 // Profile API
 export const profileAPI = {
-  get: () => api.get('/profile/'),
+  // Backend doesn't have /profile/ endpoint yet, use /auth/user/ instead
+  get: () => api.get('/auth/user/'),
 
-  update: (data) => api.patch('/profile/', data),
+  update: (data) => api.patch('/auth/user/', data),
 
   uploadAvatar: (file) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    return api.upload('/profile/avatar/', formData);
+    return api.upload('/auth/user/avatar/', formData);
   },
 };
 

@@ -54,6 +54,15 @@ const Messages = () => {
 
     } catch (error) {
       console.error('Send message error:', error);
+
+      // Handle 404 - backend endpoint not yet implemented
+      if (error.status === 404) {
+        showInfo('Messaging feature coming soon! Backend API is in development.');
+        // Clear form as if sent (for demo purposes)
+        setMessageForm({ to: '', message: '' });
+        return;
+      }
+
       let errorMessage = 'Failed to send message. Please try again.';
       if (error.data && error.data.message) {
         errorMessage = error.data.message;
@@ -74,6 +83,13 @@ const Messages = () => {
       showSuccess(`Batch reply sent to ${unreadCount} unread messages!`);
     } catch (error) {
       console.error('Batch reply error:', error);
+
+      // Handle 404 - backend endpoint not yet implemented
+      if (error.status === 404) {
+        showInfo('Batch reply feature coming soon! Backend API is in development.');
+        return;
+      }
+
       showError('Failed to send batch replies. Please try again.');
     }
   };
@@ -87,6 +103,13 @@ const Messages = () => {
       showSuccess('Broadcast message sent to all clients!');
     } catch (error) {
       console.error('Broadcast error:', error);
+
+      // Handle 404 - backend endpoint not yet implemented
+      if (error.status === 404) {
+        showInfo('Broadcast feature coming soon! Backend API is in development.');
+        return;
+      }
+
       showError('Failed to send broadcast. Please try again.');
     }
   };
