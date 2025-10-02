@@ -4,6 +4,11 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
@@ -15,11 +20,7 @@ export default defineConfig({
     setupFiles: './src/test/setup.js',
     css: true,
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    poolOptions: { forks: { singleFork: true } },
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -44,10 +45,9 @@ export default defineConfig({
       branches: 70,
       statements: 80,
     },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+    deps: {
+      // INLINE problematic packages to avoid the 'get' of undefined error
+      inline: ['whatwg-url', 'webidl-conversions'],
     },
   },
 });

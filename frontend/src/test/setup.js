@@ -1,64 +1,19 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeEach, vi, beforeAll } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 
-// Fix for webidl-conversions module loading in Node environment
-// This must happen before any other imports that might use whatwg-url
-if (typeof global.WeakMap === 'undefined') {
-  global.WeakMap = Map;
+/* ---------------- POLYFILLS ---------------- */
+
+// Polyfill WeakMap / WeakSet if missing
+if (typeof global.WeakMap === 'undefined') global.WeakMap = Map;
+if (typeof global.WeakSet === 'undefined') global.WeakSet = Set;
+
+// Dummy URL polyfill for Node environment
+if (typeof global.URL === 'undefined') {
+  global.URL = class URL {
+    constructor(url) { this.href = url; }
+  };
 }
-if (typeof global.WeakSet === 'undefined') {
-  global.WeakSet = Set;
-}
-
-// Mock Sentry to prevent errors in tests
-vi.mock('@sentry/react', () => ({
-  init: vi.fn(),
-  captureException: vi.fn(),
-  browserTracingIntegration: vi.fn(),
-  replayIntegration: vi.fn(),
-}));
-
-// Mock Firebase config to prevent async auth issues in tests
-vi.mock('../config/firebase', () => ({
-  auth: {},
-  db: {},
-  APP_ID: 'test-app-id',
-  authenticateUser: vi.fn().mockResolvedValue({
-    userId: 'test-user-123',
-    isAnonymous: false,
-  }),
-}));
-
-// Mock AuthContext to avoid async state updates in tests
-vi.mock('../contexts/AuthContext', () => ({
-  AuthProvider: ({ children }) => children,
-  useAuth: () => ({
-    userId: 'test-user-123',
-    isAnonymous: false,
-    loading: false,
-    auth: {},
-    db: {},
-  }),
-}));
-
-// Mock MessageContext to avoid Firebase collection issues
-vi.mock('../contexts/MessageContext', () => ({
-  MessageProvider: ({ children }) => children,
-  useMessages: () => ({
-    messages: [],
-    unreadCount: 0,
-    loading: false,
-    error: null,
-    refreshMessages: vi.fn(),
-    markAsRead: vi.fn(),
-  }),
-}));
-
-// Cleanup after each test
-afterEach(() => {
-  cleanup();
-});
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -80,43 +35,77 @@ global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
   observe() {}
-  takeRecords() {
-    return [];
-  }
   unobserve() {}
+  takeRecords() { return []; }
 };
 
-// Mock localStorage with actual storage
+// Mock localStorage
 const storage = {};
-const localStorageMock = {
-  getItem: vi.fn((key) => storage[key] || null),
+global.localStorage = {
+  getItem: vi.fn(key => storage[key] ?? null),
   setItem: vi.fn((key, value) => { storage[key] = value; }),
-  removeItem: vi.fn((key) => { delete storage[key]; }),
-  clear: vi.fn(() => { Object.keys(storage).forEach(key => delete storage[key]); }),
+  removeItem: vi.fn(key => { delete storage[key]; }),
+  clear: vi.fn(() => { Object.keys(storage).forEach(k => delete storage[k]); }),
 };
-global.localStorage = localStorageMock;
 
 // Mock fetch
 global.fetch = vi.fn();
 
-// Suppress unhandled rejection warnings for expected API errors in tests
-const originalUnhandledRejection = process.listeners('unhandledRejection');
-process.removeAllListeners('unhandledRejection');
-process.on('unhandledRejection', (error) => {
-  // Ignore expected APIError rejections in tests
-  if (error?.name === 'APIError' || error?.constructor?.name === 'APIError') {
-    return;
-  }
-  // Re-throw other unhandled rejections
-  originalUnhandledRejection.forEach(listener => listener(error));
-});
+/* ---------------- MOCK MODULES ---------------- */
 
-// Reset mocks before each test
+// Mock Sentry
+vi.mock('@sentry/react', () => ({
+  init: vi.fn(),
+  captureException: vi.fn(),
+  browserTracingIntegration: vi.fn(),
+  replayIntegration: vi.fn(),
+}));
+
+// Mock Firebase
+vi.mock('../config/firebase', () => ({
+  auth: {},
+  db: {},
+  APP_ID: 'test-app-id',
+  authenticateUser: vi.fn().mockResolvedValue({
+    userId: 'test-user-123',
+    isAnonymous: false,
+  }),
+}));
+
+// Mock AuthContext
+vi.mock('../contexts/AuthContext', () => ({
+  AuthProvider: ({ children }) => children,
+  useAuth: () => ({
+    userId: 'test-user-123',
+    isAnonymous: false,
+    loading: false,
+    auth: {},
+    db: {},
+  }),
+}));
+
+// Mock MessageContext
+vi.mock('../contexts/MessageContext', () => ({
+  MessageProvider: ({ children }) => children,
+  useMessages: () => ({
+    messages: [],
+    unreadCount: 0,
+    loading: false,
+    error: null,
+    refreshMessages: vi.fn(),
+    markAsRead: vi.fn(),
+  }),
+}));
+
+/* ---------------- TEST CLEANUP ---------------- */
+
+afterEach(() => cleanup());
+
 beforeEach(() => {
   vi.clearAllMocks();
-  localStorageMock.getItem.mockReset();
-  localStorageMock.setItem.mockReset();
-  localStorageMock.removeItem.mockReset();
-  localStorageMock.clear.mockReset();
+  localStorage.getItem.mockReset();
+  localStorage.setItem.mockReset();
+  localStorage.removeItem.mockReset();
+  localStorage.clear.mockReset();
   global.fetch.mockReset();
 });
