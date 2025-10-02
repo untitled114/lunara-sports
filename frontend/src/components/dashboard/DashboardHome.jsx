@@ -1,9 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import usePromiseModal from '../../hooks/usePromiseModal';
 import CustomModal from '../CustomModal';
+import NewProjectModal from '../NewProjectModal';
+import { useToast } from '../../contexts/ToastContext';
 
 const DashboardHome = () => {
+  const navigate = useNavigate();
+  const { showSuccess, showInfo, showError } = useToast();
   const { modalState, openModal, handleResolution } = usePromiseModal();
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
 
   // Demo function showing how to use the promise-based modal
   const handleTestModal = async () => {
@@ -21,6 +27,53 @@ const DashboardHome = () => {
     }
   };
 
+  // Urgent Actions Handlers
+  const handleChasePayment = () => {
+    showInfo('Sending payment reminder to client...');
+    // TODO: Implement payment reminder API call
+    setTimeout(() => {
+      showSuccess('Payment reminder sent successfully!');
+    }, 1500);
+  };
+
+  const handleWorkNow = () => {
+    showInfo('Redirecting to project workspace...');
+    // TODO: Navigate to specific project
+    setTimeout(() => {
+      navigate('/projects');
+    }, 800);
+  };
+
+  const handleDiscuss = () => {
+    showInfo('Opening chat with client...');
+    setTimeout(() => {
+      navigate('/messages');
+    }, 800);
+  };
+
+  const handleCreateFirstProject = () => {
+    setIsProjectModalOpen(true);
+  };
+
+  // Quick Actions Handlers
+  const handleNewProject = () => {
+    setIsProjectModalOpen(true);
+  };
+
+  const handleSendMessage = () => {
+    navigate('/messages');
+  };
+
+  const handleRequestPayout = () => {
+    showInfo('Payout request modal coming soon!');
+    // TODO: Implement payout modal
+  };
+
+  const handleViewReports = () => {
+    showInfo('Analytics & Reports page coming soon!');
+    // TODO: Navigate to reports page
+  };
+
   return (
     <div className="dashboard-main">
       {/* Custom Modal Component */}
@@ -33,6 +86,9 @@ const DashboardHome = () => {
         onConfirm={() => handleResolution(true)}
         onCancel={() => handleResolution(false)}
       />
+
+      {/* New Project Modal */}
+      <NewProjectModal isOpen={isProjectModalOpen} onClose={() => setIsProjectModalOpen(false)} />
 
       {/* Hero Welcome Section */}
       <section className="dashboard-hero bg-gradient-to-br from-indigo-600 to-purple-700 text-white py-12">
@@ -97,7 +153,10 @@ const DashboardHome = () => {
                         <div className="text-sm text-gray-400">$2,400 milestone • Auto-release in 4 days</div>
                       </div>
                     </div>
-                    <button className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-semibold">
+                    <button
+                      onClick={handleChasePayment}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-semibold"
+                    >
                       Chase Payment
                     </button>
                   </div>
@@ -110,7 +169,10 @@ const DashboardHome = () => {
                         <div className="text-sm text-gray-400">Client expecting preview tonight</div>
                       </div>
                     </div>
-                    <button className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition font-semibold">
+                    <button
+                      onClick={handleWorkNow}
+                      className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition font-semibold"
+                    >
                       Work Now
                     </button>
                   </div>
@@ -123,7 +185,10 @@ const DashboardHome = () => {
                         <div className="text-sm text-gray-400">Requesting additional API endpoints</div>
                       </div>
                     </div>
-                    <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-semibold">
+                    <button
+                      onClick={handleDiscuss}
+                      className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-semibold"
+                    >
                       Discuss
                     </button>
                   </div>
@@ -140,7 +205,10 @@ const DashboardHome = () => {
                   <div className="text-6xl mb-4">📋</div>
                   <h3 className="text-xl font-semibold text-white mb-2">No Active Projects</h3>
                   <p className="text-gray-400 mb-6">Create your first project to start collaborating with clients or freelancers.</p>
-                  <button className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition font-semibold shadow-lg shadow-indigo-500/30">
+                  <button
+                    onClick={handleCreateFirstProject}
+                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition font-semibold shadow-lg shadow-indigo-500/30"
+                  >
                     Create First Project
                   </button>
                 </div>
@@ -234,19 +302,31 @@ const DashboardHome = () => {
               <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-bold text-white mb-4">⚡ Quick Actions</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <button className="flex flex-col items-center justify-center p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-lg hover:bg-indigo-900/30 hover:shadow-md hover:shadow-indigo-500/10 transition group">
+                  <button
+                    onClick={handleNewProject}
+                    className="flex flex-col items-center justify-center p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-lg hover:bg-indigo-900/30 hover:shadow-md hover:shadow-indigo-500/10 transition group"
+                  >
                     <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">📝</span>
                     <span className="text-sm font-semibold text-indigo-300">New Project</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg hover:bg-purple-900/30 hover:shadow-md hover:shadow-purple-500/10 transition group">
+                  <button
+                    onClick={handleSendMessage}
+                    className="flex flex-col items-center justify-center p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg hover:bg-purple-900/30 hover:shadow-md hover:shadow-purple-500/10 transition group"
+                  >
                     <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">💬</span>
                     <span className="text-sm font-semibold text-purple-300">Send Message</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 bg-green-900/20 border border-green-500/30 rounded-lg hover:bg-green-900/30 hover:shadow-md hover:shadow-green-500/10 transition group">
+                  <button
+                    onClick={handleRequestPayout}
+                    className="flex flex-col items-center justify-center p-4 bg-green-900/20 border border-green-500/30 rounded-lg hover:bg-green-900/30 hover:shadow-md hover:shadow-green-500/10 transition group"
+                  >
                     <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">💰</span>
                     <span className="text-sm font-semibold text-green-300">Request Payout</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-lg hover:bg-cyan-900/30 hover:shadow-md hover:shadow-cyan-500/10 transition group">
+                  <button
+                    onClick={handleViewReports}
+                    className="flex flex-col items-center justify-center p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-lg hover:bg-cyan-900/30 hover:shadow-md hover:shadow-cyan-500/10 transition group"
+                  >
                     <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">📊</span>
                     <span className="text-sm font-semibold text-cyan-300">View Reports</span>
                   </button>

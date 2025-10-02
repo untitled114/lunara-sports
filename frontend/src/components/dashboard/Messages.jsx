@@ -1,13 +1,82 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import usePromiseModal from '../../hooks/usePromiseModal';
 import CustomModal from '../CustomModal';
 import UrgentAlertBanner from '../UrgentAlertBanner';
 import UrgentMessageList from '../UrgentMessageList';
 import { useMessageContext } from '../../contexts/MessageContext';
+import { useToast } from '../../contexts/ToastContext';
 
 const Messages = () => {
   const { modalState, openModal, handleResolution } = usePromiseModal();
   const { unreadCount, urgentCount } = useMessageContext();
+  const { showSuccess, showError, showInfo } = useToast();
+
+  const [messageForm, setMessageForm] = useState({
+    to: '',
+    message: '',
+  });
+  const [sending, setSending] = useState(false);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setMessageForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+
+    if (!messageForm.to || !messageForm.message) {
+      showError('Please fill in both recipient and message');
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch('/api/messages', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+      //   },
+      //   body: JSON.stringify(messageForm)
+      // });
+
+      // if (!response.ok) throw new Error('Failed to send message');
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      showSuccess(`Message sent to ${messageForm.to}!`);
+
+      // Clear form
+      setMessageForm({
+        to: '',
+        message: '',
+      });
+
+    } catch (error) {
+      console.error('Send message error:', error);
+      showError(error.message || 'Failed to send message. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleReplyToAll = () => {
+    showInfo(`Preparing batch reply to ${unreadCount} unread messages...`);
+    // TODO: Implement batch reply modal
+  };
+
+  const handleSendUpdate = () => {
+    showInfo('Opening broadcast message modal...');
+    // TODO: Implement broadcast modal
+  };
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -88,12 +157,18 @@ const Messages = () => {
                 <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
                   <h3 className="text-lg font-semibold text-white mb-4 border-b border-gray-700 pb-3">⚡ Quick Message Actions</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <button className="flex flex-col items-center justify-center p-4 bg-red-900/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-900/30 transition duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <button
+                      onClick={handleReplyToAll}
+                      className="flex flex-col items-center justify-center p-4 bg-red-900/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-900/30 transition duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
                       <div className="text-2xl mb-1">📧</div>
                       <span className="text-sm font-medium">Reply to All</span>
                       <small className="text-xs text-gray-400">({unreadCount} unread)</small>
                     </button>
-                    <button className="flex flex-col items-center justify-center p-4 bg-indigo-900/20 text-indigo-400 border border-indigo-500/30 rounded-lg hover:bg-indigo-900/30 transition duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button
+                      onClick={handleSendUpdate}
+                      className="flex flex-col items-center justify-center p-4 bg-indigo-900/20 text-indigo-400 border border-indigo-500/30 rounded-lg hover:bg-indigo-900/30 transition duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
                       <div className="text-2xl mb-1">📣</div>
                       <span className="text-sm font-medium">Send Update</span>
                       <small className="text-xs text-gray-400">(All clients)</small>
@@ -104,28 +179,49 @@ const Messages = () => {
                 {/* Compose New Message */}
                 <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 backdrop-blur-sm border border-purple-500/30 rounded-xl shadow-lg p-6">
                   <h3 className="text-lg font-semibold text-white mb-4 border-b border-purple-500/30 pb-3">✉️ Compose New Message</h3>
-                  <div className="space-y-4">
+                  <form onSubmit={handleSendMessage} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">To</label>
+                      <label htmlFor="to" className="block text-sm font-medium text-gray-300 mb-2">To</label>
                       <input
                         type="text"
+                        id="to"
+                        name="to"
+                        value={messageForm.to}
+                        onChange={handleInputChange}
                         placeholder="Select client or project..."
                         className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Message</label>
+                      <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">Message</label>
                       <textarea
+                        id="message"
+                        name="message"
+                        value={messageForm.message}
+                        onChange={handleInputChange}
                         rows="3"
                         placeholder="Type your message..."
                         className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-sm resize-none"
                       ></textarea>
                     </div>
-                    <button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all flex items-center justify-center gap-2">
-                      <span>Send Message</span>
-                      <span className="text-lg">→</span>
+                    <button
+                      type="submit"
+                      disabled={sending}
+                      className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all flex items-center justify-center gap-2 disabled:from-purple-400 disabled:to-indigo-400 disabled:cursor-not-allowed disabled:shadow-none"
+                    >
+                      {sending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Sending...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Send Message</span>
+                          <span className="text-lg">→</span>
+                        </>
+                      )}
                     </button>
-                  </div>
+                  </form>
                 </div>
               </div>
             </div>

@@ -9,6 +9,7 @@ import { MessageProvider } from './contexts/MessageContext';
 // Components
 import ToastContainer from './components/ToastContainer';
 import ProtectedRoute from './components/ProtectedRoute';
+import OfflineBanner from './components/OfflineBanner';
 
 // Landing page components
 import Navigation from './components/Navigation';
@@ -48,6 +49,7 @@ function App() {
       <ToastProvider>
         <MessageProvider>
           <Router>
+            <OfflineBanner />
             <Routes>
               {/* Landing Page */}
               <Route path="/" element={<LandingPage />} />
