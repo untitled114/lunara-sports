@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ToastProvider } from '../contexts/ToastContext';
 import { MessageProvider } from '../contexts/MessageContext';
+import ToastContainer from '../components/ToastContainer';
 
 /**
  * Custom render function that wraps components with necessary providers
@@ -24,6 +25,7 @@ export function renderWithProviders(ui, options = {}) {
           <ToastProvider>
             <MessageProvider>
               {children}
+              <ToastContainer />
             </MessageProvider>
           </ToastProvider>
         </AuthProvider>
