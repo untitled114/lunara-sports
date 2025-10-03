@@ -13,7 +13,6 @@ import OfflineBanner from './components/OfflineBanner';
 
 // Landing page components
 import Navigation from './components/Navigation';
-import Particles from './components/Particles';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import HowItWorks from './components/How-it-works';
@@ -35,7 +34,6 @@ import Profile from './components/dashboard/Profile';
 const LandingPage = () => (
   <>
     <Navigation />
-    <Particles />
     <Hero />
     <Features />
     <HowItWorks />

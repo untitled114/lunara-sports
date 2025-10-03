@@ -1,0 +1,45 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "LUNARA" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7] [cursor=pointer]
+        - generic [ref=e12] [cursor=pointer]: LUNARA
+      - link "Sign Up" [ref=e14] [cursor=pointer]:
+        - /url: /signup
+  - main [ref=e15]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - img [ref=e20]
+        - heading "Welcome back!" [level=1] [ref=e23]
+        - paragraph [ref=e24]: Your workspace is waiting ✨
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]: Email Address
+          - generic [ref=e28]:
+            - img [ref=e30]
+            - textbox "Email Address" [ref=e33]
+        - generic [ref=e34]:
+          - generic [ref=e35]: Password
+          - generic [ref=e36]:
+            - img [ref=e38]
+            - textbox "Password" [ref=e42]
+        - generic [ref=e43]:
+          - generic [ref=e44] [cursor=pointer]:
+            - checkbox "Remember me" [ref=e45]
+            - text: Remember me
+          - link "Forgot password?" [ref=e46] [cursor=pointer]:
+            - /url: /forgot-password
+        - button "Log Me In" [ref=e47]:
+          - img [ref=e48]
+          - text: Log Me In
+        - paragraph [ref=e52]:
+          - text: Don't have an account?
+          - link "Sign Up" [ref=e53] [cursor=pointer]:
+            - /url: /signup
+        - paragraph [ref=e54]: 🔒 Fast, secure login. Your workspace stays safe.
+  - contentinfo [ref=e55]: Lunara Portal (v1.0) - All rights reserved.
+```

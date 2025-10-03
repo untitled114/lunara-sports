@@ -15,13 +15,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
+    name = serializers.CharField(write_only=True, required=False)  # Accept 'name' field from frontend
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'password_confirm', 'user_type', 'first_name', 'last_name')
+        fields = ('username', 'email', 'password', 'password_confirm', 'user_type', 'first_name', 'last_name', 'name')
         extra_kwargs = {
             'password': {'write_only': True},
-            'email': {'required': True}
+            'email': {'required': True},
+            'first_name': {'required': False},
+            'last_name': {'required': False}
         }
 
     def validate(self, attrs):
@@ -36,6 +39,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password_confirm')
+
+        # Handle 'name' field by splitting into first_name/last_name
+        name = validated_data.pop('name', None)
+        if name:
+            name_parts = name.split(' ', 1)
+            validated_data['first_name'] = name_parts[0]
+            validated_data['last_name'] = name_parts[1] if len(name_parts) > 1 else ''
+
         user = User.objects.create_user(**validated_data)
 
         # Create associated profile

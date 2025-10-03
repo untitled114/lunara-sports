@@ -11,6 +11,10 @@ const DashboardHome = () => {
   const { modalState, openModal, handleResolution } = usePromiseModal();
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
 
+  // Only show mock data for eltrozo@lunara.com
+  const userEmail = localStorage.getItem('user_email');
+  const shouldShowMockData = userEmail === 'eltrozo@lunara.com';
+
   // Demo function showing how to use the promise-based modal
   const handleTestModal = async () => {
     const confirmed = await openModal(
@@ -135,65 +139,67 @@ const DashboardHome = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content Area */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Urgent Actions Widget */}
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold text-white">🔥 Needs Your Attention</h2>
-                  <span className="text-sm font-semibold text-red-300 bg-red-900/30 border border-red-500/30 px-3 py-1 rounded-full">
-                    4 urgent items
-                  </span>
+              {/* Urgent Actions Widget - Only for test user */}
+              {shouldShowMockData && (
+                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-white">🔥 Needs Your Attention</h2>
+                    <span className="text-sm font-semibold text-red-300 bg-red-900/30 border border-red-500/30 px-3 py-1 rounded-full">
+                      4 urgent items
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:shadow-red-500/10 transition">
+                      <div className="flex items-center gap-4">
+                        <div className="text-3xl">💸</div>
+                        <div>
+                          <div className="font-semibold text-white">TechFlow payment is 3 days overdue</div>
+                          <div className="text-sm text-gray-400">$2,400 milestone • Auto-release in 4 days</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleChasePayment}
+                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-semibold"
+                      >
+                        Chase Payment
+                      </button>
+                    </div>
+
+                    <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:shadow-yellow-500/10 transition">
+                      <div className="flex items-center gap-4">
+                        <div className="text-3xl">⏰</div>
+                        <div>
+                          <div className="font-semibold text-white">HealthApp UI mockups due in 6 hours</div>
+                          <div className="text-sm text-gray-400">Client expecting preview tonight</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleWorkNow}
+                        className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition font-semibold"
+                      >
+                        Work Now
+                      </button>
+                    </div>
+
+                    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:shadow-blue-500/10 transition">
+                      <div className="flex items-center gap-4">
+                        <div className="text-3xl">💬</div>
+                        <div>
+                          <div className="font-semibold text-white">Sarah from EcoTech wants scope change</div>
+                          <div className="text-sm text-gray-400">Requesting additional API endpoints</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleDiscuss}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-semibold"
+                      >
+                        Discuss
+                      </button>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:shadow-red-500/10 transition">
-                    <div className="flex items-center gap-4">
-                      <div className="text-3xl">💸</div>
-                      <div>
-                        <div className="font-semibold text-white">TechFlow payment is 3 days overdue</div>
-                        <div className="text-sm text-gray-400">$2,400 milestone • Auto-release in 4 days</div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleChasePayment}
-                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-semibold"
-                    >
-                      Chase Payment
-                    </button>
-                  </div>
-
-                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:shadow-yellow-500/10 transition">
-                    <div className="flex items-center gap-4">
-                      <div className="text-3xl">⏰</div>
-                      <div>
-                        <div className="font-semibold text-white">HealthApp UI mockups due in 6 hours</div>
-                        <div className="text-sm text-gray-400">Client expecting preview tonight</div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleWorkNow}
-                      className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition font-semibold"
-                    >
-                      Work Now
-                    </button>
-                  </div>
-
-                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:shadow-blue-500/10 transition">
-                    <div className="flex items-center gap-4">
-                      <div className="text-3xl">💬</div>
-                      <div>
-                        <div className="font-semibold text-white">Sarah from EcoTech wants scope change</div>
-                        <div className="text-sm text-gray-400">Requesting additional API endpoints</div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleDiscuss}
-                      className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-semibold"
-                    >
-                      Discuss
-                    </button>
-                  </div>
-                </div>
-              </div>
+              )}
 
               {/* Active Projects Widget */}
               <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
@@ -217,8 +223,9 @@ const DashboardHome = () => {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              {/* This Week's Reality Check */}
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+              {/* This Week's Reality Check - Only for test user */}
+              {shouldShowMockData && (
+                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-bold text-white mb-4">This Week's Reality</h3>
                 <div className="text-4xl font-bold text-green-400 mb-2">$3,200</div>
                 <div className="text-sm text-red-400 mb-4">Behind target by $800</div>
@@ -248,9 +255,11 @@ const DashboardHome = () => {
                   </div>
                 </div>
               </div>
+              )}
 
-              {/* Client Pulse Check */}
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+              {/* Client Pulse Check - Only for test user */}
+              {shouldShowMockData && (
+                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-bold text-white mb-4">Client Pulse Check</h3>
 
                 <div className="space-y-4">
@@ -297,6 +306,7 @@ const DashboardHome = () => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Quick Actions Widget */}
               <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">

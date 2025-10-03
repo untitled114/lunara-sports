@@ -1,0 +1,71 @@
+[
+  {
+    "page": "Landing Page",
+    "url": "http://localhost:3000/",
+    "metrics": {
+      "dns": 0,
+      "tcp": 0.09999999403953552,
+      "ttfb": 1.0999999940395355,
+      "download": 0.4000000059604645,
+      "domInteractive": 7.0999999940395355,
+      "domComplete": 192.69999998807907,
+      "loadComplete": 192.69999998807907,
+      "fcp": 268,
+      "resourceCount": 50,
+      "memory": {
+        "usedJSHeapSize": 19300000,
+        "totalJSHeapSize": 24500000
+      },
+      "cls": 0,
+      "fcp_s": "0.27",
+      "domInteractive_s": "0.01",
+      "loadComplete_s": "0.19"
+    }
+  },
+  {
+    "page": "Sign In",
+    "url": "http://localhost:3000/signin",
+    "metrics": {
+      "dns": 0,
+      "tcp": 0.19999998807907104,
+      "ttfb": 1.2000000178813934,
+      "download": 0.4000000059604645,
+      "domInteractive": 6.9000000059604645,
+      "domComplete": 149.80000001192093,
+      "loadComplete": 149.80000001192093,
+      "fcp": 164,
+      "resourceCount": 47,
+      "memory": {
+        "usedJSHeapSize": 19300000,
+        "totalJSHeapSize": 21700000
+      },
+      "cls": 0,
+      "fcp_s": "0.16",
+      "domInteractive_s": "0.01",
+      "loadComplete_s": "0.15"
+    }
+  },
+  {
+    "page": "Sign Up",
+    "url": "http://localhost:3000/signup",
+    "metrics": {
+      "dns": 0,
+      "tcp": 0.10000002384185791,
+      "ttfb": 1.4000000059604645,
+      "download": 0.3999999761581421,
+      "domInteractive": 7,
+      "domComplete": 144.5,
+      "loadComplete": 144.5,
+      "fcp": 160,
+      "resourceCount": 47,
+      "memory": {
+        "usedJSHeapSize": 19300000,
+        "totalJSHeapSize": 21700000
+      },
+      "cls": 0,
+      "fcp_s": "0.16",
+      "domInteractive_s": "0.01",
+      "loadComplete_s": "0.14"
+    }
+  }
+]

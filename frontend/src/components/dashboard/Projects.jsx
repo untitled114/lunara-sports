@@ -36,32 +36,40 @@ const Projects = () => {
         setAllProjects(transformedProjects);
       } catch (error) {
         console.error('Failed to load projects:', error);
-        showError('Failed to load projects. Using demo data.');
-        // Use fallback data for development
-        setAllProjects([
-          {
-            id: 1,
-            title: 'E-commerce Dashboard Redesign',
-            client: 'TechCorp',
-            status: 'active',
-            progress: 75,
-            value: '$2,500',
-            deadline: '2 days',
-            priority: 'high',
-            description: 'Modern React dashboard with real-time analytics',
-          },
-          {
-            id: 2,
-            title: 'Mobile Banking App',
-            client: 'FinanceFlow',
-            status: 'active',
-            progress: 45,
-            value: '$4,200',
-            deadline: '1 week',
-            priority: 'medium',
-            description: 'Flutter app with biometric authentication',
-          },
-        ]);
+
+        // Only show mock data for eltrozo@lunara.com
+        const userEmail = localStorage.getItem('user_email');
+        if (userEmail === 'eltrozo@lunara.com') {
+          showError('Failed to load projects. Using demo data.');
+          // Use fallback data for test user
+          setAllProjects([
+            {
+              id: 1,
+              title: 'E-commerce Dashboard Redesign',
+              client: 'TechCorp',
+              status: 'active',
+              progress: 75,
+              value: '$2,500',
+              deadline: '2 days',
+              priority: 'high',
+              description: 'Modern React dashboard with real-time analytics',
+            },
+            {
+              id: 2,
+              title: 'Mobile Banking App',
+              client: 'FinanceFlow',
+              status: 'active',
+              progress: 45,
+              value: '$4,200',
+              deadline: '1 week',
+              priority: 'medium',
+              description: 'Flutter app with biometric authentication',
+            },
+          ]);
+        } else {
+          showError('Failed to load projects.');
+          setAllProjects([]);
+        }
       } finally {
         setLoading(false);
       }

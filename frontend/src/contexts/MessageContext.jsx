@@ -81,7 +81,13 @@ const MessageContext = createContext(undefined);
 export const MessageProvider = ({ children }) => {
   const { db, userId } = useAuth();
   const { showError } = useToast();
-  const [messages, setMessages] = useState(initialMessages);
+
+  // Only show mock data for eltrozo@lunara.com
+  const userEmail = localStorage.getItem('user_email');
+  const shouldShowMockData = userEmail === 'eltrozo@lunara.com';
+  const emptyMessages = [];
+
+  const [messages, setMessages] = useState(shouldShowMockData ? initialMessages : emptyMessages);
   const [loading, setLoading] = useState(true);
   const [useFirestore, setUseFirestore] = useState(false);
 
@@ -103,8 +109,15 @@ export const MessageProvider = ({ children }) => {
         console.log('📨 Received Firestore update:', snapshot.size, 'messages');
 
         if (snapshot.empty) {
-          console.log('📭 No messages in Firestore, using mock data');
-          setMessages(initialMessages);
+          console.log('📭 No messages in Firestore');
+          // Only use mock data for eltrozo@lunara.com
+          if (shouldShowMockData) {
+            console.log('📋 Using mock data for eltrozo@lunara.com');
+            setMessages(initialMessages);
+          } else {
+            console.log('📋 No mock data for this user');
+            setMessages(emptyMessages);
+          }
           setUseFirestore(false);
           setLoading(false);
           return;
@@ -122,8 +135,14 @@ export const MessageProvider = ({ children }) => {
       },
       (error) => {
         console.error('❌ Firestore listener error:', error);
-        showError('Connection Error: Using offline data');
-        setMessages(initialMessages);
+        // Only use mock data for eltrozo@lunara.com
+        if (shouldShowMockData) {
+          showError('Connection Error: Using offline data');
+          setMessages(initialMessages);
+        } else {
+          showError('Connection Error: Could not load messages');
+          setMessages(emptyMessages);
+        }
         setUseFirestore(false);
         setLoading(false);
       }

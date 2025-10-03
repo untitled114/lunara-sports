@@ -55,26 +55,6 @@ const SignIn = () => {
     } catch (error) {
       console.error('Login error:', error);
 
-      // Fallback to mock auth if backend is unavailable
-      if (error.isNetworkError || !error.status) {
-        console.log('Backend unavailable, using mock auth for:', formData.email);
-
-        const mockToken = btoa(JSON.stringify({
-          email: formData.email,
-          timestamp: Date.now()
-        }));
-
-        localStorage.setItem('auth_token', mockToken);
-        localStorage.setItem('user_email', formData.email);
-
-        showSuccess('Welcome back! (Demo mode) Redirecting to dashboard...');
-
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1000);
-        return;
-      }
-
       let errorMessage = 'Login failed. Please check your credentials.';
 
       // Handle specific API error messages
@@ -84,6 +64,8 @@ const SignIn = () => {
         errorMessage = 'No account found with this email.';
       } else if (error.status === 429) {
         errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (error.isNetworkError || !error.status) {
+        errorMessage = 'Cannot connect to server. Please ensure the backend is running and try again.';
       } else if (error.data && error.data.message) {
         errorMessage = error.data.message;
       }
