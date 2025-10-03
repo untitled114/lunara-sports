@@ -27,16 +27,16 @@ const NewProjectModal = ({ isOpen, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate required fields before setting loading state
+    if (!formData.title || !formData.client || !formData.value || !formData.deadline) {
+      showError('Please fill in all required fields');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Validate required fields
-      if (!formData.title || !formData.client || !formData.value || !formData.deadline) {
-        showError('Please fill in all required fields');
-        setLoading(false);
-        return;
-      }
-
       // Call API to create project
       const project = await projectsAPI.create(formData);
 
@@ -125,7 +125,7 @@ const NewProjectModal = ({ isOpen, onClose }) => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5">
             {/* Project Title */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-2">

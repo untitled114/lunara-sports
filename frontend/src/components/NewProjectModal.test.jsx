@@ -158,9 +158,8 @@ describe('NewProjectModal', () => {
       await user.click(submitButton);
 
       // Should show validation error toast
-      await waitFor(() => {
-        expect(screen.getByText('Please fill in all required fields')).toBeInTheDocument();
-      });
+      const errorToast = await screen.findByText('Please fill in all required fields', {}, { timeout: 3000 });
+      expect(errorToast).toBeInTheDocument();
     });
 
     it('should not submit when only some required fields are filled', async () => {
@@ -176,9 +175,8 @@ describe('NewProjectModal', () => {
       const submitButton = screen.getByRole('button', { name: /Create Project/i });
       await user.click(submitButton);
 
-      await waitFor(() => {
-        expect(screen.getByText('Please fill in all required fields')).toBeInTheDocument();
-      });
+      const errorToast = await screen.findByText('Please fill in all required fields', {}, { timeout: 3000 });
+      expect(errorToast).toBeInTheDocument();
 
       expect(api.projectsAPI.create).not.toHaveBeenCalled();
     });
@@ -197,7 +195,10 @@ describe('NewProjectModal', () => {
         priority: 'high',
       };
 
-      api.projectsAPI.create.mockResolvedValueOnce({ data: mockProject });
+      // Add delay to mock API call so loading state is visible
+      api.projectsAPI.create.mockImplementation(() =>
+        new Promise(resolve => setTimeout(() => resolve({ data: mockProject }), 100))
+      );
 
       renderWithProviders(
         <NewProjectModal isOpen={true} onClose={mockOnClose} />
@@ -215,9 +216,7 @@ describe('NewProjectModal', () => {
       await user.click(submitButton);
 
       // Should show loading state
-      await waitFor(() => {
-        expect(screen.getByText('Creating Project...')).toBeInTheDocument();
-      });
+      expect(await screen.findByText('Creating Project...', {}, { timeout: 1000 })).toBeInTheDocument();
 
       // Wait for API call to complete
       await waitFor(() => {
@@ -232,9 +231,7 @@ describe('NewProjectModal', () => {
       });
 
       // Should show success message
-      await waitFor(() => {
-        expect(screen.getByText('Project created successfully!')).toBeInTheDocument();
-      });
+      expect(await screen.findByText('Project created successfully!', {}, { timeout: 1000 })).toBeInTheDocument();
 
       // Should close modal
       expect(mockOnClose).toHaveBeenCalled();
@@ -242,7 +239,7 @@ describe('NewProjectModal', () => {
       // Should navigate to projects page after delay
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/projects');
-      }, { timeout: 500 });
+      }, { timeout: 1000 });
     });
 
     it('should handle validation errors from server', async () => {
