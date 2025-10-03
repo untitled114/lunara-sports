@@ -50,6 +50,7 @@ const SignUp = () => {
       const response = await authAPI.signup({
         email: formData.email,
         password: formData.password,
+        password_confirm: formData.confirmPassword,
         name: formData.fullName,
         username: formData.email.split('@')[0], // Generate username from email
       });
