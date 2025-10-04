@@ -2,11 +2,13 @@ import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useMessageContext } from '../../contexts/MessageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationsModal from '../NotificationsModal';
 
 const DashboardLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [notificationsOpen, setNotificationsOpen] = React.useState(false);
   const { unreadCount, urgentCount } = useMessageContext();
   const { userId, isAnonymous } = useAuth();
 
@@ -97,6 +99,7 @@ const DashboardLayout = () => {
 
               {/* Notifications */}
               <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
                 className="relative p-2 rounded-full hover:bg-gray-700/50 transition duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 title={`${urgentCount} urgent notifications`}
                 aria-label={`${urgentCount} urgent notifications`}
@@ -266,6 +269,12 @@ const DashboardLayout = () => {
           </div>
         </div>
       </footer>
+
+      {/* Notifications Modal */}
+      <NotificationsModal
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
     </div>
   );
 };

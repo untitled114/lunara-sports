@@ -75,25 +75,25 @@ const Payments = () => {
 
   // Handle invoice download - STUB (backend endpoint doesn't exist yet)
   const handleDownloadInvoice = async (paymentId) => {
-    showInfo('Invoice download feature coming soon! Backend endpoint in development.');
+    showSuccess('Invoice download feature coming soon! Backend endpoint in development.');
     // TODO: Implement when /api/invoices/download/ endpoint is ready
   };
 
   // Handle receipt download - STUB (backend endpoint doesn't exist yet)
   const handleDownloadReceipt = async (paymentId) => {
-    showInfo('Receipt download feature coming soon! Backend endpoint in development.');
+    showSuccess('Receipt download feature coming soon! Backend endpoint in development.');
     // TODO: Implement when /api/payments/{id}/receipt/ endpoint is ready
   };
 
   // Handle create invoice - STUB
   const handleCreateInvoice = () => {
-    showInfo('Create invoice feature coming soon! Modal will open here.');
+    showSuccess('Create invoice feature coming soon! Modal will open here.');
     // TODO: Open modal to create new invoice
   };
 
   // Handle contact client - STUB
   const handleContactClient = (clientName) => {
-    showInfo(`Contact ${clientName} feature coming soon! Will open messaging.`);
+    showSuccess(`Contact ${clientName} feature coming soon! Will open messaging.`);
     // TODO: Navigate to messages with pre-selected client
   };
 
@@ -319,106 +319,212 @@ const Payments = () => {
           )}
         </div>
 
-        {/* Payment Methods Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-white mb-4">💳 Payment Methods</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🏦</span>
-                  <div>
-                    <div className="font-semibold text-white">Bank Transfer</div>
-                    <div className="text-xs text-gray-400">Primary method</div>
-                  </div>
+        {/* Power BI-Style Analytics Dashboard */}
+        <div className="mt-8 space-y-6">
+          {/* Top KPI Cards - Power BI Style */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-6 hover:shadow-lg hover:shadow-blue-500/20 transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-blue-300">Avg Invoice Value</h4>
+                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <span className="text-xl">💵</span>
                 </div>
-                <span className="text-green-400 font-bold">$8,200</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">💰</span>
-                  <div>
-                    <div className="font-semibold text-white">Lunara Wallet</div>
-                    <div className="text-xs text-gray-400">Fast & secure</div>
-                  </div>
+              <div className="text-3xl font-bold text-white mb-1">$2,800</div>
+              <div className="text-xs text-blue-300">↗ +12% vs last month</div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-6 hover:shadow-lg hover:shadow-green-500/20 transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-green-300">Success Rate</h4>
+                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                  <span className="text-xl">✓</span>
                 </div>
-                <span className="text-blue-400 font-bold">$6,400</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">📱</span>
-                  <div>
-                    <div className="font-semibold text-white">PayPal</div>
-                    <div className="text-xs text-gray-400">International</div>
-                  </div>
+              <div className="text-3xl font-bold text-white mb-1">94%</div>
+              <div className="text-xs text-green-300">On-time payments</div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6 hover:shadow-lg hover:shadow-purple-500/20 transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-purple-300">Avg Payment Time</h4>
+                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                  <span className="text-xl">⏱</span>
                 </div>
-                <span className="text-purple-400 font-bold">$3,900</span>
+              </div>
+              <div className="text-3xl font-bold text-white mb-1">8.5d</div>
+              <div className="text-xs text-purple-300">Industry avg: 12d</div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-600/20 to-orange-800/20 backdrop-blur-sm border border-orange-500/30 rounded-xl p-6 hover:shadow-lg hover:shadow-orange-500/20 transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-orange-300">Active Clients</h4>
+                <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                  <span className="text-xl">👥</span>
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-white mb-1">12</div>
+              <div className="text-xs text-orange-300">+3 this month</div>
+            </div>
+          </div>
+
+          {/* Revenue Analytics - Power BI Chart Style */}
+          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-white">Revenue Analytics</h3>
+                <p className="text-sm text-gray-400 mt-1">Monthly performance overview</p>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                  <span className="text-xs text-gray-400">Revenue</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="text-xs text-gray-400">Target</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bar Chart */}
+            <div className="relative">
+              <div className="grid grid-cols-6 gap-3">
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
+                  const revenueHeights = ['60%', '75%', '45%', '85%', '70%', '90%'];
+                  const targetHeights = ['65%', '70%', '65%', '75%', '75%', '85%'];
+                  const amounts = ['$2.1K', '$2.8K', '$1.9K', '$3.2K', '$2.6K', '$3.5K'];
+                  return (
+                    <div key={month} className="flex flex-col items-center">
+                      <div className="w-full flex items-end justify-center gap-1 h-40 mb-3">
+                        <div
+                          className="w-6 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-md transition-all hover:from-indigo-500 hover:to-indigo-300 cursor-pointer shadow-lg"
+                          style={{ height: revenueHeights[index] }}
+                          title={`Revenue: ${amounts[index]}`}
+                        ></div>
+                        <div
+                          className="w-6 bg-gradient-to-t from-green-600/50 to-green-400/50 rounded-t-md border border-green-500/50 transition-all hover:from-green-500/70 hover:to-green-300/70 cursor-pointer"
+                          style={{ height: targetHeights[index] }}
+                          title="Target"
+                        ></div>
+                      </div>
+                      <div className="text-xs font-semibold text-gray-400 mb-1">{month}</div>
+                      <div className="text-sm font-bold text-indigo-300">{amounts[index]}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="mt-6 pt-6 border-t border-gray-700/50 grid grid-cols-3 gap-4">
+              <div>
+                <div className="text-xs text-gray-400 mb-1">Total Revenue</div>
+                <div className="text-2xl font-bold text-white">$15.5K</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400 mb-1">Growth Rate</div>
+                <div className="text-2xl font-bold text-green-400">+18%</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400 mb-1">Projection (Jul)</div>
+                <div className="text-2xl font-bold text-indigo-400">$4.2K</div>
               </div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-white mb-4">📊 Payment Analytics</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-400">Average Invoice Value</span>
-                  <span className="font-bold text-white">$2,800</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full" style={{ width: '70%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-400">Payment Success Rate</span>
-                  <span className="font-bold text-green-400">94%</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '94%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-400">Avg Payment Time</span>
-                  <span className="font-bold text-yellow-400">8.5 days</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '58%' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Monthly Revenue Chart */}
-        <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 backdrop-blur-sm border border-indigo-500/30 rounded-xl shadow-lg p-6 mt-8">
-          <h3 className="text-lg font-bold text-white mb-6">📈 Monthly Revenue Breakdown</h3>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
-              const heights = ['60%', '75%', '45%', '85%', '70%', '90%'];
-              const amounts = ['$2.1K', '$2.8K', '$1.9K', '$3.2K', '$2.6K', '$3.5K'];
-              return (
-                <div key={month} className="flex flex-col items-center">
-                  <div className="w-full flex items-end justify-center h-32 mb-2">
-                    <div
-                      className="w-12 bg-gradient-to-t from-indigo-600 to-purple-500 rounded-t-lg transition-all hover:from-indigo-500 hover:to-purple-400 cursor-pointer"
-                      style={{ height: heights[index] }}
-                      title={`${month}: ${amounts[index]}`}
-                    ></div>
+          {/* Payment Methods & Client Distribution */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Payment Methods - Donut Chart Style */}
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-bold text-white mb-6">Payment Methods Distribution</h3>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                        <span className="text-lg">🏦</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white">Bank Transfer</div>
+                        <div className="text-xs text-gray-400">44.5% of total</div>
+                      </div>
+                    </div>
+                    <span className="text-xl font-bold text-green-400">$8.2K</span>
                   </div>
-                  <div className="text-xs font-semibold text-gray-400">{month}</div>
-                  <div className="text-sm font-bold text-indigo-300">{amounts[index]}</div>
+                  <div className="w-full bg-gray-700/50 rounded-full h-2">
+                    <div className="bg-gradient-to-r from-green-600 to-green-500 h-2 rounded-full" style={{ width: '44.5%' }}></div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-          <div className="mt-6 flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-500"></div>
-              <span className="text-gray-400">Revenue Trend</span>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <span className="text-lg">💰</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white">Lunara Wallet</div>
+                        <div className="text-xs text-gray-400">34.8% of total</div>
+                      </div>
+                    </div>
+                    <span className="text-xl font-bold text-blue-400">$6.4K</span>
+                  </div>
+                  <div className="w-full bg-gray-700/50 rounded-full h-2">
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full" style={{ width: '34.8%' }}></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                        <span className="text-lg">📱</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white">PayPal</div>
+                        <div className="text-xs text-gray-400">20.7% of total</div>
+                      </div>
+                    </div>
+                    <span className="text-xl font-bold text-purple-400">$3.9K</span>
+                  </div>
+                  <div className="w-full bg-gray-700/50 rounded-full h-2">
+                    <div className="bg-gradient-to-r from-purple-600 to-purple-500 h-2 rounded-full" style={{ width: '20.7%' }}></div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="text-green-400 font-semibold">↗ +18% this quarter</div>
+
+            {/* Top Clients by Revenue */}
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-bold text-white mb-6">Top Clients by Revenue</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'TechCorp', amount: '$8,200', percentage: 44, color: 'indigo' },
+                  { name: 'MedCare Plus', amount: '$5,600', percentage: 30, color: 'blue' },
+                  { name: 'StartupX', amount: '$2,900', percentage: 16, color: 'purple' },
+                  { name: 'DesignHub', amount: '$1,800', percentage: 10, color: 'pink' },
+                ].map((client, idx) => (
+                  <div key={idx} className="group hover:bg-gray-700/30 p-3 rounded-lg transition-all cursor-pointer">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full bg-${client.color}-500/20 flex items-center justify-center text-xs font-bold text-${client.color}-400`}>
+                          {idx + 1}
+                        </div>
+                        <span className="font-semibold text-white">{client.name}</span>
+                      </div>
+                      <span className="text-lg font-bold text-white">{client.amount}</span>
+                    </div>
+                    <div className="w-full bg-gray-700/50 rounded-full h-1.5">
+                      <div
+                        className={`bg-gradient-to-r from-${client.color}-600 to-${client.color}-500 h-1.5 rounded-full transition-all group-hover:h-2`}
+                        style={{ width: `${client.percentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
