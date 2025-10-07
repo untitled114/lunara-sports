@@ -1,9 +1,8 @@
-# Environment variables
+# Environment variables (exclude production as it doesn't contain secrets)
 .env
-*.env
 .env.local
-.env.production
 .env.development
+!frontend/.env.production
 
 # Database
 *.db
@@ -62,6 +61,13 @@ logs/
 
 # Node modules (if any)
 node_modules/
+
+# Test artifacts and reports
+test-results/
+playwright-report/
+coverage/
+.nyc_output/
+*.lcov
 
 # Azure specific
 azure.env
