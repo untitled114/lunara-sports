@@ -1,0 +1,37 @@
+Lunara API Performance Benchmark Results
+Date: Wed Oct  8 03:56:09 PM EDT 2025
+Target: <200ms average response time
+=========================================
+
+Health Check Endpoint
+Endpoint:  /health/
+Average: .99ms
+Min: .849000ms
+Max: 1.334000ms
+Success Rate: 100.00%
+Status: ✅ PASS
+---
+Email Availability Check
+Endpoint:  /api/auth/check-email/
+Average: 1.39ms
+Min: 1.212000ms
+Max: 1.677000ms
+Success Rate: 0%
+Status: ✅ PASS
+---
+Username Availability Check
+Endpoint:  /api/auth/check-username/
+Average: 1.36ms
+Min: 1.236000ms
+Max: 1.543000ms
+Success Rate: 0%
+Status: ✅ PASS
+---
+Login Endpoint (Invalid Credentials)
+Endpoint:  /api/auth/login/
+Average: 520.84ms
+Min: 499.693000ms
+Max: 646.241000ms
+Success Rate: 0%
+Status: ❌ FAIL
+---
