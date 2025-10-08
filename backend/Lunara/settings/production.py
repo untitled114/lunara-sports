@@ -13,7 +13,13 @@ DEBUG = False
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # Azure App Service automatically sets WEBSITE_HOSTNAME
-ALLOWED_HOSTS = ['*']  # Allow all hosts for testing - will secure later
+# Production allowed hosts - specific domains only
+ALLOWED_HOSTS = [
+    'lunara-api.thankfulhill-c6015f7f.eastus.azurecontainerapps.io',  # Azure Container Apps
+    'api.lunara-app.com',  # Custom domain
+    'localhost',  # Local testing
+    '127.0.0.1',  # Local testing
+]
 
 # Database - PostgreSQL on Azure (using Neon)
 DATABASES = {
@@ -51,18 +57,22 @@ AZURE_CONTAINER = 'media'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Security settings for production
-# Temporarily disabled SSL redirect for container testing
-SECURE_SSL_REDIRECT = False
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-# SECURE_HSTS_SECONDS = 31536000  # 1 year
-# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-# SECURE_HSTS_PRELOAD = True
+# SSL/TLS Configuration
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# Session security - adjusted for HTTP testing
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = True
+# HTTP Strict Transport Security (HSTS)
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Session and CSRF security
+SESSION_COOKIE_SECURE = True  # Only send over HTTPS
+CSRF_COOKIE_SECURE = True  # Only send over HTTPS
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+CSRF_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
@@ -75,8 +85,8 @@ CORS_ALLOWED_ORIGINS = [
 # Allow credentials for CORS
 CORS_ALLOW_CREDENTIALS = True
 
-# Additional CORS settings for better compatibility
-CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins for testing
+# Disable promiscuous CORS for production security
+CORS_ALLOW_ALL_ORIGINS = False  # Use explicit CORS_ALLOWED_ORIGINS only
 CORS_ALLOWED_HEADERS = [
     "accept",
     "accept-encoding",

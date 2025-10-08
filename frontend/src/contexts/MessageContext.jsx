@@ -3,6 +3,7 @@ import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { APP_ID } from '../config/firebase';
 import { useToast } from './ToastContext';
+import logger from '../utils/logger';
 
 // Mock message data as fallback
 const initialMessages = [
@@ -94,28 +95,28 @@ export const MessageProvider = ({ children }) => {
   // Set up Firestore real-time listener
   useEffect(() => {
     if (!db || !userId) {
-      console.log('📭 Firestore not available, using mock data');
+      logger.log('📭 Firestore not available, using mock data');
       setLoading(false);
       return;
     }
 
-    console.log('🔥 Setting up Firestore listener for messages...');
+    logger.log('🔥 Setting up Firestore listener for messages...');
     const messagesPath = `artifacts/${APP_ID}/public/data/messages`;
     const messagesRef = collection(db, messagesPath);
 
     const unsubscribe = onSnapshot(
       messagesRef,
       (snapshot) => {
-        console.log('📨 Received Firestore update:', snapshot.size, 'messages');
+        logger.log('📨 Received Firestore update:', snapshot.size, 'messages');
 
         if (snapshot.empty) {
-          console.log('📭 No messages in Firestore');
+          logger.log('📭 No messages in Firestore');
           // Only use mock data for eltrozo@lunara.com
           if (shouldShowMockData) {
-            console.log('📋 Using mock data for eltrozo@lunara.com');
+            logger.log('📋 Using mock data for eltrozo@lunara.com');
             setMessages(initialMessages);
           } else {
-            console.log('📋 No mock data for this user');
+            logger.log('📋 No mock data for this user');
             setMessages(emptyMessages);
           }
           setUseFirestore(false);
@@ -131,10 +132,10 @@ export const MessageProvider = ({ children }) => {
         setMessages(firestoreMessages);
         setUseFirestore(true);
         setLoading(false);
-        console.log('✅ Messages loaded from Firestore');
+        logger.log('✅ Messages loaded from Firestore');
       },
       (error) => {
-        console.error('❌ Firestore listener error:', error);
+        logger.error('❌ Firestore listener error:', error);
         // Only use mock data for eltrozo@lunara.com
         if (shouldShowMockData) {
           showError('Connection Error: Using offline data');
@@ -150,7 +151,7 @@ export const MessageProvider = ({ children }) => {
 
     // Cleanup listener on unmount
     return () => {
-      console.log('🔌 Unsubscribing from Firestore listener');
+      logger.log('🔌 Unsubscribing from Firestore listener');
       unsubscribe();
     };
   }, [db, userId, showError]);
@@ -177,9 +178,9 @@ export const MessageProvider = ({ children }) => {
         const messagesPath = `artifacts/${APP_ID}/public/data/messages`;
         const messageRef = doc(db, messagesPath, messageId);
 
-        console.log('💾 Updating message in Firestore:', messageId);
+        logger.log('💾 Updating message in Firestore:', messageId);
         await updateDoc(messageRef, newStatus);
-        console.log('✅ Message updated successfully');
+        logger.log('✅ Message updated successfully');
 
         // Optimistic UI update (Firestore listener will sync the actual data)
         setMessages(prevMessages =>
@@ -188,13 +189,13 @@ export const MessageProvider = ({ children }) => {
           )
         );
       } catch (error) {
-        console.error('❌ Failed to update message:', error);
+        logger.error('❌ Failed to update message:', error);
         showError('Failed to update message');
         throw error;
       }
     } else {
       // Local-only update (no Firestore)
-      console.log('📝 Updating message locally (no Firestore):', messageId);
+      logger.log('📝 Updating message locally (no Firestore):', messageId);
       setMessages(prevMessages =>
         prevMessages.map(msg =>
           msg.id === messageId ? { ...msg, ...newStatus } : msg

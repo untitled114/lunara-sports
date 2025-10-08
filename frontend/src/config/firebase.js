@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signInAnonymously } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import logger from '../utils/logger';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -25,14 +26,14 @@ if (firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.project
     auth = getAuth(app);
     db = getFirestore(app);
     isFirebaseAvailable = true;
-    console.log('✅ Firebase initialized successfully');
+    logger.log('✅ Firebase initialized successfully');
   } catch (error) {
-    console.warn('⚠️ Firebase initialization failed:', error.message);
-    console.log('📭 App will run in offline mode with mock data');
+    logger.warn('⚠️ Firebase initialization failed:', error.message);
+    logger.log('📭 App will run in offline mode with mock data');
   }
 } else {
-  console.log('📭 No Firebase credentials found - running in offline mode');
-  console.log('💡 To enable Firebase, set VITE_FIREBASE_* environment variables');
+  logger.log('📭 No Firebase credentials found - running in offline mode');
+  logger.log('💡 To enable Firebase, set VITE_FIREBASE_* environment variables');
 }
 
 /**
@@ -42,7 +43,7 @@ if (firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.project
 export async function authenticateUser() {
   // If Firebase is not available, generate a mock user ID
   if (!isFirebaseAvailable || !auth) {
-    console.log('📭 Firebase not available - using mock user ID');
+    logger.auth('Firebase not available - using mock user ID');
     const mockUserId = `mock-user-${Date.now()}`;
     return { userId: mockUserId, isAnonymous: true };
   }
@@ -52,24 +53,24 @@ export async function authenticateUser() {
   try {
     if (initialToken) {
       // Authenticate with custom token
-      console.log('🔐 Authenticating with __initial_auth_token...');
+      logger.auth('Authenticating with __initial_auth_token');
       const userCredential = await signInWithCustomToken(auth, initialToken);
       const userId = userCredential.user.uid;
-      console.log('✅ Authenticated as:', userId);
+      logger.auth('Authenticated successfully', { userId });
       return { userId, isAnonymous: false };
     } else {
       // Fall back to anonymous sign-in
-      console.log('🔐 No __initial_auth_token found, signing in anonymously...');
+      logger.auth('No __initial_auth_token found, signing in anonymously');
       const userCredential = await signInAnonymously(auth);
       const userId = userCredential.user.uid;
-      console.log('✅ Signed in anonymously as:', userId);
+      logger.auth('Signed in anonymously', { userId });
       return { userId, isAnonymous: true };
     }
   } catch (error) {
-    console.error('❌ Authentication failed:', error);
+    logger.error('❌ Authentication failed:', error);
     // Generate mock user ID as fallback
     const mockUserId = `mock-user-${Date.now()}`;
-    console.log('📭 Using mock user ID:', mockUserId);
+    logger.auth('Using mock user ID', { mockUserId });
     return { userId: mockUserId, isAnonymous: true };
   }
 }

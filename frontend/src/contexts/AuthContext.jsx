@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db, authenticateUser } from '../config/firebase';
+import logger from '../utils/logger';
 
 const AuthContext = createContext();
 
@@ -23,7 +24,7 @@ export const AuthProvider = ({ children }) => {
         setUserId(uid);
         setIsAnonymous(anon);
       } catch (err) {
-        console.error('Authentication error:', err);
+        logger.error('Authentication error:', err);
         // Generate fallback mock user ID
         const mockUserId = `mock-user-${Date.now()}`;
         setUserId(mockUserId);

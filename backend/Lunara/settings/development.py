@@ -129,10 +129,9 @@ SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Additional static files directories
+# Frontend is now built with Vite - static files served from dist/
 STATICFILES_DIRS = [
     BASE_DIR / 'static',  # Backend static files (includes favicons)
-    BASE_DIR.parent / 'frontend' / 'css',
-    BASE_DIR.parent / 'frontend' / 'js',
 ]
 
 # Media files (uploads)
