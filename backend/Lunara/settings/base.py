@@ -45,7 +45,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'safesend.urls'
+ROOT_URLCONF = 'Lunara.urls'
 
 TEMPLATES = [
     {
@@ -66,7 +66,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'safesend.wsgi.application'
+WSGI_APPLICATION = 'Lunara.wsgi.application'
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

@@ -88,7 +88,7 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'INFO',
         },
-        'safesend': {
+        'Lunara': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,

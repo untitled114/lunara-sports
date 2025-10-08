@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 // Context Providers
@@ -11,24 +11,34 @@ import ToastContainer from './components/ToastContainer';
 import ProtectedRoute from './components/ProtectedRoute';
 import OfflineBanner from './components/OfflineBanner';
 
-// Landing page components
+// Landing page components (loaded immediately - users see first)
 import Navigation from './components/Navigation';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import HowItWorks from './components/How-it-works';
 import Pricing from './components/Pricing';
 
-// Auth components
+// Auth components (loaded immediately - high priority)
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
 
-// Dashboard components
-import DashboardLayout from './components/dashboard/DashboardLayout';
-import DashboardHome from './components/dashboard/DashboardHome';
-import Messages from './components/dashboard/Messages';
-import Projects from './components/dashboard/Projects';
-import Payments from './components/dashboard/Payments';
-import Profile from './components/dashboard/Profile';
+// Dashboard components (lazy loaded - code splitting for better performance)
+const DashboardLayout = lazy(() => import('./components/dashboard/DashboardLayout'));
+const DashboardHome = lazy(() => import('./components/dashboard/DashboardHome'));
+const Messages = lazy(() => import('./components/dashboard/Messages'));
+const Projects = lazy(() => import('./components/dashboard/Projects'));
+const Payments = lazy(() => import('./components/dashboard/Payments'));
+const Profile = lazy(() => import('./components/dashboard/Profile'));
+
+// Loading component for lazy-loaded routes
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-900">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+      <p className="text-gray-400">Loading...</p>
+    </div>
+  </div>
+);
 
 // Landing Page
 const LandingPage = () => (
@@ -56,13 +66,39 @@ function App() {
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
 
-              {/* Protected Dashboard Routes */}
-              <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-                <Route path="dashboard" element={<DashboardHome />} />
-                <Route path="messages" element={<Messages />} />
-                <Route path="projects" element={<Projects />} />
-                <Route path="payments" element={<Payments />} />
-                <Route path="profile" element={<Profile />} />
+              {/* Protected Dashboard Routes - Lazy Loaded */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <DashboardLayout />
+                  </Suspense>
+                </ProtectedRoute>
+              }>
+                <Route path="dashboard" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <DashboardHome />
+                  </Suspense>
+                } />
+                <Route path="messages" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Messages />
+                  </Suspense>
+                } />
+                <Route path="projects" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Projects />
+                  </Suspense>
+                } />
+                <Route path="payments" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Payments />
+                  </Suspense>
+                } />
+                <Route path="profile" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Profile />
+                  </Suspense>
+                } />
               </Route>
             </Routes>
           </Router>

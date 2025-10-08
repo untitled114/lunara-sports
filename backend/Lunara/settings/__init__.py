@@ -1,5 +1,5 @@
 """
-Settings package for SafeSend Django application.
+Settings package for Lunara Django application.
 Imports development settings by default.
 """
 

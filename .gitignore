@@ -79,8 +79,11 @@ media/
 
 # Secrets and keys
 *secret*
-*key*
 *.pem
 *.p12
 *.pfx
 credentials.json
+
+# Documentation with sensitive info (excluded from git)
+**/sensitive-info.txt
+**/lunara-documentation.txt

@@ -6,7 +6,7 @@ from decimal import Decimal
 
 # Setup Django
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'safesend.settings.development')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Lunara.settings.development')
 django.setup()
 
 from apps.accounts.models import User

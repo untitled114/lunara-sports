@@ -81,11 +81,137 @@ const getAuthToken = () => {
 };
 
 /**
+ * Get refresh token from localStorage
+ */
+const getRefreshToken = () => {
+  return localStorage.getItem('refresh_token');
+};
+
+/**
+ * Decode JWT token to get expiration time
+ */
+const decodeToken = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Check if token is expired or will expire soon (within 5 minutes)
+ */
+const isTokenExpiringSoon = (token) => {
+  if (!token) return true;
+
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.exp) return true;
+
+  const currentTime = Math.floor(Date.now() / 1000);
+  const timeUntilExpiry = decoded.exp - currentTime;
+
+  // Refresh if token expires in less than 5 minutes (300 seconds)
+  return timeUntilExpiry < 300;
+};
+
+/**
+ * Refresh the access token using refresh token
+ */
+let isRefreshing = false;
+let refreshPromise = null;
+
+const refreshAccessToken = async () => {
+  // If already refreshing, return the existing promise
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = getRefreshToken();
+
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      console.log('🔄 Refreshing access token...');
+
+      const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh: refreshToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Token refresh failed');
+      }
+
+      const data = await response.json();
+
+      // Update access token
+      if (data.access) {
+        localStorage.setItem('auth_token', data.access);
+        console.log('✅ Access token refreshed successfully');
+        return data.access;
+      }
+
+      throw new Error('No access token in refresh response');
+    } catch (error) {
+      console.error('❌ Token refresh failed:', error);
+
+      // Clear tokens and redirect to login
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_id');
+
+      // Store redirect path
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/signin' && currentPath !== '/signup') {
+        localStorage.setItem('redirect_after_login', currentPath);
+      }
+
+      window.location.href = '/signin';
+      throw error;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+};
+
+/**
  * Base fetch wrapper with auth and error handling
  */
 const baseFetch = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
-  const token = getAuthToken();
+  let token = getAuthToken();
+
+  // Check if token needs refresh (skip for auth endpoints)
+  const isAuthEndpoint = endpoint.includes('/auth/login') ||
+                         endpoint.includes('/auth/signup') ||
+                         endpoint.includes('/auth/refresh');
+
+  if (token && !isAuthEndpoint && isTokenExpiringSoon(token)) {
+    try {
+      token = await refreshAccessToken();
+    } catch (error) {
+      // Refresh failed, will be handled below or user redirected
+      console.warn('Token refresh failed in baseFetch:', error);
+    }
+  }
 
   const headers = {
     'Content-Type': 'application/json',

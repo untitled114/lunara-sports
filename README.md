@@ -177,7 +177,7 @@ lunara.io/
 │   │   ├── projects/        # Project management
 │   │   ├── messages/        # Messaging system
 │   │   └── payments/        # Payment processing
-│   ├── safesend/            # Main Django project
+│   ├── Lunara/              # Main Django project
 │   └── manage.py
 │
 ├── Documentation/            # Project documentation

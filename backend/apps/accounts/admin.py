@@ -19,13 +19,13 @@ class UserAdmin(BaseUserAdmin):
     ordering = ('-date_joined',)
 
     fieldsets = BaseUserAdmin.fieldsets + (
-        ('SafeSend Information', {
+        ('Lunara Information', {
             'fields': ('user_type', 'is_verified')
         }),
     )
 
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ('SafeSend Information', {
+        ('Lunara Information', {
             'fields': ('email', 'user_type')
         }),
     )
