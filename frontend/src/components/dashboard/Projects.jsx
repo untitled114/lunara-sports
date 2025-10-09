@@ -279,7 +279,10 @@ const Projects = () => {
         </div>
 
         {/* Search & Sort */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow-lg p-3 sm:p-4 mb-4">
+        <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-gray-500/20 hover:border-gray-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-3 sm:p-4 mb-4">
+          {/* Top Accent Line */}
+          <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-gray-600 to-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
               <input
@@ -304,7 +307,10 @@ const Projects = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow p-3 sm:p-4 mb-4 sm:mb-6 flex flex-wrap gap-2">
+        <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-gray-500/20 hover:border-gray-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-3 sm:p-4 mb-4 sm:mb-6 flex flex-wrap gap-2">
+          {/* Top Accent Line */}
+          <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-gray-600 to-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
           {['all', 'active', 'review', 'completed', 'overdue'].map((filter) => (
             <button
               key={filter}
@@ -320,7 +326,107 @@ const Projects = () => {
           ))}
         </div>
 
-        {/* Projects List */}
+        {/* Widgets - Full Width Responsive Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          {/* Quick Actions Widget */}
+          <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+            {/* Top Accent Line */}
+            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-purple-600 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            <h3 className="text-lg font-bold text-white mb-4">Quick Actions</h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="w-full flex items-center gap-3 p-3 bg-indigo-900/20 border border-indigo-500/30 rounded-lg hover:bg-indigo-900/30 hover:shadow-md hover:shadow-indigo-500/10 transition text-left"
+              >
+                <span className="text-2xl">➕</span>
+                <div>
+                  <div className="font-semibold text-white text-sm">New Project</div>
+                  <div className="text-xs text-gray-400">Create a project</div>
+                </div>
+              </button>
+              <button
+                onClick={() => navigate('/messages')}
+                className="w-full flex items-center gap-3 p-3 bg-cyan-900/20 border border-cyan-500/30 rounded-lg hover:bg-cyan-900/30 hover:shadow-md hover:shadow-cyan-500/10 transition text-left"
+              >
+                <span className="text-2xl">💬</span>
+                <div>
+                  <div className="font-semibold text-white text-sm">Message Clients</div>
+                  <div className="text-xs text-gray-400">Quick communication</div>
+                </div>
+              </button>
+              <button
+                onClick={() => showInfo('Batch update feature coming soon!')}
+                className="w-full flex items-center gap-3 p-3 bg-green-900/20 border border-green-500/30 rounded-lg hover:bg-green-900/30 hover:shadow-md hover:shadow-green-500/10 transition text-left"
+              >
+                <span className="text-2xl">🔄</span>
+                <div>
+                  <div className="font-semibold text-white text-sm">Batch Update</div>
+                  <div className="text-xs text-gray-400">Update multiple</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Project Insights Widget */}
+          <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+            {/* Top Accent Line */}
+            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            <h3 className="text-lg font-bold text-white mb-4">Project Insights</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                <div>
+                  <div className="text-sm text-gray-400">On Track</div>
+                  <div className="text-2xl font-bold text-green-400">5</div>
+                </div>
+                <span className="text-3xl">✅</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                <div>
+                  <div className="text-sm text-gray-400">At Risk</div>
+                  <div className="text-2xl font-bold text-yellow-400">2</div>
+                </div>
+                <span className="text-3xl">⚠️</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                <div>
+                  <div className="text-sm text-gray-400">In Review</div>
+                  <div className="text-2xl font-bold text-blue-400">1</div>
+                </div>
+                <span className="text-3xl">👁️</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Performance Widget */}
+          <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-green-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-green-500/20 hover:border-green-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+            {/* Top Accent Line */}
+            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-600 to-green-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            <h3 className="text-lg font-bold text-white mb-4">This Month</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Projects Completed</span>
+                <span className="font-bold text-green-400">4</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Revenue Generated</span>
+                <span className="font-bold text-green-400">$12.5K</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Client Satisfaction</span>
+                <span className="font-bold text-yellow-400">4.8/5</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Avg Completion Time</span>
+                <span className="font-bold text-indigo-400">12 days</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Projects List - Full Width */}
         <div className="space-y-6">
           {projects.length === 0 ? (
             <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-12 text-center">

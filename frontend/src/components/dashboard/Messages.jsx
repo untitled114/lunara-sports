@@ -156,16 +156,8 @@ const Messages = () => {
               </div>
             </div>
 
-            {/* Dashboard Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
-              {/* Main Content */}
-              <div className="lg:col-span-2">
-                {/* Urgent Messages Widget */}
-                <UrgentMessageList openModal={openModal} />
-              </div>
-
-              {/* Sidebar */}
-              <div className="lg:col-span-1 mt-8 lg:mt-0 space-y-8">
+            {/* Widgets - Full Width Responsive Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 {/* Message Stats */}
                 <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
                   {/* Top Accent Line */}
@@ -268,8 +260,10 @@ const Messages = () => {
                     </button>
                   </form>
                 </div>
-              </div>
             </div>
+
+            {/* Urgent Messages List - Full Width */}
+            <UrgentMessageList openModal={openModal} />
           </div>
         </section>
       </main>

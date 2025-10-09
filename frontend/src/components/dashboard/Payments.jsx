@@ -200,7 +200,10 @@ const Payments = () => {
         </div>
 
         {/* Tabs */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow mb-4 sm:mb-6 p-1 flex gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
+        <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-gray-500/20 hover:border-gray-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 mb-4 sm:mb-6 p-1 flex gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
+          {/* Top Accent Line */}
+          <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-gray-600 to-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
           <button
             onClick={() => setActiveTab('all')}
             className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap transition ${
@@ -243,8 +246,144 @@ const Payments = () => {
           </button>
         </div>
 
-        {/* Payments List */}
-        <div className="space-y-4">
+        {/* KPI Cards - Full Width Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-6 hover:shadow-2xl hover:shadow-blue-500/20 hover:border-blue-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
+            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-blue-600 to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-blue-300 mb-1">Avg Invoice Value</div>
+                <div className="text-2xl font-bold text-white">$2,800</div>
+                <div className="text-xs text-blue-300 mt-1">↗ +12%</div>
+              </div>
+              <span className="text-3xl">💵</span>
+            </div>
+          </div>
+
+          <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-green-500/20 rounded-2xl p-6 hover:shadow-2xl hover:shadow-green-500/20 hover:border-green-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
+            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-600 to-green-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-green-300 mb-1">Success Rate</div>
+                <div className="text-2xl font-bold text-white">94%</div>
+                <div className="text-xs text-green-300 mt-1">On-time payments</div>
+              </div>
+              <span className="text-3xl">✓</span>
+            </div>
+          </div>
+
+          <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6 hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
+            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-purple-600 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-purple-300 mb-1">Avg Payment Time</div>
+                <div className="text-2xl font-bold text-white">8.5d</div>
+                <div className="text-xs text-purple-300 mt-1">Industry: 12d</div>
+              </div>
+              <span className="text-3xl">⏱</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Widgets - 2 Column Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          {/* Payment Methods Widget */}
+          <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <h3 className="text-lg font-bold text-white mb-4">Payment Methods</h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                      <span className="text-lg">🏦</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white">Bank Transfer</div>
+                      <div className="text-xs text-gray-400">44.5% of total</div>
+                    </div>
+                  </div>
+                  <span className="text-xl font-bold text-green-400">$8.2K</span>
+                </div>
+                <div className="w-full bg-gray-700/50 rounded-full h-2">
+                  <div className="bg-gradient-to-r from-green-600 to-green-500 h-2 rounded-full" style={{ width: '44.5%' }}></div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                      <span className="text-lg">💰</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white">Lunara Wallet</div>
+                      <div className="text-xs text-gray-400">34.8% of total</div>
+                    </div>
+                  </div>
+                  <span className="text-xl font-bold text-blue-400">$6.4K</span>
+                </div>
+                <div className="w-full bg-gray-700/50 rounded-full h-2">
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full" style={{ width: '34.8%' }}></div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                      <span className="text-lg">📱</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white">PayPal</div>
+                      <div className="text-xs text-gray-400">20.7% of total</div>
+                    </div>
+                  </div>
+                  <span className="text-xl font-bold text-purple-400">$3.9K</span>
+                </div>
+                <div className="w-full bg-gray-700/50 rounded-full h-2">
+                  <div className="bg-gradient-to-r from-purple-600 to-purple-500 h-2 rounded-full" style={{ width: '20.7%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Clients Widget */}
+          <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-green-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-green-500/20 hover:border-green-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-600 to-green-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            <h3 className="text-lg font-bold text-white mb-4">Top Clients</h3>
+            <div className="space-y-3">
+              {[
+                { name: 'TechCorp', amount: '$8,200', percentage: 44, color: 'indigo' },
+                { name: 'MedCare Plus', amount: '$5,600', percentage: 30, color: 'blue' },
+                { name: 'StartupX', amount: '$2,900', percentage: 16, color: 'purple' },
+                { name: 'DesignHub', amount: '$1,800', percentage: 10, color: 'pink' },
+              ].map((client, idx) => (
+                <div key={idx} className="group hover:bg-gray-700/30 p-3 rounded-lg transition-all cursor-pointer">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full bg-${client.color}-500/20 flex items-center justify-center text-xs font-bold text-${client.color}-400`}>
+                        {idx + 1}
+                      </div>
+                      <span className="font-semibold text-white">{client.name}</span>
+                    </div>
+                    <span className="text-lg font-bold text-white">{client.amount}</span>
+                  </div>
+                  <div className="w-full bg-gray-700/50 rounded-full h-1.5">
+                    <div
+                      className={`bg-gradient-to-r from-${client.color}-600 to-${client.color}-500 h-1.5 rounded-full transition-all group-hover:h-2`}
+                      style={{ width: `${client.percentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Payments List - Full Width */}
+        <div className="space-y-4 mb-6 sm:mb-8">
           {filteredPayments.length === 0 ? (
             <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-12 text-center">
               <div className="text-6xl mb-4">📭</div>
@@ -259,292 +398,138 @@ const Payments = () => {
             </div>
           ) : (
             filteredPayments.map((payment) => (
-            <div key={payment.id} className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
-              {/* Top Accent Line */}
-              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div key={payment.id} className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                {/* Top Accent Line */}
+                <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-              <div className="flex flex-col gap-4">
-                {/* Top Section - Project & Amount */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                  <div className="flex items-start gap-3 flex-1">
-                    <span className="text-2xl sm:text-3xl flex-shrink-0">{getStatusIcon(payment.status)}</span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg sm:text-xl font-bold text-white truncate">{payment.project}</h3>
-                      <p className="text-gray-400 text-xs sm:text-sm">Client: {payment.client}</p>
+                <div className="flex flex-col gap-4">
+                  {/* Top Section - Project & Amount */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <span className="text-2xl sm:text-3xl flex-shrink-0">{getStatusIcon(payment.status)}</span>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg sm:text-xl font-bold text-white truncate">{payment.project}</h3>
+                        <p className="text-gray-400 text-xs sm:text-sm">Client: {payment.client}</p>
+                      </div>
+                    </div>
+
+                    {/* Amount - Desktop */}
+                    <div className="hidden sm:block text-center">
+                      <div className="text-2xl sm:text-3xl font-bold text-white">${payment.amount.toLocaleString()}</div>
+                      <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)}`}>
+                        {payment.status.toUpperCase()}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Amount - Desktop */}
-                  <div className="hidden sm:block text-center">
-                    <div className="text-2xl sm:text-3xl font-bold text-white">${payment.amount.toLocaleString()}</div>
-                    <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)}`}>
+                  {/* Amount - Mobile */}
+                  <div className="sm:hidden flex items-center justify-between">
+                    <div className="text-2xl font-bold text-white">${payment.amount.toLocaleString()}</div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)}`}>
                       {payment.status.toUpperCase()}
                     </span>
                   </div>
-                </div>
 
-                {/* Amount - Mobile */}
-                <div className="sm:hidden flex items-center justify-between">
-                  <div className="text-2xl font-bold text-white">${payment.amount.toLocaleString()}</div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)}`}>
-                    {payment.status.toUpperCase()}
-                  </span>
-                </div>
+                  {/* Payment Details */}
+                  <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400">
+                    <span className="flex items-center gap-1">📄 {payment.invoice}</span>
+                    <span className="flex items-center gap-1">💳 {payment.method}</span>
+                    <span className="flex items-center gap-1">📅 {new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    {payment.daysOverdue && (
+                      <span className="text-red-600 font-semibold">⚠️ {payment.daysOverdue} days overdue</span>
+                    )}
+                  </div>
 
-                {/* Payment Details */}
-                <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400">
-                  <span className="flex items-center gap-1">📄 {payment.invoice}</span>
-                  <span className="flex items-center gap-1">💳 {payment.method}</span>
-                  <span className="flex items-center gap-1">📅 {new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  {payment.daysOverdue && (
-                    <span className="text-red-600 font-semibold">⚠️ {payment.daysOverdue} days overdue</span>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                  <button
-                    onClick={() => handleDownloadInvoice(payment.id)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition text-sm"
-                  >
-                    View Invoice
-                  </button>
-                  {payment.status === 'pending' && (
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                     <button
-                      onClick={() => handleSendReminder(payment.id)}
-                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition text-sm"
+                      onClick={() => handleDownloadInvoice(payment.id)}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition text-sm"
                     >
-                      Send Reminder
+                      View Invoice
                     </button>
-                  )}
-                  {payment.status === 'paid' && (
-                    <button
-                      onClick={() => handleDownloadReceipt(payment.id)}
-                      className="px-4 py-2 bg-gray-700 text-gray-300 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition text-sm"
-                    >
-                      Download Receipt
-                    </button>
-                  )}
+                    {payment.status === 'pending' && (
+                      <button
+                        onClick={() => handleSendReminder(payment.id)}
+                        className="px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition text-sm"
+                      >
+                        Send Reminder
+                      </button>
+                    )}
+                    {payment.status === 'paid' && (
+                      <button
+                        onClick={() => handleDownloadReceipt(payment.id)}
+                        className="px-4 py-2 bg-gray-700 text-gray-300 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition text-sm"
+                      >
+                        Download Receipt
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
             ))
           )}
         </div>
 
-        {/* Power BI-Style Analytics Dashboard */}
-        <div className="mt-8 space-y-6">
-          {/* Top KPI Cards - Power BI Style */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="group relative bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm border border-blue-500/30 rounded-2xl p-6 hover:shadow-2xl hover:shadow-blue-500/20 hover:border-blue-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
-              {/* Top Accent Line */}
-              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-blue-600 to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-blue-300">Avg Invoice Value</h4>
-                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <span className="text-xl">💵</span>
-                </div>
-              </div>
-              <div className="text-3xl font-bold text-white mb-1">$2,800</div>
-              <div className="text-xs text-blue-300">↗ +12% vs last month</div>
+        {/* Revenue Analytics Chart - Full Width */}
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-white">Revenue Analytics</h3>
+              <p className="text-sm text-gray-400 mt-1">Monthly performance overview</p>
             </div>
-
-            <div className="group relative bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-sm border border-green-500/30 rounded-2xl p-6 hover:shadow-2xl hover:shadow-green-500/20 hover:border-green-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
-              {/* Top Accent Line */}
-              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-600 to-green-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-green-300">Success Rate</h4>
-                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <span className="text-xl">✓</span>
-                </div>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                <span className="text-xs text-gray-400">Revenue</span>
               </div>
-              <div className="text-3xl font-bold text-white mb-1">94%</div>
-              <div className="text-xs text-green-300">On-time payments</div>
-            </div>
-
-            <div className="group relative bg-gradient-to-br from-purple-600/20 to-purple-800/20 backdrop-blur-sm border border-purple-500/30 rounded-2xl p-6 hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
-              {/* Top Accent Line */}
-              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-purple-600 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-purple-300">Avg Payment Time</h4>
-                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                  <span className="text-xl">⏱</span>
-                </div>
-              </div>
-              <div className="text-3xl font-bold text-white mb-1">8.5d</div>
-              <div className="text-xs text-purple-300">Industry avg: 12d</div>
-            </div>
-
-            <div className="group relative bg-gradient-to-br from-orange-600/20 to-orange-800/20 backdrop-blur-sm border border-orange-500/30 rounded-2xl p-6 hover:shadow-2xl hover:shadow-orange-500/20 hover:border-orange-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
-              {/* Top Accent Line */}
-              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-orange-600 to-orange-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-orange-300">Active Clients</h4>
-                <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                  <span className="text-xl">👥</span>
-                </div>
-              </div>
-              <div className="text-3xl font-bold text-white mb-1">12</div>
-              <div className="text-xs text-orange-300">+3 this month</div>
-            </div>
-          </div>
-
-          {/* Revenue Analytics - Power BI Chart Style */}
-          <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-white">Revenue Analytics</h3>
-                <p className="text-sm text-gray-400 mt-1">Monthly performance overview</p>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-                  <span className="text-xs text-gray-400">Revenue</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span className="text-xs text-gray-400">Target</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bar Chart */}
-            <div className="relative">
-              <div className="grid grid-cols-6 gap-3">
-                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
-                  const revenueHeights = ['60%', '75%', '45%', '85%', '70%', '90%'];
-                  const targetHeights = ['65%', '70%', '65%', '75%', '75%', '85%'];
-                  const amounts = ['$2.1K', '$2.8K', '$1.9K', '$3.2K', '$2.6K', '$3.5K'];
-                  return (
-                    <div key={month} className="flex flex-col items-center">
-                      <div className="w-full flex items-end justify-center gap-1 h-40 mb-3">
-                        <div
-                          className="w-6 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-md transition-all hover:from-indigo-500 hover:to-indigo-300 cursor-pointer shadow-lg"
-                          style={{ height: revenueHeights[index] }}
-                          title={`Revenue: ${amounts[index]}`}
-                        ></div>
-                        <div
-                          className="w-6 bg-gradient-to-t from-green-600/50 to-green-400/50 rounded-t-md border border-green-500/50 transition-all hover:from-green-500/70 hover:to-green-300/70 cursor-pointer"
-                          style={{ height: targetHeights[index] }}
-                          title="Target"
-                        ></div>
-                      </div>
-                      <div className="text-xs font-semibold text-gray-400 mb-1">{month}</div>
-                      <div className="text-sm font-bold text-indigo-300">{amounts[index]}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="mt-6 pt-6 border-t border-gray-700/50 grid grid-cols-3 gap-4">
-              <div>
-                <div className="text-xs text-gray-400 mb-1">Total Revenue</div>
-                <div className="text-2xl font-bold text-white">$15.5K</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400 mb-1">Growth Rate</div>
-                <div className="text-2xl font-bold text-green-400">+18%</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400 mb-1">Projection (Jul)</div>
-                <div className="text-2xl font-bold text-indigo-400">$4.2K</div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-xs text-gray-400">Target</span>
               </div>
             </div>
           </div>
 
-          {/* Payment Methods & Client Distribution */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Payment Methods - Donut Chart Style */}
-            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-white mb-6">Payment Methods Distribution</h3>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                        <span className="text-lg">🏦</span>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">Bank Transfer</div>
-                        <div className="text-xs text-gray-400">44.5% of total</div>
-                      </div>
-                    </div>
-                    <span className="text-xl font-bold text-green-400">$8.2K</span>
-                  </div>
-                  <div className="w-full bg-gray-700/50 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-green-600 to-green-500 h-2 rounded-full" style={{ width: '44.5%' }}></div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                        <span className="text-lg">💰</span>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">Lunara Wallet</div>
-                        <div className="text-xs text-gray-400">34.8% of total</div>
-                      </div>
-                    </div>
-                    <span className="text-xl font-bold text-blue-400">$6.4K</span>
-                  </div>
-                  <div className="w-full bg-gray-700/50 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full" style={{ width: '34.8%' }}></div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                        <span className="text-lg">📱</span>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">PayPal</div>
-                        <div className="text-xs text-gray-400">20.7% of total</div>
-                      </div>
-                    </div>
-                    <span className="text-xl font-bold text-purple-400">$3.9K</span>
-                  </div>
-                  <div className="w-full bg-gray-700/50 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-purple-600 to-purple-500 h-2 rounded-full" style={{ width: '20.7%' }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Top Clients by Revenue */}
-            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-white mb-6">Top Clients by Revenue</h3>
-              <div className="space-y-3">
-                {[
-                  { name: 'TechCorp', amount: '$8,200', percentage: 44, color: 'indigo' },
-                  { name: 'MedCare Plus', amount: '$5,600', percentage: 30, color: 'blue' },
-                  { name: 'StartupX', amount: '$2,900', percentage: 16, color: 'purple' },
-                  { name: 'DesignHub', amount: '$1,800', percentage: 10, color: 'pink' },
-                ].map((client, idx) => (
-                  <div key={idx} className="group hover:bg-gray-700/30 p-3 rounded-lg transition-all cursor-pointer">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full bg-${client.color}-500/20 flex items-center justify-center text-xs font-bold text-${client.color}-400`}>
-                          {idx + 1}
-                        </div>
-                        <span className="font-semibold text-white">{client.name}</span>
-                      </div>
-                      <span className="text-lg font-bold text-white">{client.amount}</span>
-                    </div>
-                    <div className="w-full bg-gray-700/50 rounded-full h-1.5">
+          <div className="relative">
+            <div className="grid grid-cols-6 gap-3">
+              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
+                const revenueHeights = ['60%', '75%', '45%', '85%', '70%', '90%'];
+                const targetHeights = ['65%', '70%', '65%', '75%', '75%', '85%'];
+                const amounts = ['$2.1K', '$2.8K', '$1.9K', '$3.2K', '$2.6K', '$3.5K'];
+                return (
+                  <div key={month} className="flex flex-col items-center">
+                    <div className="w-full flex items-end justify-center gap-1 h-40 mb-3">
                       <div
-                        className={`bg-gradient-to-r from-${client.color}-600 to-${client.color}-500 h-1.5 rounded-full transition-all group-hover:h-2`}
-                        style={{ width: `${client.percentage}%` }}
+                        className="w-6 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-md transition-all hover:from-indigo-500 hover:to-indigo-300 cursor-pointer shadow-lg"
+                        style={{ height: revenueHeights[index] }}
+                        title={`Revenue: ${amounts[index]}`}
+                      ></div>
+                      <div
+                        className="w-6 bg-gradient-to-t from-green-600/50 to-green-400/50 rounded-t-md border border-green-500/50 transition-all hover:from-green-500/70 hover:to-green-300/70 cursor-pointer"
+                        style={{ height: targetHeights[index] }}
+                        title="Target"
                       ></div>
                     </div>
+                    <div className="text-xs font-semibold text-gray-400 mb-1">{month}</div>
+                    <div className="text-sm font-bold text-indigo-300">{amounts[index]}</div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-700/50 grid grid-cols-3 gap-4">
+            <div>
+              <div className="text-xs text-gray-400 mb-1">Total Revenue</div>
+              <div className="text-2xl font-bold text-white">$15.5K</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 mb-1">Growth Rate</div>
+              <div className="text-2xl font-bold text-green-400">+18%</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 mb-1">Projection (Jul)</div>
+              <div className="text-2xl font-bold text-indigo-400">$4.2K</div>
             </div>
           </div>
         </div>
