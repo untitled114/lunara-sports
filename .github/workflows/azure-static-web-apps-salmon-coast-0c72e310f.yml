@@ -40,4 +40,4 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for GitHub integrations (PR comments)
           action: "upload"
           app_location: "frontend"      # Source code folder
-          output_location: "frontend/dist" # Built artifact folder
+          output_location: "dist" # Built artifact folder (relative to app_location)
