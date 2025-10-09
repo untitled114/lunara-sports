@@ -1,15 +1,15 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
-export default defineConfig({
+// Single consolidated Vite configuration
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
-    // CSP configuration for development environment
-    {
+    ...(mode === 'development' ? [{
       name: 'dev-csp-headers',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
-          // Set permissive CSP for development (allows localhost API calls)
           res.setHeader('Content-Security-Policy',
             "default-src 'self'; " +
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; " +
@@ -22,8 +22,13 @@ export default defineConfig({
           next();
         });
       }
-    }
+    }] : [])
   ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }
+  },
   optimizeDeps: {
     include: ['three'],
     exclude: []
@@ -32,14 +37,22 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     minify: 'terser',
+    chunkSizeWarningLimit: 1000, // 1000 KB to reduce noisy warnings
     rollupOptions: {
       output: {
         entryFileNames: 'js/[name]-[hash].js',
         chunkFileNames: 'js/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'three-vendor': ['three']
+        manualChunks(id) {
+          if (!id) return;
+          if (id.includes('node_modules')) {
+            if (id.includes('firebase')) return 'vendor-firebase';
+            if (id.includes('three')) return 'vendor-three';
+            if (id.includes('lucide-react')) return 'vendor-lucide';
+            if (id.includes('react-router-dom')) return 'vendor-router';
+            if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';
+            return 'vendor';
+          }
         }
       }
     },
@@ -53,19 +66,11 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    sourcemapIgnoreList: (sourcePath) => {
-      // Ignore source maps from node_modules and browser extensions
-      return sourcePath.includes('node_modules') ||
-             sourcePath.includes('chrome-extension') ||
-             sourcePath.includes('installHook') ||
-             sourcePath.includes('passkeys') ||
-             sourcePath.includes('nordpass');
-    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
+        changeOrigin: true
       }
     }
   }
-});
+}))
