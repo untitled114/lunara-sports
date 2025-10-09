@@ -134,13 +134,13 @@ const Messages = () => {
         <section>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Welcome Card */}
-            <div className="bg-indigo-600 text-white rounded-xl shadow-xl p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-              <div className="max-w-2xl">
-                <h1 className="text-3xl sm:text-4xl font-extrabold mb-1">💬 Messages & Communication</h1>
-                <p className="text-indigo-200 text-lg mb-4">Manage your client conversations and respond to urgent requests</p>
-                <p className="text-indigo-300 text-sm italic">All messages are synced in real-time with notifications</p>
+            <div className="bg-indigo-600 text-white rounded-xl shadow-xl p-4 sm:p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8 gap-4 md:gap-6">
+              <div className="w-full md:max-w-2xl">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-1 sm:mb-2">💬 Messages & Communication</h1>
+                <p className="text-indigo-200 text-base sm:text-lg mb-3 sm:mb-4">Manage your client conversations and respond to urgent requests</p>
+                <p className="text-indigo-300 text-xs sm:text-sm italic">All messages are synced in real-time with notifications</p>
               </div>
-              <div className="flex flex-wrap gap-4 mt-6 md:mt-0">
+              <div className="flex flex-wrap gap-2 sm:gap-4 w-full md:w-auto">
                 <div className="text-center p-3 bg-indigo-700/50 rounded-lg shadow-inner">
                   <span className="text-3xl font-bold block">{urgentCount}</span>
                   <span className="block text-indigo-200 text-sm">Urgent</span>
@@ -167,7 +167,10 @@ const Messages = () => {
               {/* Sidebar */}
               <div className="lg:col-span-1 mt-8 lg:mt-0 space-y-8">
                 {/* Message Stats */}
-                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+                <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                  {/* Top Accent Line */}
+                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                   <h3 className="text-lg font-semibold text-white mb-4 border-b border-gray-700 pb-3">📊 Message Stats</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
@@ -190,7 +193,10 @@ const Messages = () => {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+                <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                  {/* Top Accent Line */}
+                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-purple-600 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                   <h3 className="text-lg font-semibold text-white mb-4 border-b border-gray-700 pb-3">⚡ Quick Message Actions</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <button
@@ -213,7 +219,10 @@ const Messages = () => {
                 </div>
 
                 {/* Compose New Message */}
-                <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 backdrop-blur-sm border border-purple-500/30 rounded-xl shadow-lg p-6">
+                <div className="group relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30 backdrop-blur-sm border border-purple-500/30 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                  {/* Top Accent Line */}
+                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-purple-600 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                   <h3 className="text-lg font-semibold text-white mb-4 border-b border-purple-500/30 pb-3">✉️ Compose New Message</h3>
                   <form onSubmit={handleSendMessage} className="space-y-4">
                     <div>

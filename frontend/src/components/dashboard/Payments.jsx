@@ -165,22 +165,22 @@ const Payments = () => {
         )}
 
         {/* Hero Section */}
-        <div className="bg-gradient-to-br from-green-600 to-emerald-700 text-white rounded-xl shadow-xl p-6 md:p-8 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold mb-2">💰 Payments & Earnings</h1>
-              <p className="text-green-100 text-lg">Track your income and manage invoices</p>
+        <div className="bg-gradient-to-br from-green-600 to-emerald-700 text-white rounded-xl shadow-xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="w-full md:w-auto">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-2">💰 Payments & Earnings</h1>
+              <p className="text-green-100 text-base sm:text-lg">Track your income and manage invoices</p>
             </div>
             <button
               onClick={handleCreateInvoice}
-              className="mt-4 md:mt-0 bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-green-50 transition duration-200 shadow-lg"
+              className="w-full md:w-auto mt-2 md:mt-0 bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-green-50 transition duration-200 shadow-lg whitespace-nowrap"
             >
               + Create Invoice
             </button>
           </div>
 
           {/* Financial Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mt-4 sm:mt-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
               <div className="text-green-100 text-sm mb-1">This Month Earned</div>
               <div className="text-3xl font-bold">${totalEarned.toLocaleString()}</div>
@@ -200,10 +200,10 @@ const Payments = () => {
         </div>
 
         {/* Tabs */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow mb-6 p-1 flex gap-2 overflow-x-auto">
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow mb-4 sm:mb-6 p-1 flex gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+            className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap transition ${
               activeTab === 'all' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
             }`}
           >
@@ -211,7 +211,7 @@ const Payments = () => {
           </button>
           <button
             onClick={() => setActiveTab('paid')}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+            className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap transition ${
               activeTab === 'paid' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
             }`}
           >
@@ -219,7 +219,7 @@ const Payments = () => {
           </button>
           <button
             onClick={() => setActiveTab('pending')}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+            className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap transition ${
               activeTab === 'pending' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
             }`}
           >
@@ -227,7 +227,7 @@ const Payments = () => {
           </button>
           <button
             onClick={() => setActiveTab('overdue')}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+            className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap transition ${
               activeTab === 'overdue' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
             }`}
           >
@@ -235,7 +235,7 @@ const Payments = () => {
           </button>
           <button
             onClick={() => setActiveTab('invoices')}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
+            className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap transition ${
               activeTab === 'invoices' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
             }`}
           >
@@ -263,36 +263,46 @@ const Payments = () => {
               {/* Top Accent Line */}
               <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                {/* Left Section */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-3xl">{getStatusIcon(payment.status)}</span>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">{payment.project}</h3>
-                      <p className="text-gray-400 text-sm">Client: {payment.client}</p>
+              <div className="flex flex-col gap-4">
+                {/* Top Section - Project & Amount */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex items-start gap-3 flex-1">
+                    <span className="text-2xl sm:text-3xl flex-shrink-0">{getStatusIcon(payment.status)}</span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg sm:text-xl font-bold text-white truncate">{payment.project}</h3>
+                      <p className="text-gray-400 text-xs sm:text-sm">Client: {payment.client}</p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-400 ml-12">
-                    <span>📄 {payment.invoice}</span>
-                    <span>💳 {payment.method}</span>
-                    <span>📅 {new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    {payment.daysOverdue && (
-                      <span className="text-red-600 font-semibold">⚠️ {payment.daysOverdue} days overdue</span>
-                    )}
+
+                  {/* Amount - Desktop */}
+                  <div className="hidden sm:block text-center">
+                    <div className="text-2xl sm:text-3xl font-bold text-white">${payment.amount.toLocaleString()}</div>
+                    <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)}`}>
+                      {payment.status.toUpperCase()}
+                    </span>
                   </div>
                 </div>
 
-                {/* Center - Amount */}
-                <div className="text-center lg:mx-6">
-                  <div className="text-3xl font-bold text-white">${payment.amount.toLocaleString()}</div>
-                  <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)}`}>
+                {/* Amount - Mobile */}
+                <div className="sm:hidden flex items-center justify-between">
+                  <div className="text-2xl font-bold text-white">${payment.amount.toLocaleString()}</div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)}`}>
                     {payment.status.toUpperCase()}
                   </span>
                 </div>
 
-                {/* Right - Actions */}
-                <div className="flex flex-wrap gap-2">
+                {/* Payment Details */}
+                <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400">
+                  <span className="flex items-center gap-1">📄 {payment.invoice}</span>
+                  <span className="flex items-center gap-1">💳 {payment.method}</span>
+                  <span className="flex items-center gap-1">📅 {new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  {payment.daysOverdue && (
+                    <span className="text-red-600 font-semibold">⚠️ {payment.daysOverdue} days overdue</span>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                   <button
                     onClick={() => handleDownloadInvoice(payment.id)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition text-sm"

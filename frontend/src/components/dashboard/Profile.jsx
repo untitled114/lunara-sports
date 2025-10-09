@@ -389,15 +389,15 @@ const Profile = () => {
       {/* Tabs Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow mb-6 p-1 flex gap-2 overflow-x-auto">
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow mb-4 sm:mb-6 p-1 flex gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
           {['activity', 'projects', 'reviews', 'analytics', 'payments'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 rounded-lg font-medium capitalize whitespace-nowrap transition ${
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base capitalize whitespace-nowrap transition ${
                 activeTab === tab
                   ? 'bg-indigo-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  : 'text-gray-300 hover:bg-gray-700/50'
               }`}
             >
               {tab === 'activity' && '📊 '}

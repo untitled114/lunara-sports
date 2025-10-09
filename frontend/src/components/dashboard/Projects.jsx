@@ -243,22 +243,22 @@ const Projects = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="bg-indigo-600 text-white rounded-xl shadow-xl p-6 md:p-8 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold mb-2">📊 Active Projects</h1>
-              <p className="text-indigo-200 text-lg">Manage your ongoing work and track deliverables</p>
+        <div className="bg-indigo-600 text-white rounded-xl shadow-xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="w-full md:w-auto">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-2">📊 Active Projects</h1>
+              <p className="text-indigo-200 text-base sm:text-lg">Manage your ongoing work and track deliverables</p>
             </div>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="mt-4 md:mt-0 bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition duration-200 shadow-lg"
+              className="w-full md:w-auto mt-2 md:mt-0 bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition duration-200 shadow-lg whitespace-nowrap"
             >
               + New Project
             </button>
           </div>
 
           {/* Stats Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
               <div className="text-2xl font-bold">7</div>
               <div className="text-sm text-indigo-200">Total Active</div>
@@ -279,21 +279,21 @@ const Projects = () => {
         </div>
 
         {/* Search & Sort */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow-lg p-4 mb-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow-lg p-3 sm:p-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="🔍 Search projects by name, client, or description..."
-                className="w-full px-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                placeholder="🔍 Search projects..."
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white text-sm sm:text-base placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
               />
             </div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              className="px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white text-sm sm:text-base focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
             >
               <option value="priority">Sort: Priority</option>
               <option value="deadline">Sort: Deadline</option>
@@ -304,12 +304,12 @@ const Projects = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow p-4 mb-6 flex flex-wrap gap-2">
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg shadow p-3 sm:p-4 mb-4 sm:mb-6 flex flex-wrap gap-2">
           {['all', 'active', 'review', 'completed', 'overdue'].map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
+              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm sm:text-base transition ${
                 activeFilter === filter
                   ? 'bg-indigo-600 text-white'
                   : 'bg-gray-700/50 text-gray-300 border border-gray-600 hover:bg-gray-700'
