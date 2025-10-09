@@ -141,7 +141,10 @@ const DashboardHome = () => {
             <div className="lg:col-span-2 space-y-6">
               {/* Urgent Actions Widget - Only for test user */}
               {shouldShowMockData && (
-                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+                <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-red-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-red-500/20 hover:border-red-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                  {/* Top Accent Line */}
+                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-red-600 to-red-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-bold text-white">🔥 Needs Your Attention</h2>
                     <span className="text-sm font-semibold text-red-300 bg-red-900/30 border border-red-500/30 px-3 py-1 rounded-full">
@@ -202,7 +205,10 @@ const DashboardHome = () => {
               )}
 
               {/* Active Projects Widget */}
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+              <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                {/* Top Accent Line */}
+                <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-2xl font-bold text-white">Projects in Progress</h2>
                 </div>
@@ -225,7 +231,10 @@ const DashboardHome = () => {
             <div className="space-y-6">
               {/* This Week's Reality Check - Only for test user */}
               {shouldShowMockData && (
-                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+                <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-green-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-green-500/20 hover:border-green-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                {/* Top Accent Line */}
+                <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-600 to-green-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                 <h3 className="text-lg font-bold text-white mb-4">This Week's Reality</h3>
                 <div className="text-4xl font-bold text-green-400 mb-2">$3,200</div>
                 <div className="text-sm text-red-400 mb-4">Behind target by $800</div>
@@ -259,7 +268,10 @@ const DashboardHome = () => {
 
               {/* Client Pulse Check - Only for test user */}
               {shouldShowMockData && (
-                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+                <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-sky-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-sky-500/20 hover:border-sky-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                {/* Top Accent Line */}
+                <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-sky-600 to-sky-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                 <h3 className="text-lg font-bold text-white mb-4">Client Pulse Check</h3>
 
                 <div className="space-y-4">
@@ -309,7 +321,10 @@ const DashboardHome = () => {
               )}
 
               {/* Quick Actions Widget */}
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+              <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                {/* Top Accent Line */}
+                <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-purple-600 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                 <h3 className="text-lg font-bold text-white mb-4">⚡ Quick Actions</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <button

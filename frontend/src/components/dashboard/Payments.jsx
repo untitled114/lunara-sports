@@ -259,7 +259,10 @@ const Payments = () => {
             </div>
           ) : (
             filteredPayments.map((payment) => (
-            <div key={payment.id} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg hover:shadow-xl transition duration-300 p-6">
+            <div key={payment.id} className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+              {/* Top Accent Line */}
+              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 {/* Left Section */}
                 <div className="flex-1">
@@ -323,7 +326,9 @@ const Payments = () => {
         <div className="mt-8 space-y-6">
           {/* Top KPI Cards - Power BI Style */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-6 hover:shadow-lg hover:shadow-blue-500/20 transition-all">
+            <div className="group relative bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm border border-blue-500/30 rounded-2xl p-6 hover:shadow-2xl hover:shadow-blue-500/20 hover:border-blue-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
+              {/* Top Accent Line */}
+              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-blue-600 to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-medium text-blue-300">Avg Invoice Value</h4>
                 <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
@@ -334,7 +339,9 @@ const Payments = () => {
               <div className="text-xs text-blue-300">↗ +12% vs last month</div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-6 hover:shadow-lg hover:shadow-green-500/20 transition-all">
+            <div className="group relative bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-sm border border-green-500/30 rounded-2xl p-6 hover:shadow-2xl hover:shadow-green-500/20 hover:border-green-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
+              {/* Top Accent Line */}
+              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-600 to-green-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-medium text-green-300">Success Rate</h4>
                 <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
@@ -345,7 +352,9 @@ const Payments = () => {
               <div className="text-xs text-green-300">On-time payments</div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6 hover:shadow-lg hover:shadow-purple-500/20 transition-all">
+            <div className="group relative bg-gradient-to-br from-purple-600/20 to-purple-800/20 backdrop-blur-sm border border-purple-500/30 rounded-2xl p-6 hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
+              {/* Top Accent Line */}
+              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-purple-600 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-medium text-purple-300">Avg Payment Time</h4>
                 <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
@@ -356,7 +365,9 @@ const Payments = () => {
               <div className="text-xs text-purple-300">Industry avg: 12d</div>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-600/20 to-orange-800/20 backdrop-blur-sm border border-orange-500/30 rounded-xl p-6 hover:shadow-lg hover:shadow-orange-500/20 transition-all">
+            <div className="group relative bg-gradient-to-br from-orange-600/20 to-orange-800/20 backdrop-blur-sm border border-orange-500/30 rounded-2xl p-6 hover:shadow-2xl hover:shadow-orange-500/20 hover:border-orange-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
+              {/* Top Accent Line */}
+              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-orange-600 to-orange-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-medium text-orange-300">Active Clients</h4>
                 <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">

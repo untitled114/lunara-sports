@@ -415,7 +415,9 @@ const Profile = () => {
           {activeTab === 'activity' && (
             <div className="grid grid-cols-1 gap-6">
               {activities.map((activity) => (
-                <div key={activity.id} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6 hover:shadow-xl transition">
+                <div key={activity.id} className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                  {/* Top Accent Line */}
+                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="text-xl font-bold text-white">{activity.title}</h3>
@@ -450,7 +452,9 @@ const Profile = () => {
           {activeTab === 'reviews' && (
             <div className="grid grid-cols-1 gap-6">
               {reviews.map((review) => (
-                <div key={review.id} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+                <div key={review.id} className="group relative bg-gray-800/50 backdrop-blur-sm border border-yellow-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-yellow-500/20 hover:border-yellow-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                  {/* Top Accent Line */}
+                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-yellow-600 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="flex items-center gap-4 mb-4">
                     <img
                       src={review.avatar}
@@ -473,7 +477,9 @@ const Profile = () => {
 
           {activeTab === 'analytics' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+              <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-green-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-green-500/20 hover:border-green-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                {/* Top Accent Line */}
+                <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-600 to-green-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <h3 className="text-lg font-bold text-white mb-4">Monthly Earnings</h3>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-4xl font-bold text-green-600">$4,200</span>
@@ -485,7 +491,10 @@ const Profile = () => {
                 <p className="text-sm text-gray-400">84% of monthly goal ($5,000)</p>
               </div>
 
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg p-6">
+              <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-yellow-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-yellow-500/20 hover:border-yellow-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                {/* Top Accent Line */}
+                <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-yellow-600 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                 <h3 className="text-lg font-bold text-white mb-4">Client Satisfaction</h3>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-4xl font-bold text-yellow-600">4.9/5</span>
