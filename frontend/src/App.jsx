@@ -21,6 +21,11 @@ import Pricing from './components/Pricing';
 // Auth components (loaded immediately - high priority)
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
+import ForgotPassword from './components/ForgotPassword';
+
+// Legal pages (loaded immediately)
+import Terms from './components/Terms';
+import Privacy from './components/Privacy';
 
 // Dashboard components (lazy loaded - code splitting for better performance)
 const DashboardLayout = lazy(() => import('./components/dashboard/DashboardLayout'));
@@ -65,6 +70,11 @@ function App() {
               {/* Auth Routes */}
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+
+              {/* Legal Pages */}
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
 
               {/* Protected Dashboard Routes - Lazy Loaded */}
               <Route path="/" element={

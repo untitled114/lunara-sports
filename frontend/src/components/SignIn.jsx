@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, AtSign, Key, Rocket, LogIn, Loader2 } from 'lucide-react';
+import { User, AtSign, Key, Rocket, LogIn } from 'lucide-react';
 import { authAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
@@ -58,7 +58,16 @@ const SignIn = () => {
       let errorMessage = 'Login failed. Please check your credentials.';
 
       // Handle specific API error messages
-      if (error.status === 401) {
+      if (error.status === 400) {
+        // Backend returns 400 for invalid credentials
+        if (error.data?.non_field_errors) {
+          errorMessage = error.data.non_field_errors[0];
+        } else if (error.data?.message) {
+          errorMessage = error.data.message;
+        } else {
+          errorMessage = 'Invalid email or password.';
+        }
+      } else if (error.status === 401) {
         errorMessage = 'Invalid email or password.';
       } else if (error.status === 404) {
         errorMessage = 'No account found with this email.';
@@ -175,19 +184,10 @@ const SignIn = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center px-6 py-4 text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl hover:from-indigo-500 hover:to-indigo-400 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 disabled:from-indigo-400 disabled:to-indigo-400 disabled:cursor-not-allowed disabled:shadow-none mt-2"
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl hover:from-indigo-500 hover:to-indigo-400 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 disabled:from-indigo-400 disabled:to-indigo-400 disabled:cursor-not-allowed disabled:shadow-none mt-2"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Signing In...
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="w-5 h-5 mr-2" />
-                    Log Me In
-                  </>
-                )}
+                <LogIn className="w-5 h-5" />
+                {loading ? 'Signing In...' : 'Log Me In'}
               </button>
 
               {/* Sign Up Link */}

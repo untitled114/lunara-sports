@@ -42,20 +42,23 @@ const Pricing = () => {
 
                 {/* Single Centered Pricing Card */}
                 <div className="max-w-lg mx-auto">
-                    <div className="relative flex flex-col p-10 bg-gray-800 border-4 border-indigo-600 rounded-2xl shadow-2xl">
+                    <div className="group relative flex flex-col p-6 bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300">
+                        {/* Top Accent Line */}
+                        <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                         {/* Badge */}
-                        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                            <span className="inline-block px-4 py-1.5 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-full shadow-lg">
+                        <div className="mb-4">
+                            <span className="inline-block px-4 py-1.5 text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">
                                 Limited Time Offer
                             </span>
                         </div>
 
-                        <div className="text-center mt-4 mb-8">
+                        <div className="text-center mb-6">
                             <h3 className="text-3xl font-bold text-white mb-2">{PRICING_DATA.name}</h3>
                             <p className="text-gray-400">Everything you need to manage projects securely</p>
                         </div>
 
-                        <div className="text-center mb-8">
+                        <div className="text-center mb-6">
                             <div className="flex items-center justify-center gap-3">
                                 <span className="text-6xl font-extrabold bg-gradient-to-r from-indigo-400 to-indigo-300 bg-clip-text text-transparent">
                                     {PRICING_DATA.price}
@@ -67,7 +70,7 @@ const Pricing = () => {
                             <p className="mt-3 text-sm text-indigo-300">No credit card required</p>
                         </div>
 
-                        <ul className="flex-1 space-y-2 mb-10">
+                        <ul className="flex-1 space-y-2 mb-6">
                             {PRICING_DATA.features.map((feature, idx) => (
                                 <FeatureItem key={idx} {...feature} />
                             ))}
@@ -75,13 +78,13 @@ const Pricing = () => {
 
                         <Link
                             to="/signup"
-                            className="group flex justify-center items-center gap-2 px-6 py-4 rounded-xl font-bold text-lg text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-105"
+                            className="flex justify-center items-center gap-2 px-6 py-4 rounded-xl font-bold text-lg text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40"
                         >
                             <Rocket className="w-5 h-5" />
                             {PRICING_DATA.ctaText}
                         </Link>
 
-                        <p className="text-center text-xs text-gray-500 mt-6">
+                        <p className="text-center text-xs text-gray-500 mt-4">
                             Join thousands of professionals already using Lunara
                         </p>
                     </div>

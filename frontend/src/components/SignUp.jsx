@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus, AtSign, Key, User, Rocket, Loader2 } from 'lucide-react';
+import { UserPlus, AtSign, Key, User, Rocket } from 'lucide-react';
 import { authAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
@@ -33,8 +33,8 @@ const SignUp = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      showError('Password must be at least 6 characters long');
+    if (formData.password.length < 8) {
+      showError('Password must be at least 8 characters long');
       return;
     }
 
@@ -53,6 +53,7 @@ const SignUp = () => {
         password_confirm: formData.confirmPassword,
         name: formData.fullName,
         username: formData.email.split('@')[0], // Generate username from email
+        user_type: 'freelancer', // Default to freelancer (can be made configurable later)
       });
 
       // Store auth token and user info (Django JWT format uses 'access' not 'token')
@@ -79,15 +80,41 @@ const SignUp = () => {
 
     } catch (error) {
       console.error('Sign up error:', error);
+      console.error('Error details:', {
+        status: error.status,
+        data: error.data,
+        message: error.message
+      });
 
       let errorMessage = 'Sign up failed. Please try again.';
 
       // Handle specific API error messages
-      if (error.status === 400) {
-        if (error.data && error.data.email) {
-          errorMessage = 'An account with this email already exists.';
-        } else if (error.data && error.data.message) {
+      if (error.status === 400 && error.data) {
+        // Check for field-specific errors
+        if (error.data.email) {
+          errorMessage = Array.isArray(error.data.email)
+            ? error.data.email[0]
+            : 'An account with this email already exists.';
+        } else if (error.data.username) {
+          errorMessage = Array.isArray(error.data.username)
+            ? error.data.username[0]
+            : 'This username is already taken. Please choose another.';
+        } else if (error.data.password) {
+          errorMessage = Array.isArray(error.data.password)
+            ? error.data.password[0]
+            : 'Password does not meet requirements.';
+        } else if (error.data.non_field_errors) {
+          errorMessage = Array.isArray(error.data.non_field_errors)
+            ? error.data.non_field_errors[0]
+            : error.data.non_field_errors;
+        } else if (error.data.message) {
           errorMessage = error.data.message;
+        } else {
+          // Show first error from any field
+          const firstError = Object.values(error.data)[0];
+          if (firstError) {
+            errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+          }
         }
       } else if (error.data && error.data.message) {
         errorMessage = error.data.message;
@@ -191,9 +218,9 @@ const SignUp = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="Create a strong password (6+ characters)"
+                    placeholder="Create a strong password (8+ characters)"
                     required
-                    minLength={6}
+                    minLength={8}
                     className="w-full pl-12 pr-4 py-3.5 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition duration-200 hover:bg-gray-700/70"
                   />
                 </div>
@@ -214,7 +241,7 @@ const SignUp = () => {
                     onChange={handleChange}
                     placeholder="Confirm your password"
                     required
-                    minLength={6}
+                    minLength={8}
                     className="w-full pl-12 pr-4 py-3.5 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition duration-200 hover:bg-gray-700/70"
                   />
                 </div>
@@ -247,19 +274,10 @@ const SignUp = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center px-6 py-4 text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl hover:from-indigo-500 hover:to-indigo-400 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 disabled:from-indigo-400 disabled:to-indigo-400 disabled:cursor-not-allowed disabled:shadow-none mt-2"
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl hover:from-indigo-500 hover:to-indigo-400 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 disabled:from-indigo-400 disabled:to-indigo-400 disabled:cursor-not-allowed disabled:shadow-none mt-2"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-5 h-5 mr-2" />
-                    Create Account
-                  </>
-                )}
+                <UserPlus className="w-5 h-5" />
+                {loading ? 'Creating Account...' : 'Create Account'}
               </button>
 
               {/* Sign In Link */}
