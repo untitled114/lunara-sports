@@ -4,7 +4,7 @@ import React from 'react';
 const FEATURES_DATA = [
     {
         id: 'escrow',
-        iconSrc: '/img/logos/stripe-connect.svg', // Placeholder for Stripe Logo
+        iconSrc: '🔒', // Stripe Logo
         badge: 'Stripe Verified',
         title: 'High-Fidelity Escrow Security',
         description: 'Funds are secured instantly in a real, transparent Stripe Connect escrow account. This process is auditable and protects both the client and the freelancer until work is approved.',
@@ -12,7 +12,7 @@ const FEATURES_DATA = [
     },
     {
         id: 'video',
-        iconSrc: '/img/logos/100ms.svg', // Placeholder for 100ms Logo
+        iconSrc: '🎥', // 100ms Logo
         badge: '100ms Integration',
         title: 'Native HD Video Collaboration',
         description: 'Instant, built-in video meetings powered by 100ms. Experience crystal-clear quality, zero-lag screen sharing, and recording—all within your project workspace.',
@@ -20,7 +20,7 @@ const FEATURES_DATA = [
     },
     {
         id: 'messaging',
-        iconSrc: '/img/logos/ably.svg', // Placeholder for Ably Logo
+        iconSrc: '💬', // Ably Logo
         badge: 'Ably Powered Comms',
         title: 'Zero-Lag Real-Time Messaging',
         description: 'Lightning-fast, threaded chat and file sharing powered by Ably. Eliminates the clunky, delayed interfaces of older platforms.',

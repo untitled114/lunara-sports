@@ -262,9 +262,9 @@ const DashboardLayout = () => {
             </div>
             <div className="flex gap-6">
               <a href="#" className="text-gray-400 hover:text-indigo-400 text-sm transition">Help Center</a>
-              <a href="#" className="text-gray-400 hover:text-indigo-400 text-sm transition">Privacy</a>
-              <a href="#" className="text-gray-400 hover:text-indigo-400 text-sm transition">Terms</a>
-              <a href="#" className="text-gray-400 hover:text-indigo-400 text-sm transition">Status</a>
+              <Link to="/privacy" className="text-gray-400 hover:text-indigo-400 text-sm transition">Privacy</Link>
+              <Link to="/terms" className="text-gray-400 hover:text-indigo-400 text-sm transition">Terms</Link>
+              <a href="https://status.lunara.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-indigo-400 text-sm transition">Status</a>
             </div>
           </div>
         </div>

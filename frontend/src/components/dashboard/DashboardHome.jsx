@@ -15,6 +15,11 @@ const DashboardHome = () => {
   const userEmail = localStorage.getItem('user_email');
   const shouldShowMockData = userEmail === 'eltrozo@lunara.com';
 
+  // Fallback image handler
+  const handleImageError = (e) => {
+    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(e.target.alt)}&size=40&background=4f46e5&color=fff`;
+  };
+
   // Demo function showing how to use the promise-based modal
   const handleTestModal = async () => {
     const confirmed = await openModal(
@@ -281,6 +286,7 @@ const DashboardHome = () => {
                       alt="Sarah - EcoTech"
                       className="w-10 h-10 rounded-full"
                       crossOrigin="anonymous"
+                      onError={handleImageError}
                     />
                     <div className="flex-1">
                       <div className="font-semibold text-white">Sarah K. (EcoTech)</div>
@@ -295,6 +301,7 @@ const DashboardHome = () => {
                       alt="Dr. Martinez"
                       className="w-10 h-10 rounded-full"
                       crossOrigin="anonymous"
+                      onError={handleImageError}
                     />
                     <div className="flex-1">
                       <div className="font-semibold text-white">Dr. Martinez (HealthTech)</div>
@@ -309,6 +316,7 @@ const DashboardHome = () => {
                       alt="Mike - TechFlow"
                       className="w-10 h-10 rounded-full"
                       crossOrigin="anonymous"
+                      onError={handleImageError}
                     />
                     <div className="flex-1">
                       <div className="font-semibold text-white">Mike R. (TechFlow)</div>

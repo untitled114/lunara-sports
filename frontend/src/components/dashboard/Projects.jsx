@@ -67,8 +67,87 @@ const Projects = () => {
             },
           ]);
         } else {
-          showError('Failed to load projects.');
-          setAllProjects([]);
+          showError('Failed to load projects. Using demo data.');
+          // Use demo data for all users when backend is empty
+          setAllProjects([
+            {
+              id: 1,
+              title: 'E-commerce Dashboard Redesign',
+              client: 'TechCorp',
+              status: 'active',
+              progress: 75,
+              value: '$2,500',
+              deadline: '2 days',
+              priority: 'high',
+              description: 'Modern React dashboard with real-time analytics',
+            },
+            {
+              id: 2,
+              title: 'Mobile Banking App',
+              client: 'FinanceFlow',
+              status: 'active',
+              progress: 45,
+              value: '$4,200',
+              deadline: '1 week',
+              priority: 'medium',
+              description: 'Flutter app with biometric authentication',
+            },
+            {
+              id: 3,
+              title: 'Social Media Platform',
+              client: 'ConnectHub',
+              status: 'review',
+              progress: 90,
+              value: '$3,800',
+              deadline: '3 days',
+              priority: 'high',
+              description: 'Full-stack social network with real-time chat',
+            },
+            {
+              id: 4,
+              title: 'Inventory Management System',
+              client: 'RetailPro',
+              status: 'active',
+              progress: 60,
+              value: '$2,100',
+              deadline: '2 weeks',
+              priority: 'medium',
+              description: 'Cloud-based inventory tracking solution',
+            },
+            {
+              id: 5,
+              title: 'Healthcare Appointment System',
+              client: 'MediCare',
+              status: 'active',
+              progress: 35,
+              value: '$3,200',
+              deadline: 'Overdue',
+              priority: 'critical',
+              description: 'Patient scheduling and management platform',
+            },
+            {
+              id: 6,
+              title: 'Learning Management System',
+              client: 'EduTech',
+              status: 'active',
+              progress: 55,
+              value: '$1,800',
+              deadline: '10 days',
+              priority: 'low',
+              description: 'Online course platform with video streaming',
+            },
+            {
+              id: 7,
+              title: 'Restaurant Delivery App',
+              client: 'FoodDash',
+              status: 'completed',
+              progress: 100,
+              value: '$2,900',
+              deadline: 'Completed',
+              priority: 'medium',
+              description: 'Full-featured food delivery mobile application',
+            },
+          ]);
         }
       } finally {
         setLoading(false);
@@ -193,6 +272,28 @@ const Projects = () => {
 
   const projects = sortedProjects;
 
+  // Calculate dynamic stats
+  const activeProjects = allProjects.filter(p => p.status === 'active' || p.status === 'review').length;
+  const dueThisWeek = allProjects.filter(p =>
+    p.deadline && (p.deadline.includes('day') || p.deadline.includes('Overdue'))
+  ).length;
+  const totalValue = allProjects.reduce((sum, p) => {
+    const value = parseInt(p.value.replace(/[$,]/g, '')) || 0;
+    return sum + value;
+  }, 0);
+  const avgProgress = allProjects.length > 0
+    ? Math.round(allProjects.reduce((sum, p) => sum + p.progress, 0) / allProjects.length)
+    : 0;
+
+  // Calculate project insights
+  const onTrackProjects = allProjects.filter(p =>
+    p.progress >= 50 && !p.deadline.includes('Overdue') && p.status !== 'paused'
+  ).length;
+  const atRiskProjects = allProjects.filter(p =>
+    p.deadline.includes('Overdue') || (p.progress < 50 && p.deadline.includes('day'))
+  ).length;
+  const inReviewProjects = allProjects.filter(p => p.status === 'review').length;
+
   // Action handlers
   const handleViewDetails = (projectId) => {
     showInfo('Project details page coming soon!');
@@ -260,19 +361,19 @@ const Projects = () => {
           {/* Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">7</div>
+              <div className="text-2xl font-bold">{activeProjects}</div>
               <div className="text-sm text-indigo-200">Total Active</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">3</div>
+              <div className="text-2xl font-bold">{dueThisWeek}</div>
               <div className="text-sm text-indigo-200">Due This Week</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">$18.5K</div>
+              <div className="text-2xl font-bold">${(totalValue / 1000).toFixed(1)}K</div>
               <div className="text-sm text-indigo-200">Total Value</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">68%</div>
+              <div className="text-2xl font-bold">{avgProgress}%</div>
               <div className="text-sm text-indigo-200">Avg Progress</div>
             </div>
           </div>
@@ -378,21 +479,21 @@ const Projects = () => {
               <div className="flex items-center justify-between p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
                 <div>
                   <div className="text-sm text-gray-400">On Track</div>
-                  <div className="text-2xl font-bold text-green-400">5</div>
+                  <div className="text-2xl font-bold text-green-400">{onTrackProjects}</div>
                 </div>
                 <span className="text-3xl">✅</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
                 <div>
                   <div className="text-sm text-gray-400">At Risk</div>
-                  <div className="text-2xl font-bold text-yellow-400">2</div>
+                  <div className="text-2xl font-bold text-yellow-400">{atRiskProjects}</div>
                 </div>
                 <span className="text-3xl">⚠️</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
                 <div>
                   <div className="text-sm text-gray-400">In Review</div>
-                  <div className="text-2xl font-bold text-blue-400">1</div>
+                  <div className="text-2xl font-bold text-blue-400">{inReviewProjects}</div>
                 </div>
                 <span className="text-3xl">👁️</span>
               </div>
