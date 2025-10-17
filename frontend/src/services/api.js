@@ -174,6 +174,7 @@ const refreshAccessToken = async () => {
       localStorage.removeItem('user_email');
       localStorage.removeItem('user_name');
       localStorage.removeItem('user_id');
+      localStorage.removeItem('is_demo');
 
       // Store redirect path
       const currentPath = window.location.pathname;
@@ -214,12 +215,17 @@ const baseFetch = async (endpoint, options = {}) => {
   }
 
   const headers = {
-    'Content-Type': 'application/json',
     ...options.headers,
   };
 
-  // Add auth token if available
-  if (token) {
+  // Only set Content-Type to JSON if body is not FormData
+  // For FormData, browser will set the correct Content-Type with boundary
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  // Add auth token if available (but NOT for auth endpoints like login/signup)
+  if (token && !isAuthEndpoint) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
@@ -249,6 +255,7 @@ const baseFetch = async (endpoint, options = {}) => {
         localStorage.removeItem('user_email');
         localStorage.removeItem('user_name');
         localStorage.removeItem('user_id');
+        localStorage.removeItem('is_demo');
 
         // Store current path for redirect after login
         const currentPath = window.location.pathname;

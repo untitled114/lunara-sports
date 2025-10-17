@@ -24,6 +24,7 @@ class User(AbstractUser):
         default='freelancer'
     )
     is_verified = models.BooleanField(default=False)
+    is_demo = models.BooleanField(default=False, help_text="Demo users have pre-populated fake data")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

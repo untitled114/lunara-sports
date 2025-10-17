@@ -44,6 +44,8 @@ const SignIn = () => {
         if (response.user.id) {
           localStorage.setItem('user_id', response.user.id);
         }
+        // Store is_demo flag to determine if user should see mock data
+        localStorage.setItem('is_demo', response.user.is_demo ? 'true' : 'false');
       }
 
       showSuccess('Welcome back! Redirecting to dashboard...');

@@ -121,10 +121,10 @@ def upload_avatar(request):
         profile.avatar = avatar_file
         profile.save()
 
-        # Return updated profile with avatar URL
-        serializer = ProfileSerializer(profile)
+        # Return updated profile with avatar URL (don't use serializer to avoid binary data issues)
+        avatar_url = request.build_absolute_uri(profile.avatar.url) if profile.avatar else None
         return Response({
-            'avatar': request.build_absolute_uri(profile.avatar.url) if profile.avatar else None,
+            'avatar': avatar_url,
             'message': 'Avatar uploaded successfully'
         }, status=status.HTTP_200_OK)
     except Exception as e:

@@ -37,38 +37,11 @@ const Projects = () => {
       } catch (error) {
         console.error('Failed to load projects:', error);
 
-        // Only show mock data for eltrozo@lunara.com
-        const userEmail = localStorage.getItem('user_email');
-        if (userEmail === 'eltrozo@lunara.com') {
-          showError('Failed to load projects. Using demo data.');
-          // Use fallback data for test user
-          setAllProjects([
-            {
-              id: 1,
-              title: 'E-commerce Dashboard Redesign',
-              client: 'TechCorp',
-              status: 'active',
-              progress: 75,
-              value: '$2,500',
-              deadline: '2 days',
-              priority: 'high',
-              description: 'Modern React dashboard with real-time analytics',
-            },
-            {
-              id: 2,
-              title: 'Mobile Banking App',
-              client: 'FinanceFlow',
-              status: 'active',
-              progress: 45,
-              value: '$4,200',
-              deadline: '1 week',
-              priority: 'medium',
-              description: 'Flutter app with biometric authentication',
-            },
-          ]);
-        } else {
-          showError('Failed to load projects. Using demo data.');
-          // Use demo data for all users when backend is empty
+        // Only show mock data for demo users (is_demo=true)
+        const isDemo = localStorage.getItem('is_demo') === 'true';
+        if (isDemo) {
+          showError('Failed to load projects from server. Using demo data.');
+          // Use fallback data for demo users only
           setAllProjects([
             {
               id: 1,
@@ -148,6 +121,10 @@ const Projects = () => {
               description: 'Full-featured food delivery mobile application',
             },
           ]);
+        } else {
+          // New users: show empty state, no mock data
+          showError('Failed to load projects. Please try again.');
+          setAllProjects([]);
         }
       } finally {
         setLoading(false);
@@ -500,31 +477,33 @@ const Projects = () => {
             </div>
           </div>
 
-          {/* Performance Widget */}
-          <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-green-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-green-500/20 hover:border-green-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
-            {/* Top Accent Line */}
-            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-600 to-green-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          {/* Performance Widget - Only for demo users */}
+          {localStorage.getItem('is_demo') === 'true' && (
+            <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-green-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-green-500/20 hover:border-green-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+              {/* Top Accent Line */}
+              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-600 to-green-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-            <h3 className="text-lg font-bold text-white mb-4">This Month</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Projects Completed</span>
-                <span className="font-bold text-green-400">4</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Revenue Generated</span>
-                <span className="font-bold text-green-400">$12.5K</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Client Satisfaction</span>
-                <span className="font-bold text-yellow-400">4.8/5</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Avg Completion Time</span>
-                <span className="font-bold text-indigo-400">12 days</span>
+              <h3 className="text-lg font-bold text-white mb-4">This Month</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Projects Completed</span>
+                  <span className="font-bold text-green-400">4</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Revenue Generated</span>
+                  <span className="font-bold text-green-400">$12.5K</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Client Satisfaction</span>
+                  <span className="font-bold text-yellow-400">4.8/5</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Avg Completion Time</span>
+                  <span className="font-bold text-indigo-400">12 days</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Projects List - Full Width */}

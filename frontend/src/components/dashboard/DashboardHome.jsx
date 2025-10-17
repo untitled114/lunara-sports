@@ -11,9 +11,9 @@ const DashboardHome = () => {
   const { modalState, openModal, handleResolution } = usePromiseModal();
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
 
-  // Only show mock data for eltrozo@lunara.com
-  const userEmail = localStorage.getItem('user_email');
-  const shouldShowMockData = userEmail === 'eltrozo@lunara.com';
+  // Only show mock data for demo users (users with is_demo=true)
+  const isDemo = localStorage.getItem('is_demo') === 'true';
+  const shouldShowMockData = isDemo;
 
   // Fallback image handler
   const handleImageError = (e) => {
@@ -74,13 +74,11 @@ const DashboardHome = () => {
   };
 
   const handleRequestPayout = () => {
-    showInfo('Payout request modal coming soon!');
-    // TODO: Implement payout modal
+    navigate('/payouts');
   };
 
   const handleViewReports = () => {
-    showInfo('Analytics & Reports page coming soon!');
-    // TODO: Navigate to reports page
+    navigate('/reports');
   };
 
   return (
@@ -107,10 +105,16 @@ const DashboardHome = () => {
               <h1 id="dashboard-greeting" className="text-4xl font-bold mb-2">
                 Welcome to Lunara Dashboard ⚡
               </h1>
-              <p className="text-lg opacity-90">You've got 3 client check-ins today and a milestone deadline tonight</p>
-              <span className="text-sm opacity-75 mt-2 block">
-                Last active: <time dateTime="2024-12-15T14:23:00">2 hours ago from Coffee Bean WiFi</time>
-              </span>
+              {shouldShowMockData ? (
+                <>
+                  <p className="text-lg opacity-90">You've got 3 client check-ins today and a milestone deadline tonight</p>
+                  <span className="text-sm opacity-75 mt-2 block">
+                    Last active: <time dateTime="2024-12-15T14:23:00">2 hours ago from Coffee Bean WiFi</time>
+                  </span>
+                </>
+              ) : (
+                <p className="text-lg opacity-90">Your dashboard for managing projects and collaborations</p>
+              )}
               <button
                 onClick={handleTestModal}
                 className="mt-4 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-all"

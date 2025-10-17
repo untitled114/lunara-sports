@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useMessageContext } from '../../contexts/MessageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { profileAPI } from '../../services/api';
 import NotificationsModal from '../NotificationsModal';
 
 const DashboardLayout = () => {
@@ -9,8 +10,52 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
+  const [userAvatar, setUserAvatar] = React.useState(localStorage.getItem('user_avatar') || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face');
   const { unreadCount, urgentCount } = useMessageContext();
   const { userId, isAnonymous } = useAuth();
+
+  // Get user info from localStorage
+  const userName = localStorage.getItem('user_name') || '';
+  const userEmail = localStorage.getItem('user_email') || '';
+  const isDemo = localStorage.getItem('is_demo') === 'true';
+
+  // Fetch user profile to get avatar
+  React.useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const profile = await profileAPI.get();
+        if (profile.profile?.avatar) {
+          setUserAvatar(profile.profile.avatar);
+          localStorage.setItem('user_avatar', profile.profile.avatar);
+        }
+      } catch (error) {
+        console.error('Failed to load user avatar:', error);
+      }
+    };
+
+    fetchUserProfile();
+
+    // Listen for avatar updates from other components (localStorage and custom events)
+    const handleAvatarUpdate = (event) => {
+      if (event.key === 'user_avatar') {
+        setUserAvatar(event.newValue || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face');
+      }
+    };
+
+    const handleAvatarUpdatedEvent = () => {
+      const newAvatar = localStorage.getItem('user_avatar');
+      if (newAvatar) {
+        setUserAvatar(newAvatar);
+      }
+    };
+
+    window.addEventListener('storage', handleAvatarUpdate);
+    window.addEventListener('avatarUpdated', handleAvatarUpdatedEvent);
+    return () => {
+      window.removeEventListener('storage', handleAvatarUpdate);
+      window.removeEventListener('avatarUpdated', handleAvatarUpdatedEvent);
+    };
+  }, []);
 
   // Note: Authentication check is handled by ProtectedRoute wrapper
   // No need for additional check here
@@ -30,10 +75,13 @@ const DashboardLayout = () => {
   const isActive = (path) => location.pathname === path;
 
   const handleLogout = () => {
-    // Clear auth tokens
+    // Clear auth tokens and user data
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_email');
     localStorage.removeItem('user_name');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('user_avatar');
+    localStorage.removeItem('is_demo');
 
     // Redirect to signin using React Router
     navigate('/signin');
@@ -66,7 +114,7 @@ const DashboardLayout = () => {
                   isActive('/projects') ? 'active bg-indigo-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
                 }`}
               >
-                Projects <span className="nav-badge ml-1 bg-indigo-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">7</span>
+                Projects
               </Link>
               <Link
                 to="/payments"
@@ -74,7 +122,7 @@ const DashboardLayout = () => {
                   isActive('/payments') ? 'active bg-indigo-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
                 }`}
               >
-                Payments <span className="nav-badge urgent ml-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">2</span>
+                Payments
               </Link>
               <Link
                 to="/messages"
@@ -88,12 +136,13 @@ const DashboardLayout = () => {
 
             {/* Header Actions */}
             <div className="hidden md:flex items-center space-x-4">
-              {/* User ID Display */}
-              {userId && (
+              {/* User Name Display */}
+              {(userName || userEmail) && (
                 <div className="text-sm text-gray-300 bg-gray-700/50 px-3 py-1.5 rounded-lg border border-gray-600">
-                  <span className="font-medium">User: </span>
-                  <span className="font-mono text-xs">{userId.substring(0, 8)}...</span>
-                  {isAnonymous && <span className="ml-1 text-xs text-orange-400">(Guest)</span>}
+                  <span className="font-medium">
+                    {userName || userEmail.split('@')[0]}
+                  </span>
+                  {isDemo && <span className="ml-1 text-xs text-orange-400">(Demo)</span>}
                 </div>
               )}
 
@@ -115,7 +164,7 @@ const DashboardLayout = () => {
               {/* Profile */}
               <Link to="/profile" className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-700/50 transition duration-150">
                 <img
-                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face"
+                  src={userAvatar}
                   alt="User Avatar"
                   className="w-8 h-8 rounded-full object-cover"
                   loading="lazy"
@@ -164,10 +213,10 @@ const DashboardLayout = () => {
             <div className="flex items-center justify-between p-6 border-b border-gray-700">
               <div>
                 <h2 className="text-lg font-bold text-white">Menu</h2>
-                {userId && (
-                  <p className="text-xs text-gray-400 font-mono mt-1">
-                    {userId.substring(0, 12)}...
-                    {isAnonymous && <span className="ml-1 text-orange-400">(Guest)</span>}
+                {(userName || userEmail) && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {userName || userEmail.split('@')[0]}
+                    {isDemo && <span className="ml-1 text-orange-400">(Demo)</span>}
                   </p>
                 )}
               </div>
@@ -194,22 +243,20 @@ const DashboardLayout = () => {
               <Link
                 to="/projects"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`text-lg p-3 rounded-lg transition duration-150 flex items-center justify-between ${
+                className={`text-lg p-3 rounded-lg transition duration-150 ${
                   isActive('/projects') ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700'
                 }`}
               >
-                <span>Projects</span>
-                <span className="bg-indigo-600 text-white text-sm font-bold px-2 py-0.5 rounded-full">7</span>
+                Projects
               </Link>
               <Link
                 to="/payments"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`text-lg p-3 rounded-lg transition duration-150 flex items-center justify-between ${
+                className={`text-lg p-3 rounded-lg transition duration-150 ${
                   isActive('/payments') ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700'
                 }`}
               >
-                <span>Payments</span>
-                <span className="bg-red-600 text-white text-sm font-bold px-2 py-0.5 rounded-full">2</span>
+                Payments
               </Link>
               <Link
                 to="/messages"

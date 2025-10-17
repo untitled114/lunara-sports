@@ -20,13 +20,13 @@ const ToastContainer = () => {
   const getToastIcon = (type) => {
     switch (type) {
       case 'success':
-        return '✅';
+        return '✓';
       case 'error':
-        return '❌';
+        return '✗';
       case 'info':
-        return 'ℹ️';
+        return 'i';
       default:
-        return '📢';
+        return '!';
     }
   };
 

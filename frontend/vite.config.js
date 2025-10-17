@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
-            "img-src 'self' data: https:; " +
+            "img-src 'self' data: https: http://localhost:8000 http://127.0.0.1:8000; " +
             "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 ws://localhost:3000 wss://localhost:3000; " +
             "frame-ancestors 'none';"
           );

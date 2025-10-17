@@ -34,8 +34,9 @@ const NotificationsModal = ({ isOpen, onClose, notifications = [] }) => {
     }
   };
 
-  // Sample notifications if none provided
-  const sampleNotifications = [
+  // Sample notifications if none provided - Only for demo users
+  const isDemo = localStorage.getItem('is_demo') === 'true';
+  const sampleNotifications = isDemo ? [
     {
       id: 1,
       type: 'urgent',
@@ -68,7 +69,7 @@ const NotificationsModal = ({ isOpen, onClose, notifications = [] }) => {
       time: '1 day ago',
       unread: false,
     },
-  ];
+  ] : [];
 
   const displayNotifications = notifications.length > 0 ? notifications : sampleNotifications;
 

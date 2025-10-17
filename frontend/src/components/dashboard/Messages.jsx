@@ -149,40 +149,44 @@ const Messages = () => {
                   <span className="text-3xl font-bold block">{unreadCount}</span>
                   <span className="block text-indigo-200 text-sm">Unread</span>
                 </div>
-                <div className="text-center p-3 bg-indigo-700/50 rounded-lg shadow-inner">
-                  <span className="text-3xl font-bold block">12</span>
-                  <span className="block text-indigo-200 text-sm">Total Today</span>
-                </div>
+                {localStorage.getItem('is_demo') === 'true' && (
+                  <div className="text-center p-3 bg-indigo-700/50 rounded-lg shadow-inner">
+                    <span className="text-3xl font-bold block">12</span>
+                    <span className="block text-indigo-200 text-sm">Total Today</span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Widgets - Full Width Responsive Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                {/* Message Stats */}
-                <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
-                  {/* Top Accent Line */}
-                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                {/* Message Stats - Only for demo users */}
+                {localStorage.getItem('is_demo') === 'true' && (
+                  <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
+                    {/* Top Accent Line */}
+                    <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                  <h3 className="text-lg font-semibold text-white mb-4 border-b border-gray-700 pb-3">📊 Message Stats</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-400">Today's Messages</span>
-                      <span className="font-bold text-yellow-400">12</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-400">Unread</span>
-                      <span className="font-bold text-red-400">{unreadCount}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-400">Response Time Avg</span>
-                      <span className="font-bold text-green-400">2.3h</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-400">Active Conversations</span>
-                      <span className="font-bold text-indigo-400">5</span>
+                    <h3 className="text-lg font-semibold text-white mb-4 border-b border-gray-700 pb-3">📊 Message Stats</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-400">Today's Messages</span>
+                        <span className="font-bold text-yellow-400">12</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-400">Unread</span>
+                        <span className="font-bold text-red-400">{unreadCount}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-400">Response Time Avg</span>
+                        <span className="font-bold text-green-400">2.3h</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-400">Active Conversations</span>
+                        <span className="font-bold text-indigo-400">5</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Quick Actions */}
                 <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">

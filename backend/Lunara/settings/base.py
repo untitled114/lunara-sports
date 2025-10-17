@@ -149,6 +149,9 @@ SIMPLE_JWT = {
 # CORS settings for frontend integration
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React dev server
+    "http://localhost:3001",  # React dev server (alternate port)
+    "http://localhost:3002",  # React dev server (alternate port)
+    "http://localhost:3003",  # React dev server (alternate port)
     "http://localhost:8000",  # Local frontend
     "http://127.0.0.1:8000",
 ]

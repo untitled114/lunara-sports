@@ -7,7 +7,16 @@
       "Bash(findstr:*)",
       "Bash(python:*)",
       "Bash(curl:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(if [ -d \"C:\\Users\\LUILLY\\lunaro.io\\frontend\\public\\img\" ])",
+      "Bash(then ls \"C:\\Users\\LUILLY\\lunaro.io\\frontend\\public\\img\")",
+      "Bash(else echo \"img directory does not exist\")",
+      "Bash(fi)",
+      "Bash(dir:*)",
+      "Bash(timeout:*)",
+      "Bash(npm run dev:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

@@ -33,6 +33,8 @@ const DashboardHome = lazy(() => import('./components/dashboard/DashboardHome'))
 const Messages = lazy(() => import('./components/dashboard/Messages'));
 const Projects = lazy(() => import('./components/dashboard/Projects'));
 const Payments = lazy(() => import('./components/dashboard/Payments'));
+const Payouts = lazy(() => import('./components/dashboard/Payouts'));
+const Reports = lazy(() => import('./components/dashboard/Reports'));
 const Profile = lazy(() => import('./components/dashboard/Profile'));
 
 // Loading component for lazy-loaded routes
@@ -102,6 +104,16 @@ function App() {
                 <Route path="payments" element={
                   <Suspense fallback={<LoadingFallback />}>
                     <Payments />
+                  </Suspense>
+                } />
+                <Route path="payouts" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Payouts />
+                  </Suspense>
+                } />
+                <Route path="reports" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Reports />
                   </Suspense>
                 } />
                 <Route path="profile" element={

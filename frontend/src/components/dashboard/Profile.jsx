@@ -20,18 +20,44 @@ const Profile = () => {
       try {
         setLoading(true);
         const data = await profileAPI.get();
-        setProfile(data);
+
+        // Transform user data into profile format
+        const profileData = {
+          name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.username,
+          username: data.username,
+          bio: data.profile?.bio || '',
+          avatar: data.profile?.avatar || null,
+          verified: data.is_verified,
+        };
+
+        setProfile(profileData);
       } catch (error) {
         console.error('Failed to load profile:', error);
-        showError('Failed to load profile data');
-        // Use fallback data for development
-        setProfile({
-          name: 'Alex Taylor',
-          username: 'alexthedev',
-          bio: 'Full-stack developer & UI/UX designer specializing in modern web applications.',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-          verified: true,
-        });
+
+        // Only show mock data for demo users (is_demo=true)
+        const isDemo = localStorage.getItem('is_demo') === 'true';
+        if (isDemo) {
+          showError('Failed to load profile from server. Using demo data.');
+          setProfile({
+            name: 'Alex Taylor',
+            username: 'alexthedev',
+            bio: 'Full-stack developer & UI/UX designer specializing in modern web applications.',
+            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+            verified: true,
+          });
+        } else {
+          // New users: show basic profile with user data from localStorage
+          showError('Failed to load profile data.');
+          const userName = localStorage.getItem('user_name') || 'User';
+          const userEmail = localStorage.getItem('user_email') || 'user@example.com';
+          setProfile({
+            name: userName,
+            username: userEmail.split('@')[0],
+            bio: '',
+            avatar: null,
+            verified: false,
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -92,7 +118,15 @@ const Profile = () => {
     try {
       setUploadingAvatar(true);
       const data = await profileAPI.uploadAvatar(file);
-      setProfile({ ...profile, avatar: data.avatar || URL.createObjectURL(file) });
+      const avatarUrl = data.avatar || URL.createObjectURL(file);
+      setProfile({ ...profile, avatar: avatarUrl });
+
+      // Save avatar URL to localStorage so DashboardLayout can use it
+      localStorage.setItem('user_avatar', avatarUrl);
+
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('avatarUpdated'));
+
       showSuccess('Avatar updated successfully!');
     } catch (error) {
       console.error('Failed to upload avatar:', error);
@@ -219,13 +253,15 @@ const Profile = () => {
                   <p className="text-white/90 text-sm sm:text-base mb-4">
                     {profile.bio || 'Welcome to Lunara!'}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {['React', 'Node.js', 'UI/UX', 'Python', 'AWS'].map((skill) => (
-                      <span key={skill} className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-xs sm:text-sm font-medium">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
+                  {localStorage.getItem('is_demo') === 'true' && (
+                    <div className="flex flex-wrap gap-2">
+                      {['React', 'Node.js', 'UI/UX', 'Python', 'AWS'].map((skill) => (
+                        <span key={skill} className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-xs sm:text-sm font-medium">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2 mt-4">
                     <button onClick={handleEditProfile} className="px-4 sm:px-6 py-2 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition shadow-lg text-sm sm:text-base">
                       Edit Profile
@@ -236,7 +272,8 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Stats Bar */}
+          {/* Stats Bar - Only for demo users */}
+          {localStorage.getItem('is_demo') === 'true' && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 sm:p-4 text-center">
               <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">📊</div>
@@ -263,6 +300,7 @@ const Profile = () => {
               <div className="text-xs text-white/70">On-time delivery</div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Tab Navigation */}
@@ -289,7 +327,7 @@ const Profile = () => {
 
         {/* Widgets - Full Width Responsive Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {activeTab === 'overview' && (
+          {activeTab === 'overview' && localStorage.getItem('is_demo') === 'true' && (
             <>
               {/* Recent Activity */}
               <div className="group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
@@ -341,7 +379,7 @@ const Profile = () => {
             </>
           )}
 
-          {activeTab === 'activity' && (
+          {activeTab === 'activity' && localStorage.getItem('is_demo') === 'true' && (
             <>
               <div className="col-span-full group relative bg-gray-800/50 backdrop-blur-sm border border-indigo-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
                 <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-600 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -375,7 +413,7 @@ const Profile = () => {
             </>
           )}
 
-          {activeTab === 'skills' && (
+          {activeTab === 'skills' && localStorage.getItem('is_demo') === 'true' && (
             <div className="col-span-full group relative bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-purple-500/20 hover:border-purple-500/50 hover:transform hover:-translate-y-2 transition-all duration-300 p-6">
               <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-purple-600 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <h2 className="text-xl font-bold text-white mb-6">Technical Skills</h2>

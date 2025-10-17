@@ -82,6 +82,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     user_email = serializers.EmailField(source='user.email', read_only=True)
     user_type = serializers.CharField(source='user.user_type', read_only=True)
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -92,6 +93,15 @@ class ProfileSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('is_profile_complete', 'average_rating', 'total_projects', 'created_at')
 
+    def get_avatar(self, obj):
+        """Return absolute URL for avatar"""
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
+
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for user information with profile data."""
@@ -100,8 +110,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'user_type', 'is_verified', 'profile')
-        read_only_fields = ('id', 'email', 'is_verified')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'user_type', 'is_verified', 'is_demo', 'profile')
+        read_only_fields = ('id', 'email', 'is_verified', 'is_demo')
 
 
 class TokenSerializer(serializers.Serializer):

@@ -83,9 +83,9 @@ export const MessageProvider = ({ children }) => {
   const { db, userId } = useAuth();
   const { showError } = useToast();
 
-  // Only show mock data for eltrozo@lunara.com
-  const userEmail = localStorage.getItem('user_email');
-  const shouldShowMockData = userEmail === 'eltrozo@lunara.com';
+  // Only show mock data for demo users (is_demo=true)
+  const isDemo = localStorage.getItem('is_demo') === 'true';
+  const shouldShowMockData = isDemo;
   const emptyMessages = [];
 
   const [messages, setMessages] = useState(shouldShowMockData ? initialMessages : emptyMessages);
@@ -111,9 +111,9 @@ export const MessageProvider = ({ children }) => {
 
         if (snapshot.empty) {
           logger.log('📭 No messages in Firestore');
-          // Only use mock data for eltrozo@lunara.com
+          // Only use mock data for demo users
           if (shouldShowMockData) {
-            logger.log('📋 Using mock data for eltrozo@lunara.com');
+            logger.log('📋 Using mock data for demo user');
             setMessages(initialMessages);
           } else {
             logger.log('📋 No mock data for this user');
@@ -136,7 +136,7 @@ export const MessageProvider = ({ children }) => {
       },
       (error) => {
         logger.error('❌ Firestore listener error:', error);
-        // Only use mock data for eltrozo@lunara.com
+        // Only use mock data for demo users
         if (shouldShowMockData) {
           showError('Connection Error: Using offline data');
           setMessages(initialMessages);
