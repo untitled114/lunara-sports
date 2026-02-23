@@ -1,0 +1,56 @@
+services:
+  # --- FastAPI Backend ---
+  - type: web
+    name: pbp-api
+    runtime: docker
+    plan: starter
+    region: oregon
+    rootDir: api
+    healthCheckPath: /health
+    repo: https://github.com/untitled114/lunaro.io
+    branch: main
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pbp-db
+          property: connectionString
+        # Render gives postgresql:// — app needs postgresql+asyncpg://
+        # Set manually: postgresql+asyncpg://user:pass@host:port/dbname
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: pbp-redis
+          property: connectionString
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        sync: false  # Upstash or Confluent Cloud bootstrap URL
+      - key: SPORT_SUITE_DB_USER
+        sync: false
+      - key: SPORT_SUITE_DB_PASSWORD
+        sync: false
+      - key: SPORT_SUITE_DB_HOST
+        sync: false
+
+  # --- ESPN Ingestion Worker ---
+  - type: worker
+    name: pbp-ingestion
+    runtime: docker
+    plan: starter
+    region: oregon
+    rootDir: ingestion
+    repo: https://github.com/untitled114/lunaro.io
+    branch: main
+    envVars:
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        sync: false  # Same Upstash/Confluent Cloud URL as api
+      - key: ESPN_POLL_INTERVAL_SECONDS
+        value: "30"
+
+databases:
+  - name: pbp-db
+    plan: starter
+    region: oregon
+    postgresMajorVersion: "16"
+
+  - name: pbp-redis
+    plan: starter
+    region: oregon

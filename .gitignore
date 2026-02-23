@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.next/
+
+# Java
+build/
+.gradle/
+*.class
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Docker volumes
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# MinIO data
+minio-data/
+
+# Monitoring data
+prometheus-data/
+grafana-data/
+
+# Kafka data
+kafka-data/
+zookeeper-data/
+zookeeper-logs/
+PLAN.md
+GEMINI.md
+.vercel
