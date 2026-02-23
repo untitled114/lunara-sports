@@ -64,8 +64,16 @@ def _make_espn_event(
 class TestParseCompetitor:
     def test_home_team(self):
         competitors = [
-            {"homeAway": "home", "score": "55", "team": {"abbreviation": "MIA", "displayName": "Miami Heat"}},
-            {"homeAway": "away", "score": "48", "team": {"abbreviation": "NYK", "displayName": "New York Knicks"}},
+            {
+                "homeAway": "home",
+                "score": "55",
+                "team": {"abbreviation": "MIA", "displayName": "Miami Heat"},
+            },
+            {
+                "homeAway": "away",
+                "score": "48",
+                "team": {"abbreviation": "NYK", "displayName": "New York Knicks"},
+            },
         ]
         result = _parse_competitor(competitors, "home")
         assert result["abbrev"] == "MIA"
@@ -74,8 +82,16 @@ class TestParseCompetitor:
 
     def test_away_team(self):
         competitors = [
-            {"homeAway": "home", "score": "55", "team": {"abbreviation": "MIA", "displayName": "Miami Heat"}},
-            {"homeAway": "away", "score": "48", "team": {"abbreviation": "NYK", "displayName": "New York Knicks"}},
+            {
+                "homeAway": "home",
+                "score": "55",
+                "team": {"abbreviation": "MIA", "displayName": "Miami Heat"},
+            },
+            {
+                "homeAway": "away",
+                "score": "48",
+                "team": {"abbreviation": "NYK", "displayName": "New York Knicks"},
+            },
         ]
         result = _parse_competitor(competitors, "away")
         assert result["abbrev"] == "NYK"

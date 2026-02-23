@@ -14,15 +14,12 @@ scrape_configs:
 
   - job_name: "kafka"
     static_configs:
-      - targets: ["kafka:9092"]
-    # TODO: Add kafka-exporter sidecar for JMX metrics
+      - targets: ["kafka-exporter:9308"]
 
   - job_name: "postgres"
     static_configs:
-      - targets: ["postgres:5432"]
-    # TODO: Add postgres-exporter sidecar
+      - targets: ["postgres-exporter:9187"]
 
   - job_name: "redis"
     static_configs:
-      - targets: ["redis:6379"]
-    # TODO: Add redis-exporter sidecar
+      - targets: ["redis-exporter:9121"]

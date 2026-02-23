@@ -14,11 +14,11 @@ logger = structlog.get_logger(__name__)
 BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
 
 # Cache TTLs (seconds)
-STANDINGS_TTL = 1800   # 30 min
-ROSTER_TTL = 86400     # 24 hr
-LEADERS_TTL = 3600     # 1 hr
-SUMMARY_TTL = 300      # 5 min
-SCOREBOARD_TTL = 8     # 8s — sub-poller interval for fast live updates
+STANDINGS_TTL = 1800  # 30 min
+ROSTER_TTL = 86400  # 24 hr
+LEADERS_TTL = 3600  # 1 hr
+SUMMARY_TTL = 300  # 5 min
+SCOREBOARD_TTL = 8  # 8s — sub-poller interval for fast live updates
 
 _client: httpx.AsyncClient | None = None
 
@@ -43,7 +43,9 @@ def _get_client() -> httpx.AsyncClient:
     return _client
 
 
-async def _cached_get(cache_key: str, url: str, ttl: int, params: dict | None = None) -> dict | list | None:
+async def _cached_get(
+    cache_key: str, url: str, ttl: int, params: dict | None = None
+) -> dict | list | None:
     """Fetch from Redis cache or ESPN API with automatic caching."""
     r = get_redis()
     raw = await r.get(cache_key)
@@ -106,8 +108,8 @@ async def get_game_summary(event_id: str) -> dict | None:
     )
 
 
-ATHLETE_STATS_TTL = 3600   # 1 hr
-ATHLETE_INFO_TTL = 86400   # 24 hr
+ATHLETE_STATS_TTL = 3600  # 1 hr
+ATHLETE_INFO_TTL = 86400  # 24 hr
 
 COMMON_V3 = "https://site.api.espn.com/apis/common/v3/sports/basketball/nba"
 
@@ -136,6 +138,19 @@ async def get_athlete_info(espn_id: str) -> dict | None:
         f"espn:athlete:info:{espn_id}",
         f"{COMMON_V3}/athletes/{espn_id}",
         ATHLETE_INFO_TTL,
+    )
+
+
+SUMMARY_LIVE_TTL = 30  # 30s for live stat tracking
+
+
+async def get_game_summary_live(event_id: str) -> dict | None:
+    """Fetch game summary with shorter TTL for live stat freshness."""
+    return await _cached_get(
+        f"espn:summary:live:{event_id}",
+        f"{BASE_URL}/summary",
+        SUMMARY_LIVE_TTL,
+        params={"event": event_id},
     )
 
 

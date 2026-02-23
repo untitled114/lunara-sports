@@ -99,8 +99,8 @@ export default function GamesPage() {
                 key={f.id}
                 onClick={() => handleFilterChange(f.id)}
                 className={`px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-500 ${
-                  filter === f.id 
-                    ? 'bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] scale-105' 
+                  filter === f.id
+                    ? 'bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] scale-105'
                     : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -108,7 +108,7 @@ export default function GamesPage() {
               </button>
             ))}
           </div>
-          
+
           <div className="flex items-center gap-6 px-8 border-l border-white/5 hidden md:flex">
              <div className="flex flex-col items-end">
                 <span className="text-[13px] font-black uppercase tracking-[0.3em] text-white/50">System Status</span>
@@ -141,12 +141,12 @@ export default function GamesPage() {
             {/* Ambient Vertical Spotlights */}
             <div className="absolute -left-20 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent blur-sm" />
             <div className="absolute -right-20 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent blur-sm" />
-            
+
             {filteredGames.map((game, idx) => (
-              <div 
-                key={game.id} 
-                className="animate-boot" 
-                style={{ 
+              <div
+                key={game.id}
+                className="animate-boot"
+                style={{
                   animationDelay: `${0.4 + (idx * 0.1)}s`
                 }}
               >

@@ -10,8 +10,8 @@ from ..config import Settings
 logger = structlog.get_logger(__name__)
 
 _players_pool: asyncpg.Pool | None = None  # port 5536
-_games_pool: asyncpg.Pool | None = None    # port 5537
-_teams_pool: asyncpg.Pool | None = None    # port 5538
+_games_pool: asyncpg.Pool | None = None  # port 5537
+_teams_pool: asyncpg.Pool | None = None  # port 5538
 
 
 async def init_sport_suite(settings: Settings) -> None:
@@ -28,8 +28,13 @@ async def init_sport_suite(settings: Settings) -> None:
 
     try:
         _players_pool = await asyncpg.create_pool(
-            host=host, port=5536, user=user, password=password,
-            database="nba_players", min_size=1, max_size=3,
+            host=host,
+            port=5536,
+            user=user,
+            password=password,
+            database="nba_players",
+            min_size=1,
+            max_size=3,
         )
         logger.info("sport_suite.players_connected", port=5536)
     except Exception as e:
@@ -37,8 +42,13 @@ async def init_sport_suite(settings: Settings) -> None:
 
     try:
         _games_pool = await asyncpg.create_pool(
-            host=host, port=5537, user=user, password=password,
-            database="nba_games", min_size=1, max_size=3,
+            host=host,
+            port=5537,
+            user=user,
+            password=password,
+            database="nba_games",
+            min_size=1,
+            max_size=3,
         )
         logger.info("sport_suite.games_connected", port=5537)
     except Exception as e:
@@ -46,8 +56,13 @@ async def init_sport_suite(settings: Settings) -> None:
 
     try:
         _teams_pool = await asyncpg.create_pool(
-            host=host, port=5538, user=user, password=password,
-            database="nba_team", min_size=1, max_size=3,
+            host=host,
+            port=5538,
+            user=user,
+            password=password,
+            database="nba_team",
+            min_size=1,
+            max_size=3,
         )
         logger.info("sport_suite.teams_connected", port=5538)
     except Exception as e:

@@ -42,7 +42,7 @@ export const getLogoUrl = (abbrev) => {
     'SA': 'sa',
     'NY': 'ny',
     'NO': 'no',
-    'UTAH': 'uta'
+    'UTA': 'utah'
   };
   const code = (map[abbrev] || abbrev).toLowerCase();
   return `https://a.espncdn.com/i/teamlogos/nba/500/${code}.png`;

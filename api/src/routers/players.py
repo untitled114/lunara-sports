@@ -1,9 +1,9 @@
 """Players router — search and browse NBA players."""
 
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from ..services.player_service import get_all_players, get_player_by_id
-from ..services.stats_service import get_player_season_stats, get_player_game_log
+from ..services.stats_service import get_player_game_log, get_player_season_stats
 
 router = APIRouter(tags=["players"])
 
@@ -30,6 +30,7 @@ async def player_stats(player_id: str):
     if not stats:
         # Instead of 404, return empty stats to avoid frontend crashes
         from ..models.schemas import PlayerSeasonStats
+
         return PlayerSeasonStats()
     return stats
 

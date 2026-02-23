@@ -49,8 +49,13 @@ async def import_games(
     """
     # Connect to Sport-suite nba_games database
     ss_pool = await asyncpg.create_pool(
-        host=ss_host, port=ss_port, user=ss_user, password=ss_password,
-        database="nba_games", min_size=1, max_size=3,
+        host=ss_host,
+        port=ss_port,
+        user=ss_user,
+        password=ss_password,
+        database="nba_games",
+        min_size=1,
+        max_size=3,
     )
 
     # Connect to playbyplay database
@@ -88,16 +93,18 @@ async def import_games(
                 else:
                     status = "final"
 
-                # Use game_date as start_time (noon UTC as placeholder)
+                # Use game_date as start_time (noon timezone.utc as placeholder)
                 if isinstance(game_date, datetime):
                     start_time = game_date.replace(tzinfo=timezone.utc)
                 else:
                     start_time = datetime.combine(game_date, datetime.min.time()).replace(
-                        hour=19, tzinfo=timezone.utc  # Default to 7pm UTC (2pm ET)
+                        hour=19,
+                        tzinfo=timezone.utc,  # Default to 7pm timezone.utc (2pm ET)
                     )
 
                 try:
-                    await pbp_conn.execute("""
+                    await pbp_conn.execute(
+                        """
                         INSERT INTO games (id, home_team, away_team, status,
                                           home_score, away_score, start_time, updated_at)
                         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
@@ -106,8 +113,15 @@ async def import_games(
                             away_score = EXCLUDED.away_score,
                             status = EXCLUDED.status
                         WHERE games.status != 'final' OR games.home_score = 0
-                    """, game_id, home_team, away_team, status,
-                        home_score, away_score, start_time)
+                    """,
+                        game_id,
+                        home_team,
+                        away_team,
+                        status,
+                        home_score,
+                        away_score,
+                        start_time,
+                    )
                     imported += 1
                 except asyncpg.ForeignKeyViolationError:
                     # Team abbreviation not in teams table
@@ -136,7 +150,9 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="Import games from Sport-suite")
     parser.add_argument("--ss-host", default="localhost", help="Sport-suite DB host")
     parser.add_argument("--ss-port", type=int, default=5537, help="Sport-suite games DB port")
-    parser.add_argument("--pbp-dsn", default="postgresql://playbyplay:dev_password@localhost:5432/playbyplay")
+    parser.add_argument(
+        "--pbp-dsn", default="postgresql://playbyplay:dev_password@localhost:5432/playbyplay"
+    )
     args = parser.parse_args()
 
     ss_user = os.environ.get("DB_USER", "")

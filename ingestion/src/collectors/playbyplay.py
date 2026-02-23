@@ -16,6 +16,8 @@ import structlog
 from src.collectors.base import BaseCollector
 from src.config import Settings
 from src.producers.kafka_producer import KafkaProducer
+from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
+from src.resilience.retry import espn_retry
 from src.schemas.events import PlayEvent
 
 logger = structlog.get_logger(__name__)
@@ -73,9 +75,7 @@ _EVENT_TYPE_MAP = {
 
 # Regex to extract the first player name from ESPN play text.
 # Matches patterns like "LeBron James makes..." or "De'Aaron Fox misses..."
-_PLAYER_RE = re.compile(
-    r"^([A-Z][a-zA-Z'\-\.]+(?: (?:Jr\.|Sr\.|III|II|IV|[A-Z][a-zA-Z'\-\.]+))+)"
-)
+_PLAYER_RE = re.compile(r"^([A-Z][a-zA-Z'\-\.]+(?: (?:Jr\.|Sr\.|III|II|IV|[A-Z][a-zA-Z'\-\.]+))+)")
 
 
 def _normalize_event_type(event_text: str) -> str:
@@ -186,19 +186,29 @@ class PlayByPlayCollector(BaseCollector):
         game_id: ESPN game identifier to poll.
     """
 
-    def __init__(
-        self, settings: Settings, producer: KafkaProducer, game_id: str
-    ) -> None:
+    def __init__(self, settings: Settings, producer: KafkaProducer, game_id: str) -> None:
         self.settings = settings
         self.producer = producer
         self.game_id = game_id
         self.client = httpx.AsyncClient(timeout=10.0)
         self._max_sequence: int = -1  # highest sequence number seen so far
+        self._circuit_breaker = CircuitBreaker()
 
     @property
     def new_play_count(self) -> int:
         """Number of plays seen (based on max sequence). Useful for monitoring."""
         return self._max_sequence + 1 if self._max_sequence >= 0 else 0
+
+    @espn_retry
+    async def _fetch(self) -> dict:
+        """Fetch game summary JSON from ESPN with retry."""
+        url = f"{self.settings.espn_base_url}/summary"
+        params = {"event": self.game_id}
+        logger.debug("playbyplay.fetching", game_id=self.game_id)
+
+        resp = await self.client.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
 
     async def collect(self) -> list[dict]:
         """GET /summary?event={game_id} and return new play dicts.
@@ -206,13 +216,7 @@ class PlayByPlayCollector(BaseCollector):
         Only returns plays with sequence numbers greater than the highest
         previously seen, providing built-in deduplication.
         """
-        url = f"{self.settings.espn_base_url}/summary"
-        params = {"event": self.game_id}
-        logger.debug("playbyplay.fetching", game_id=self.game_id)
-
-        resp = await self.client.get(url, params=params)
-        resp.raise_for_status()
-        data = resp.json()
+        data = await self._circuit_breaker.call(self._fetch())
 
         polled_at = datetime.now(timezone.utc)
         team_map = _build_team_map(data.get("header", {}))
@@ -248,6 +252,13 @@ class PlayByPlayCollector(BaseCollector):
         """Run one poll cycle: collect plays and produce new ones to Kafka."""
         try:
             plays = await self.collect()
+        except CircuitOpenError:
+            logger.warning(
+                "playbyplay.circuit_open",
+                game_id=self.game_id,
+                action="skipping_cycle",
+            )
+            return
         except httpx.HTTPStatusError as exc:
             logger.error(
                 "playbyplay.http_error",

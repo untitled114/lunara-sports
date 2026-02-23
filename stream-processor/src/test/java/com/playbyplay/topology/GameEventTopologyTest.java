@@ -1,10 +1,12 @@
 package com.playbyplay.topology;
 
-import com.playbyplay.models.EnrichedEvent;
-import com.playbyplay.models.GameEvent;
-import com.playbyplay.models.GameState;
-import com.playbyplay.models.ScoreboardSnapshot;
-import com.playbyplay.serdes.JsonSerde;
+import com.playbyplay.avro.EnrichedEvent;
+import com.playbyplay.avro.GameState;
+import com.playbyplay.avro.PlayEvent;
+import com.playbyplay.avro.ScoreboardEvent;
+import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
+import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -12,6 +14,8 @@ import org.apache.kafka.streams.*;
 import org.junit.jupiter.api.*;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,18 +23,31 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests the Kafka Streams topology using TopologyTestDriver.
  * No running Kafka broker needed — everything is in-memory.
+ * Uses MockSchemaRegistryClient to avoid needing a running Schema Registry.
  */
 class GameEventTopologyTest {
 
+    private static final String MOCK_REGISTRY_URL = "mock://test";
+
     private TopologyTestDriver driver;
-    private TestInputTopic<String, ScoreboardSnapshot> scoreboardInput;
-    private TestInputTopic<String, GameEvent> playsInput;
+    private TestInputTopic<String, ScoreboardEvent> scoreboardInput;
+    private TestInputTopic<String, PlayEvent> playsInput;
     private TestOutputTopic<String, EnrichedEvent> enrichedOutput;
     private TestOutputTopic<String, GameState> gameStateOutput;
 
+    private MockSchemaRegistryClient schemaRegistryClient;
+
+    private <T extends SpecificRecord> SpecificAvroSerde<T> mockAvroSerde(boolean isKey) {
+        SpecificAvroSerde<T> serde = new SpecificAvroSerde<>(schemaRegistryClient);
+        Map<String, String> config = Collections.singletonMap("schema.registry.url", MOCK_REGISTRY_URL);
+        serde.configure(config, isKey);
+        return serde;
+    }
+
     @BeforeEach
     void setUp() {
-        Topology topology = GameEventTopology.build();
+        schemaRegistryClient = new MockSchemaRegistryClient();
+        Topology topology = GameEventTopology.build(MOCK_REGISTRY_URL);
 
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test-app");
@@ -39,25 +56,30 @@ class GameEventTopologyTest {
 
         driver = new TopologyTestDriver(topology, props);
 
+        SpecificAvroSerde<ScoreboardEvent> scoreboardSerde = mockAvroSerde(false);
+        SpecificAvroSerde<PlayEvent> playEventSerde = mockAvroSerde(false);
+        SpecificAvroSerde<EnrichedEvent> enrichedSerde = mockAvroSerde(false);
+        SpecificAvroSerde<GameState> gameStateSerde = mockAvroSerde(false);
+
         scoreboardInput = driver.createInputTopic(
                 GameEventTopology.SCOREBOARD_TOPIC,
                 new StringSerializer(),
-                JsonSerde.of(ScoreboardSnapshot.class).serializer()
+                scoreboardSerde.serializer()
         );
         playsInput = driver.createInputTopic(
                 GameEventTopology.PLAYS_TOPIC,
                 new StringSerializer(),
-                JsonSerde.of(GameEvent.class).serializer()
+                playEventSerde.serializer()
         );
         enrichedOutput = driver.createOutputTopic(
                 GameEventTopology.ENRICHED_TOPIC,
                 new StringDeserializer(),
-                JsonSerde.of(EnrichedEvent.class).deserializer()
+                enrichedSerde.deserializer()
         );
         gameStateOutput = driver.createOutputTopic(
                 GameEventTopology.GAME_STATE_TOPIC,
                 new StringDeserializer(),
-                JsonSerde.of(GameState.class).deserializer()
+                gameStateSerde.deserializer()
         );
     }
 
@@ -70,23 +92,27 @@ class GameEventTopologyTest {
 
     // -- Helpers --
 
-    private ScoreboardSnapshot scoreboard(String gameId, String homeTeam, String awayTeam) {
-        ScoreboardSnapshot s = new ScoreboardSnapshot();
+    private ScoreboardEvent scoreboard(String gameId, String homeTeam, String awayTeam) {
+        ScoreboardEvent s = new ScoreboardEvent();
         s.setGameId(gameId);
         s.setHomeTeam(homeTeam);
         s.setAwayTeam(awayTeam);
         s.setHomeTeamName(homeTeam + " Team");
         s.setAwayTeamName(awayTeam + " Team");
+        s.setHomeScore(0);
+        s.setAwayScore(0);
         s.setStatus("live");
-        s.setVenue("Test Arena");
+        s.setStatusDetail("");
+        s.setVenue(venue);
+        s.setStartTime(Instant.now());
         s.setPolledAt(Instant.now());
         return s;
     }
 
-    private GameEvent play(String gameId, long seq, int quarter, String clock,
+    private PlayEvent play(String gameId, int seq, int quarter, String clock,
                            String eventType, String desc, int homeScore, int awayScore,
                            boolean scoring, int scoreValue) {
-        GameEvent e = new GameEvent();
+        PlayEvent e = new PlayEvent();
         e.setGameId(gameId);
         e.setPlayId(gameId + seq);
         e.setSequenceNumber(seq);
@@ -104,6 +130,8 @@ class GameEventTopologyTest {
         e.setPolledAt(Instant.now());
         return e;
     }
+
+    private static final String venue = "Test Arena";
 
     // -- Tests --
 

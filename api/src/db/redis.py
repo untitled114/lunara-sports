@@ -39,8 +39,8 @@ def get_redis() -> redis.Redis:
 
 # ── Cache helpers ────────────────────────────────────────────────────────
 
-GAME_STATE_TTL = 15   # seconds — refreshed every poll cycle (10s)
-GAME_LIST_TTL = 12    # seconds — scoreboard poller refreshes every 10s
+GAME_STATE_TTL = 15  # seconds — refreshed every poll cycle (10s)
+GAME_LIST_TTL = 12  # seconds — scoreboard poller refreshes every 10s
 
 
 async def cache_game_state(game_id: str, state: dict) -> None:

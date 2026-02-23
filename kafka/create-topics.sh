@@ -51,5 +51,25 @@ kafka-topics --bootstrap-server "$BOOTSTRAP" --create --if-not-exists \
   --replication-factor 1 \
   --config retention.ms=259200000
 
+# --- Dead Letter Queues (30-day retention) ---
+
+kafka-topics --bootstrap-server "$BOOTSTRAP" --create --if-not-exists \
+  --topic dlq.raw.scoreboard \
+  --partitions 1 \
+  --replication-factor 1 \
+  --config retention.ms=2592000000
+
+kafka-topics --bootstrap-server "$BOOTSTRAP" --create --if-not-exists \
+  --topic dlq.raw.plays \
+  --partitions 1 \
+  --replication-factor 1 \
+  --config retention.ms=2592000000
+
+kafka-topics --bootstrap-server "$BOOTSTRAP" --create --if-not-exists \
+  --topic dlq.enriched.plays \
+  --partitions 1 \
+  --replication-factor 1 \
+  --config retention.ms=2592000000
+
 echo "Topics created:"
 kafka-topics --bootstrap-server "$BOOTSTRAP" --list

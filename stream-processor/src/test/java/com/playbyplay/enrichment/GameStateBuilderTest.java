@@ -1,10 +1,12 @@
 package com.playbyplay.enrichment;
 
-import com.playbyplay.models.EnrichedEvent;
-import com.playbyplay.models.GameState;
+import com.playbyplay.avro.EnrichedEvent;
+import com.playbyplay.avro.GameState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,20 +20,24 @@ class GameStateBuilderTest {
         state = new GameState();
     }
 
-    private EnrichedEvent event(long seq, int quarter, String clock, String eventType,
+    private EnrichedEvent event(int seq, int quarter, String clock, String eventType,
                                 String desc, int homeScore, int awayScore,
                                 boolean scoring, int scoreValue) {
         EnrichedEvent e = new EnrichedEvent();
         e.setGameId("G1");
+        e.setPlayId("G1" + seq);
         e.setSequenceNumber(seq);
         e.setQuarter(quarter);
         e.setClock(clock);
         e.setEventType(eventType);
+        e.setEventText(eventType);
         e.setDescription(desc);
         e.setHomeScore(homeScore);
         e.setAwayScore(awayScore);
         e.setScoringPlay(scoring);
         e.setScoreValue(scoreValue);
+        e.setScoreDifferential(homeScore - awayScore);
+        e.setEnrichedAt(Instant.now());
         e.setHomeTeam("BOS");
         e.setAwayTeam("LAL");
         e.setHomeTeamName("Boston Celtics");

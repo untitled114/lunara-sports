@@ -30,9 +30,7 @@ class KafkaProducer:
     """JSON-serializing Kafka producer."""
 
     def __init__(self, settings: Settings) -> None:
-        self._producer = Producer(
-            {"bootstrap.servers": settings.kafka_bootstrap_servers}
-        )
+        self._producer = Producer({"bootstrap.servers": settings.kafka_bootstrap_servers})
 
     def produce(self, topic: str, key: str, value: dict) -> None:
         self._producer.produce(

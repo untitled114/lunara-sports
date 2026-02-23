@@ -240,9 +240,9 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
   if (muted) {
     return (
       <div className="relative">
-        <div className="flex items-center gap-3 px-8 py-3.5">
+        <div className="flex items-center gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8 lg:py-3.5">
           {tl && <img src={tl} alt="" className="h-5 w-5 opacity-50" />}
-          <span className="text-[15px] font-bold text-white/70">{play.description}</span>
+          <span className="text-[13px] sm:text-[14px] lg:text-[15px] font-bold text-white/70">{play.description}</span>
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-px bg-white/[0.12]" />
       </div>
@@ -271,7 +271,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
         />
       )}
 
-      <div className="relative px-8 py-6">
+      <div className="relative px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         {/* ── Score Row ── */}
         <div className="flex items-center mb-4">
           <div className="flex items-center gap-2.5">
@@ -303,11 +303,11 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
           <div className="relative shrink-0">
             {/* Glow behind avatar */}
             <div
-              className="absolute -inset-3 rounded-full blur-xl opacity-20 group-hover/play:opacity-35 transition-opacity duration-500"
+              className="absolute -inset-2 sm:-inset-3 rounded-full blur-xl opacity-20 group-hover/play:opacity-35 transition-opacity duration-500"
               style={{ backgroundColor: tc?.primary || "#6366f1" }}
             />
             <div
-              className="relative h-16 w-16 rounded-full overflow-hidden border-2 bg-[#080c18] shadow-xl"
+              className="relative h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 rounded-full overflow-hidden border-2 bg-[#080c18] shadow-xl"
               style={{
                 borderColor: `${tc?.primary || "#444"}50`,
                 boxShadow: `0 8px 24px -8px rgba(0,0,0,0.6), inset 0 1px 0 0 rgba(255,255,255,0.1)`
@@ -321,7 +321,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
             </div>
             {/* Team logo badge */}
             {tl && (
-              <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-[#080c18] shadow-md flex items-center justify-center"
+              <div className="absolute -bottom-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-[#080c18] shadow-md flex items-center justify-center"
                 style={{ boxShadow: `0 0 0 2px #080c18, 0 2px 6px rgba(0,0,0,0.4)` }}>
                 <img src={tl} alt="" className="h-4 w-4 object-contain" />
               </div>
@@ -330,7 +330,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
 
           {/* Play info */}
           <div className="flex-1 min-w-0 pt-1">
-            <h4 className={`text-2xl font-black leading-tight tracking-[-0.02em] ${
+            <h4 className={`text-lg sm:text-xl lg:text-2xl font-black leading-tight tracking-[-0.02em] ${
               scoring ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-white/80"
             }`}>
               {title}
@@ -338,7 +338,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
 
             {/* Player + running stats */}
             {play.player_name && (
-              <p className="text-[16px] text-white/90 mt-2 font-bold">
+              <p className="text-[14px] sm:text-[15px] lg:text-[16px] text-white/90 mt-2 font-bold">
                 {abbr(play.player_name)}
                 {meta && (
                   <span className="text-white/55 font-medium"> &middot; {meta}</span>
@@ -361,7 +361,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
 
         {/* ── Reactions ── */}
         {(scoring || miss) && (
-          <div className="flex items-center gap-4 mt-4 ml-[84px]">
+          <div className="flex items-center gap-4 mt-4 ml-[52px] sm:ml-[64px] lg:ml-[84px]">
             <button
               onClick={() => onReact("fire")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-300 ${
@@ -447,7 +447,7 @@ export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam }) {
       )}
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-white/[0.08]">
+      <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 lg:px-8 border-b border-white/[0.08]">
         <div className="flex items-center gap-3">
           <Zap className="h-4 w-4 text-[var(--accent)]" />
           <span className="text-sm font-black uppercase tracking-[0.2em] text-white">
@@ -482,7 +482,7 @@ export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam }) {
           </p>
         </div>
       ) : (
-        <div ref={feedRef} className="overflow-y-auto scrollbar-hide max-h-[calc(100vh-340px)]">
+        <div ref={feedRef} className="overflow-y-auto scrollbar-hide max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-280px)] lg:max-h-[calc(100vh-340px)]">
           {plays.map((play, i) => {
             const desc = (play.description ?? "").toLowerCase();
             if (desc.includes("timeout") && !desc.includes("shot clock")) {

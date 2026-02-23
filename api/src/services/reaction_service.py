@@ -39,9 +39,8 @@ async def delete_reaction(
     play_id: int,
 ) -> bool:
     """Delete a user's reaction on a play. Returns True if a row was removed."""
-    stmt = (
-        delete(Reaction)
-        .where(Reaction.user_id == uuid.UUID(user_id), Reaction.play_id == play_id)
+    stmt = delete(Reaction).where(
+        Reaction.user_id == uuid.UUID(user_id), Reaction.play_id == play_id
     )
     result = await session.execute(stmt)
     await session.commit()

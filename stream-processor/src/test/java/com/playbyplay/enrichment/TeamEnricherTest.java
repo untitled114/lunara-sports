@@ -1,8 +1,8 @@
 package com.playbyplay.enrichment;
 
-import com.playbyplay.models.EnrichedEvent;
-import com.playbyplay.models.GameEvent;
-import com.playbyplay.models.ScoreboardSnapshot;
+import com.playbyplay.avro.EnrichedEvent;
+import com.playbyplay.avro.PlayEvent;
+import com.playbyplay.avro.ScoreboardEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -14,8 +14,8 @@ class TeamEnricherTest {
 
     private final TeamEnricher enricher = new TeamEnricher();
 
-    private GameEvent makePlay(int homeScore, int awayScore) {
-        GameEvent e = new GameEvent();
+    private PlayEvent makePlay(int homeScore, int awayScore) {
+        PlayEvent e = new PlayEvent();
         e.setGameId("G1");
         e.setPlayId("G1_10");
         e.setSequenceNumber(10);
@@ -35,22 +35,27 @@ class TeamEnricherTest {
         return e;
     }
 
-    private ScoreboardSnapshot makeScoreboard() {
-        ScoreboardSnapshot s = new ScoreboardSnapshot();
+    private ScoreboardEvent makeScoreboard() {
+        ScoreboardEvent s = new ScoreboardEvent();
         s.setGameId("G1");
         s.setHomeTeam("BOS");
         s.setAwayTeam("LAL");
         s.setHomeTeamName("Boston Celtics");
         s.setAwayTeamName("Los Angeles Lakers");
-        s.setVenue("TD Garden");
+        s.setHomeScore(0);
+        s.setAwayScore(0);
         s.setStatus("live");
+        s.setStatusDetail("Q2 5:30");
+        s.setStartTime(Instant.parse("2026-02-17T00:00:00Z"));
+        s.setVenue("TD Garden");
+        s.setPolledAt(Instant.parse("2026-02-17T02:00:00Z"));
         return s;
     }
 
     @Test
     @DisplayName("Copies all play fields to enriched event")
     void copiesPlayFields() {
-        GameEvent play = makePlay(55, 48);
+        PlayEvent play = makePlay(55, 48);
         EnrichedEvent result = enricher.apply(play, makeScoreboard());
 
         assertEquals("G1", result.getGameId());
@@ -65,7 +70,7 @@ class TeamEnricherTest {
         assertEquals("Jayson Tatum", result.getPlayerName());
         assertEquals(55, result.getHomeScore());
         assertEquals(48, result.getAwayScore());
-        assertTrue(result.isScoringPlay());
+        assertTrue(result.getScoringPlay());
         assertEquals(2, result.getScoreValue());
         assertNotNull(result.getWallclock());
     }

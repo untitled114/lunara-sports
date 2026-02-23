@@ -92,7 +92,7 @@ export default function PlayersPage() {
                         <div className="flex items-center gap-2">
                           {/* INCREASED OPACITY FROM 50% TO 70% */}
                           <span className="text-[13px] font-black text-white/70 tabular-nums w-5">#{p.jersey}</span>
-                          <Link 
+                          <Link
                             to={`/player/${p.id}`}
                             onClick={() => playGlassClick()}
                             className="text-base font-black text-white uppercase tracking-tight hover:text-indigo-400 transition-colors"

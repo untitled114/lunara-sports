@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 from datetime import date, timedelta
 
-import httpx
 import structlog
 
 from src.collectors.playbyplay import PlayByPlayCollector

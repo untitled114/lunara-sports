@@ -6,7 +6,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-
 # ── Games ──────────────────────────────────────────────────────────────
 
 
@@ -176,6 +175,14 @@ class ModelPickResponse(BaseModel):
     tier: str | None = None
     actual_value: float | None = None
     is_hit: bool | None = None
+    edge_pct: float | None = None
+    consensus_line: float | None = None
+    opponent_team: str | None = None
+    reasoning: str | None = None
+    is_home: bool | None = None
+    confidence: str | None = None
+    line_spread: float | None = None
+    is_gated: bool = False
     created_at: datetime | None = None
 
     model_config = {"from_attributes": True}

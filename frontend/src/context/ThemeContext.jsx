@@ -19,7 +19,7 @@ export function ThemeProvider({ children }) {
 
   const setArenaTheme = useCallback((abbrev) => {
     const targetAbbrev = abbrev || favoriteTeam;
-    
+
     if (!targetAbbrev) {
       setAccentColors({ primary: '#6366f1', secondary: '#1e293b' });
       return;

@@ -34,7 +34,7 @@ function TickerItem({ game }) {
       <div className="absolute top-0 left-0 bottom-0 w-px bg-gradient-to-b from-white/10 via-transparent to-white/10" />
 
       {/* Dynamic Hover Glow */}
-      <div 
+      <div
         className="absolute inset-0 opacity-0 group-hover/tick:opacity-10 transition-opacity pointer-events-none"
         style={{
           background: `radial-gradient(circle at 50% 50%, ${homeColors.primary} 0%, transparent 70%)`
@@ -179,12 +179,12 @@ export function ScoreTicker() {
         <div className="absolute inset-0 texture-mesh opacity-[0.03] pointer-events-none" />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-white/5" />
       </div>
-      
+
       {/* Primary Control Hub Module */}
       <div className="flex-shrink-0 px-12 flex flex-col items-center justify-center border-r border-white/10 min-w-[220px] bg-black/40 relative overflow-hidden group/hub">
         <div className="absolute inset-0 bg-indigo-500/[0.03] group-hover/hub:bg-indigo-500/[0.08] transition-colors duration-1000" />
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500/40" />
-        
+
         <div className="relative z-10 flex flex-col items-start gap-2">
            <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shadow-inner">
@@ -195,7 +195,7 @@ export function ScoreTicker() {
                  <span className="text-sm font-black uppercase tracking-[0.2em] text-white">Telemetry</span>
               </div>
            </div>
-           
+
            <div className="flex items-center gap-3 mt-2">
               <div className="h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_10px_indigo] animate-pulse" />
               <span className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400">

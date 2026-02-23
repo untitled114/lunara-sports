@@ -5,9 +5,9 @@ from __future__ import annotations
 import structlog
 
 from ..db.sport_suite import get_players_pool, get_teams_pool
-from ..models.schemas import StatLeader, StatLeadersResponse, TeamStatsRow, PlayerSeasonStats
-from .team_mapping import from_sport_suite_abbrev
+from ..models.schemas import PlayerSeasonStats, StatLeader, StatLeadersResponse, TeamStatsRow
 from . import espn_client
+from .team_mapping import from_sport_suite_abbrev
 
 logger = structlog.get_logger(__name__)
 
@@ -15,8 +15,16 @@ logger = structlog.get_logger(__name__)
 # ── ESPN stat-label indices (Regular Season Averages) ─────────────
 # Labels: GP, GS, MIN, FG, FG%, 3PT, 3P%, FT, FT%, OR, DR, REB, AST, BLK, STL, PF, TO, PTS
 _STAT_IDX = {
-    "gp": 0, "min": 2, "fg_pct": 4, "three_pct": 6, "ft_pct": 8,
-    "reb": 11, "ast": 12, "blk": 13, "stl": 14, "pts": 17,
+    "gp": 0,
+    "min": 2,
+    "fg_pct": 4,
+    "three_pct": 6,
+    "ft_pct": 8,
+    "reb": 11,
+    "ast": 12,
+    "blk": 13,
+    "stl": 14,
+    "pts": 17,
 }
 
 
@@ -36,7 +44,8 @@ async def get_player_season_stats(player_id: str) -> PlayerSeasonStats | None:
     if pool:
         try:
             async with pool.acquire() as conn:
-                row = await conn.fetchrow("""
+                row = await conn.fetchrow(
+                    """
                     SELECT
                         COUNT(*) as gp,
                         ROUND(AVG(points)::numeric, 1) as ppg,
@@ -56,7 +65,9 @@ async def get_player_season_stats(player_id: str) -> PlayerSeasonStats | None:
                     FROM player_game_logs
                     WHERE player_id = $1::integer
                       AND game_date >= '2024-10-01'
-                """, int(player_id) if player_id.isdigit() else 0)
+                """,
+                    int(player_id) if player_id.isdigit() else 0,
+                )
 
                 if row and row["gp"] > 0:
                     return PlayerSeasonStats(
@@ -71,7 +82,9 @@ async def get_player_season_stats(player_id: str) -> PlayerSeasonStats | None:
                         ft_pct=f"{row['ft_pct']}%",
                     )
         except Exception as e:
-            logger.warning("player_season_stats.sport_suite_failed", player_id=player_id, error=str(e))
+            logger.warning(
+                "player_season_stats.sport_suite_failed", player_id=player_id, error=str(e)
+            )
 
     # Fallback: ESPN athlete stats endpoint
     try:
@@ -130,7 +143,8 @@ async def get_player_game_log(player_id: str) -> list[dict]:
     if pool:
         try:
             async with pool.acquire() as conn:
-                rows = await conn.fetch("""
+                rows = await conn.fetch(
+                    """
                     SELECT
                         game_date as date,
                         team_abbrev as team,
@@ -149,7 +163,9 @@ async def get_player_game_log(player_id: str) -> list[dict]:
                     WHERE player_id = $1::integer
                     ORDER BY game_date DESC
                     LIMIT 10
-                """, int(player_id) if player_id.isdigit() else 0)
+                """,
+                    int(player_id) if player_id.isdigit() else 0,
+                )
 
                 if rows:
                     return [
@@ -164,7 +180,7 @@ async def get_player_game_log(player_id: str) -> list[dict]:
                             "stl": r["steals"],
                             "blk": r["blocks"],
                             "fg": f"{r['fg_made']}-{r['fg_attempted']}",
-                            "three": f"{r['tpm']}-{r['tpa']}"
+                            "three": f"{r['tpm']}-{r['tpa']}",
                         }
                         for r in rows
                     ]
@@ -216,22 +232,24 @@ async def get_player_game_log(player_id: str) -> list[dict]:
                     return stats[idx]
                 return default
 
-            result.append({
-                "date": game_date,
-                "team": team_info.get("abbreviation", ""),
-                "opponent": opp.get("abbreviation", ""),
-                "home_away": meta.get("atVs", "vs"),
-                "pts": int(float(_get("PTS", "0"))),
-                "reb": int(float(_get("REB", "0"))),
-                "ast": int(float(_get("AST", "0"))),
-                "stl": int(float(_get("STL", "0"))),
-                "blk": int(float(_get("BLK", "0"))),
-                "fg": _get("FG", "0-0"),
-                "three": _get("3PT", "0-0"),
-                "min": _get("MIN", "0"),
-                "result": meta.get("gameResult", ""),
-                "score": meta.get("score", ""),
-            })
+            result.append(
+                {
+                    "date": game_date,
+                    "team": team_info.get("abbreviation", ""),
+                    "opponent": opp.get("abbreviation", ""),
+                    "home_away": meta.get("atVs", "vs"),
+                    "pts": int(float(_get("PTS", "0"))),
+                    "reb": int(float(_get("REB", "0"))),
+                    "ast": int(float(_get("AST", "0"))),
+                    "stl": int(float(_get("STL", "0"))),
+                    "blk": int(float(_get("BLK", "0"))),
+                    "fg": _get("FG", "0-0"),
+                    "three": _get("3PT", "0-0"),
+                    "min": _get("MIN", "0"),
+                    "result": meta.get("gameResult", ""),
+                    "score": meta.get("score", ""),
+                }
+            )
 
         return result
     except Exception as e:
@@ -242,6 +260,7 @@ async def get_player_game_log(player_id: str) -> list[dict]:
 async def _build_athlete_lookup() -> dict[str, dict]:
     """Build {espn_id: {name, abbrev}} from cached roster data."""
     from .team_mapping import ESPN_TEAM_IDS
+
     lookup: dict[str, dict] = {}
     try:
         for abbrev, espn_id in ESPN_TEAM_IDS.items():
@@ -292,7 +311,11 @@ _LEADER_CATEGORIES = {
     "ast": {"col": "assists", "label": "Assists Per Game", "espn_id": "assists"},
     "stl": {"col": "steals", "label": "Steals Per Game", "espn_id": "steals"},
     "blk": {"col": "blocks", "label": "Blocks Per Game", "espn_id": "blocks"},
-    "threes": {"col": "three_pointers_made", "label": "3PM Per Game", "espn_id": "threePointFieldGoalsMade"},
+    "threes": {
+        "col": "three_pointers_made",
+        "label": "3PM Per Game",
+        "espn_id": "threePointFieldGoalsMade",
+    },
 }
 
 
@@ -307,7 +330,8 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
                 for key, cfg in _LEADER_CATEGORIES.items():
                     col = cfg["col"]
                     try:
-                        rows = await conn.fetch(f"""
+                        rows = await conn.fetch(
+                            f"""
                             SELECT
                                 pp.full_name,
                                 pp.player_id,
@@ -322,24 +346,30 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
                             HAVING COUNT(*) >= 1
                             ORDER BY AVG(pgl.{col}) DESC
                             LIMIT $1
-                        """, limit)
+                        """,
+                            limit,
+                        )
 
                         leaders = []
                         for i, r in enumerate(rows):
                             abbrev = from_sport_suite_abbrev(r["team_abbrev"])
-                            leaders.append(StatLeader(
-                                rank=i + 1,
-                                player=r["full_name"],
-                                player_id=str(r["player_id"]),
-                                team=abbrev,
-                                value=str(r["avg_val"]),
-                                headshot_url=r["headshot_url"] or "",
-                            ))
+                            leaders.append(
+                                StatLeader(
+                                    rank=i + 1,
+                                    player=r["full_name"],
+                                    player_id=str(r["player_id"]),
+                                    team=abbrev,
+                                    value=str(r["avg_val"]),
+                                    headshot_url=r["headshot_url"] or "",
+                                )
+                            )
 
                         if leaders:
                             categories[key] = leaders
                     except Exception as cat_e:
-                        logger.warning("stat_leaders.category_failed", category=key, error=str(cat_e))
+                        logger.warning(
+                            "stat_leaders.category_failed", category=key, error=str(cat_e)
+                        )
         except Exception as e:
             logger.warning("stat_leaders.query_failed", error=str(e))
 
@@ -368,17 +398,23 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
                     for i, leader in enumerate(cat.get("leaders", [])):
                         # Extract athlete ID from $ref URL
                         ref = leader.get("athlete", {}).get("$ref", "")
-                        aid = ref.split("/athletes/")[-1].split("?")[0] if "/athletes/" in ref else ""
+                        aid = (
+                            ref.split("/athletes/")[-1].split("?")[0] if "/athletes/" in ref else ""
+                        )
                         # Resolve athlete name (with fallback to v3 endpoint)
                         info = await _resolve_athlete(aid, athlete_map)
-                        leaders.append(StatLeader(
-                            rank=i + 1,
-                            player=info.get("name", f"Player {aid}"),
-                            player_id=aid,
-                            team=info.get("abbrev", ""),
-                            value=str(leader.get("displayValue", "0.0")),
-                            headshot_url=f"https://a.espncdn.com/i/headshots/nba/players/full/{aid}.png" if aid else "",
-                        ))
+                        leaders.append(
+                            StatLeader(
+                                rank=i + 1,
+                                player=info.get("name", f"Player {aid}"),
+                                player_id=aid,
+                                team=info.get("abbrev", ""),
+                                value=str(leader.get("displayValue", "0.0")),
+                                headshot_url=f"https://a.espncdn.com/i/headshots/nba/players/full/{aid}.png"
+                                if aid
+                                else "",
+                            )
+                        )
                     if leaders:
                         categories[key] = leaders[:limit]
         except Exception as espn_e:

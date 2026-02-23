@@ -183,6 +183,84 @@ export async function postComment(gameId, body, userId = "anon", playId = null) 
   return res.json();
 }
 
+// ── Picks ────────────────────────────────────────────────────────────
+
+export async function fetchTodayPicks(token) {
+  const headers = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API_URL}/picks/today`, { headers });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function triggerPickSync(date = "") {
+  const params = date ? `?pick_date=${date}` : "";
+  const res = await fetch(`${API_URL}/picks/sync${params}`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to sync picks");
+  return res.json();
+}
+
+export async function tailPick(pickId, token) {
+  const res = await fetch(`${API_URL}/picks/${pickId}/tail`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to tail pick");
+  return res.json();
+}
+
+export async function untailPick(pickId, token) {
+  const res = await fetch(`${API_URL}/picks/${pickId}/tail`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.ok;
+}
+
+export async function fetchTailedPicks(token) {
+  const res = await fetch(`${API_URL}/picks/tailed`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────
+
+export async function authRegister(username, email, password) {
+  const res = await fetch(`${API_URL}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, email, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Registration failed");
+  }
+  return res.json();
+}
+
+export async function authLogin(email, password) {
+  const res = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Login failed");
+  }
+  return res.json();
+}
+
+export async function authMe(token) {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // Build a standings lookup map: { abbrev: { rank, w, l, record, streak, conf, pct } }
 export function buildStandingsLookup(standings) {
   const map = {};

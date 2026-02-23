@@ -13,7 +13,7 @@ function formatDate(dateStr, format = 'short') {
   if (format === 'day') return d.getDate();
   if (format === 'weekday') return d.toLocaleDateString("en-US", { weekday: "short" });
   if (format === 'month') return d.toLocaleDateString("en-US", { month: "short" });
-  
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
@@ -26,7 +26,7 @@ function formatDate(dateStr, format = 'short') {
 export function DateNav({ current }) {
   const navigate = useNavigate();
   const { playGlassClick, playThud } = useTheme();
-  
+
   // Generate a range of dates around the current date
   const dates = [];
   for (let i = -3; i <= 3; i++) {
@@ -41,7 +41,7 @@ export function DateNav({ current }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-8">
           <h2 className="text-5xl text-jumbotron tracking-tighter">Scoreboard</h2>
-          <button 
+          <button
             onClick={() => { playThud(); navigate(`/scoreboard?date=${todayStr}`); }}
             className="px-6 py-2 text-sm font-black uppercase tracking-[0.4em] bg-white text-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]"
           >
@@ -60,14 +60,14 @@ export function DateNav({ current }) {
       </div>
 
       <div className="flex items-center gap-2 p-2 bg-[#050a18]/60 backdrop-blur-2xl rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] border border-white/5 overflow-hidden deep-occlusion">
-        <Link 
+        <Link
           to={`/scoreboard?date=${shiftDate(current, -1)}`}
           onClick={() => playGlassClick()}
           className="p-5 text-white/50 hover:text-white transition-all hover:bg-white/5 rounded-[1.5rem] active:scale-90"
         >
           <ChevronLeft className="h-6 w-6" />
         </Link>
-        
+
         <div className="flex-1 flex justify-between overflow-x-auto scrollbar-hide px-4">
           {dates.map((date) => {
             const isActive = date === current;
@@ -78,8 +78,8 @@ export function DateNav({ current }) {
                 onClick={() => { if (!isActive) playGlassClick(); }}
                 className={`
                   flex flex-col items-center min-w-[100px] py-4 px-2 rounded-2xl transition-all duration-500 relative group
-                  ${isActive 
-                    ? 'bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] scale-110 z-10' 
+                  ${isActive
+                    ? 'bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] scale-110 z-10'
                     : 'text-white/50 hover:text-white/60 hover:bg-white/5'
                   }
                 `}
@@ -95,7 +95,7 @@ export function DateNav({ current }) {
           })}
         </div>
 
-        <Link 
+        <Link
           to={`/scoreboard?date=${shiftDate(current, 1)}`}
           onClick={() => playGlassClick()}
           className="p-5 text-white/50 hover:text-white transition-all hover:bg-white/5 rounded-[1.5rem] active:scale-90"

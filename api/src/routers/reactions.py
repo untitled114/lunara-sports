@@ -27,20 +27,24 @@ async def add_reaction(
     """Add an emoji reaction to a play."""
     try:
         reaction = await create_reaction(session, x_user_id, play_id, body.emoji)
-    except IntegrityError:
-        raise HTTPException(status_code=409, detail="Already reacted to this play")
+    except IntegrityError as exc:
+        raise HTTPException(status_code=409, detail="Already reacted to this play") from exc
 
     # Publish to Kafka for WS broadcast
     producer = get_producer()
     if producer is not None:
         game_id = await get_play_game_id(session, play_id)
-        producer.produce("user.reactions", f"{x_user_id}:{play_id}", {
-            "play_id": play_id,
-            "game_id": game_id,
-            "user_id": x_user_id,
-            "emoji": body.emoji,
-            "action": "add",
-        })
+        producer.produce(
+            "user.reactions",
+            f"{x_user_id}:{play_id}",
+            {
+                "play_id": play_id,
+                "game_id": game_id,
+                "user_id": x_user_id,
+                "emoji": body.emoji,
+                "action": "add",
+            },
+        )
 
     return ReactionResponse.from_orm_reaction(reaction)
 
@@ -59,12 +63,16 @@ async def remove_reaction(
     producer = get_producer()
     if producer is not None:
         game_id = await get_play_game_id(session, play_id)
-        producer.produce("user.reactions", f"{x_user_id}:{play_id}", {
-            "play_id": play_id,
-            "game_id": game_id,
-            "user_id": x_user_id,
-            "action": "remove",
-        })
+        producer.produce(
+            "user.reactions",
+            f"{x_user_id}:{play_id}",
+            {
+                "play_id": play_id,
+                "game_id": game_id,
+                "user_id": x_user_id,
+                "action": "remove",
+            },
+        )
 
 
 @router.get("/{play_id}/reactions", response_model=list[ReactionCount])

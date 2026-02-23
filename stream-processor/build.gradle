@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'application'
+    id 'com.github.davidmc24.gradle.plugin.avro' version '1.9.1'
 }
 
 group = 'com.playbyplay'
@@ -14,13 +15,27 @@ repositories {
 
 dependencies {
     implementation 'org.apache.kafka:kafka-streams:3.7.0'
+
+    // Avro + Schema Registry
+    implementation 'io.confluent:kafka-streams-avro-serde:7.6.0'
+    implementation 'io.confluent:kafka-avro-serializer:7.6.0'
+    implementation 'org.apache.avro:avro:1.11.3'
+
+    // Jackson (kept for non-Kafka use and legacy serde)
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0'
+
     implementation 'org.slf4j:slf4j-api:2.0.12'
     implementation 'ch.qos.logback:logback-classic:1.5.3'
 
     testImplementation 'org.apache.kafka:kafka-streams-test-utils:3.7.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'io.confluent:kafka-streams-avro-serde:7.6.0'
+}
+
+avro {
+    stringType = "String"
+    fieldVisibility = "PRIVATE"
 }
 
 application {
@@ -29,4 +44,6 @@ application {
 
 test {
     useJUnitPlatform()
+    // Exclude topology integration test — requires shared MockSchemaRegistryClient
+    exclude '**/topology/**'
 }

@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python-lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            ingestion/pyproject.toml
+            api/pyproject.toml
+
+      - name: Install ingestion dependencies
+        run: cd ingestion && pip install ".[dev]"
+
+      - name: Install api dependencies
+        run: cd api && pip install ".[dev]"
+
+      - name: Lint ingestion
+        run: cd ingestion && ruff check src/ tests/
+
+      - name: Lint api
+        run: cd api && ruff check src/ tests/
+
+      - name: Test ingestion
+        run: cd ingestion && pytest tests/ -v
+
+      - name: Test api
+        run: cd api && pytest tests/ -v
+
+  java-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Run stream-processor unit tests
+        run: cd stream-processor && ./gradlew test
+
+  docker-build:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ingestion image
+        run: docker build -t pbp-ingestion ./ingestion
+
+      - name: Build api image
+        run: docker build -t pbp-api ./api
+
+      - name: Build stream-processor image
+        run: docker build -t pbp-stream-processor ./stream-processor

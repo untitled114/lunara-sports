@@ -11,7 +11,6 @@ import asyncio
 
 import structlog
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models import Play
 from ..db.session import get_session_factory

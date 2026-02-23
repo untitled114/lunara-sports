@@ -1,0 +1,23 @@
+{
+  "type": "record",
+  "name": "PlayEvent",
+  "namespace": "com.playbyplay.avro",
+  "fields": [
+    {"name": "game_id", "type": "string"},
+    {"name": "play_id", "type": "string"},
+    {"name": "sequence_number", "type": "int"},
+    {"name": "quarter", "type": "int"},
+    {"name": "clock", "type": "string"},
+    {"name": "event_type", "type": "string"},
+    {"name": "event_text", "type": "string"},
+    {"name": "description", "type": "string"},
+    {"name": "team", "type": ["null", "string"], "default": null},
+    {"name": "player_name", "type": ["null", "string"], "default": null},
+    {"name": "home_score", "type": "int"},
+    {"name": "away_score", "type": "int"},
+    {"name": "scoring_play", "type": "boolean", "default": false},
+    {"name": "score_value", "type": "int", "default": 0},
+    {"name": "wallclock", "type": ["null", {"type": "long", "logicalType": "timestamp-millis"}], "default": null},
+    {"name": "polled_at", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+  ]
+}

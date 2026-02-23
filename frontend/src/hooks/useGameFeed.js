@@ -24,6 +24,7 @@ export function useGameFeed(gameId, status = "scheduled") {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState(null);
   const [gameUpdate, setGameUpdate] = useState(null);
+  const [pickUpdates, setPickUpdates] = useState(null);
 
   const isLive = status === "live" || status === "halftime";
 
@@ -135,6 +136,8 @@ export function useGameFeed(gameId, status = "scheduled") {
           });
         } else if (msg.type === "game_update" && msg.data) {
           setGameUpdate(msg.data);
+        } else if (msg.type === "pick_update" && msg.data) {
+          setPickUpdates(msg.data);
         }
       } catch {
         // Ignore malformed messages
@@ -170,5 +173,5 @@ export function useGameFeed(gameId, status = "scheduled") {
     };
   }, [connect, isLive]);
 
-  return { plays, connected: isLive ? connected : status === "final", error, gameUpdate };
+  return { plays, connected: isLive ? connected : status === "final", error, gameUpdate, pickUpdates };
 }

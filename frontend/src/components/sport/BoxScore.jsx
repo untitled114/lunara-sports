@@ -50,7 +50,7 @@ function getOnCourtNames(plays, boxData, homeTeam, awayTeam) {
 function StatBlock({ label, value, isPrimary = false }) {
   return (
     <div className="flex flex-col items-center min-w-[32px]">
-      <span className={`tabular-nums leading-none mb-1.5 ${isPrimary ? 'text-[18px] font-black text-white' : 'text-[15px] font-bold text-white/80'}`}>
+      <span className={`tabular-nums leading-none mb-1.5 ${isPrimary ? 'text-[15px] sm:text-[16px] lg:text-[18px] font-black text-white' : 'text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white/80'}`}>
         {value}
       </span>
       <span className="text-[8px] font-black text-white/20 uppercase tracking-tighter">
@@ -65,9 +65,9 @@ function PlayerRow({ player, teamAbbrev }) {
   const teamLogo = getLogoUrl(teamAbbrev);
 
   return (
-    <div className="group relative py-5 px-6 border-b border-white/[0.03] hover:bg-white/[0.02] transition-all">
-      <div className="flex items-center gap-5">
-        <div className="h-14 w-14 rounded-full border border-white/10 bg-[#050a18] flex items-center justify-center overflow-hidden shadow-inner shrink-0">
+    <div className="group relative py-3 px-4 sm:py-4 sm:px-5 lg:py-5 lg:px-6 border-b border-white/[0.03] hover:bg-white/[0.02] transition-all">
+      <div className="flex items-center gap-4 sm:gap-5">
+        <div className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 rounded-full border border-white/10 bg-[#050a18] flex items-center justify-center overflow-hidden shadow-inner shrink-0">
           {player.headshot_url ? (
             <img src={player.headshot_url} alt="" className="w-full h-full object-cover scale-110" />
           ) : teamLogo ? (
@@ -82,7 +82,7 @@ function PlayerRow({ player, teamAbbrev }) {
             <Link
               to={`/player/${player.id || '1'}`}
               onClick={playGlassClick}
-              className="text-[17px] font-black text-white uppercase tracking-tight truncate hover:text-indigo-400 transition-colors"
+              className="text-[14px] sm:text-[15px] lg:text-[17px] font-black text-white uppercase tracking-tight truncate hover:text-indigo-400 transition-colors"
             >
               {player.name}
             </Link>
@@ -93,7 +93,7 @@ function PlayerRow({ player, teamAbbrev }) {
             )}
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 sm:gap-5 lg:gap-6">
             <StatBlock label="PTS" value={player.points ?? 0} isPrimary={true} />
             <StatBlock label="FG" value={player.fg || "0-0"} />
             <StatBlock label="REB" value={player.rebounds ?? 0} />
@@ -117,7 +117,7 @@ function TeamSection({ teamAbbrev, players }) {
 
   return (
     <div className="mb-6 last:mb-0 rounded-[2.5rem] bg-[#111624] border border-white/5 overflow-hidden shadow-2xl">
-      <div className="flex items-center justify-between px-6 py-5 bg-white/[0.02] border-b border-white/5">
+      <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-5 bg-white/[0.02] border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="h-7 w-7 rounded-full bg-[#050a18] border border-white/10 flex items-center justify-center p-1.5 overflow-hidden">
             <img src={logo} alt="" className="w-full h-full object-contain" />
@@ -142,7 +142,177 @@ function TeamSection({ teamAbbrev, players }) {
   );
 }
 
-/* ─── Main ─── */
+/* ─── Full Box Score Table ─── */
+
+function FullTeamTable({ teamAbbrev, players, totals }) {
+  const logo = getLogoUrl(teamAbbrev);
+  const { playGlassClick } = useTheme();
+
+  const statCols = [
+    { key: 'minutes', label: 'MIN' },
+    { key: 'fg', label: 'FG' },
+    { key: 'three_pt', label: '3PT' },
+    { key: 'ft', label: 'FT' },
+    { key: 'rebounds', label: 'REB' },
+    { key: 'assists', label: 'AST' },
+    { key: 'steals', label: 'STL' },
+    { key: 'blocks', label: 'BLK' },
+    { key: 'turnovers', label: 'TO' },
+    { key: 'fouls', label: 'PF' },
+    { key: 'plus_minus', label: '+/-' },
+    { key: 'points', label: 'PTS', primary: true },
+  ];
+
+  const starters = players.filter(p => p.starter);
+  const bench = players.filter(p => !p.starter);
+
+  const renderRow = (p, i) => (
+    <tr key={p.name || i} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors group/row">
+      <td className="py-2 sm:py-2.5 pl-3 pr-2 sm:pl-4 sm:pr-3 whitespace-nowrap">
+        <div className="flex items-center gap-2.5">
+          <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-full border border-white/10 bg-[#050a18] flex items-center justify-center overflow-hidden shrink-0">
+            {p.headshot_url ? (
+              <img src={p.headshot_url} alt="" className="w-full h-full object-cover scale-110" />
+            ) : (
+              <span className="text-[8px] font-black text-white/10">{p.name?.[0]}</span>
+            )}
+          </div>
+          <Link
+            to={`/player/${p.id || '1'}`}
+            onClick={playGlassClick}
+            className="text-[12px] font-black text-white uppercase tracking-tight hover:text-indigo-400 transition-colors"
+          >
+            {p.name}
+          </Link>
+          <span className="text-[10px] font-bold text-white/15">{p.position}</span>
+        </div>
+      </td>
+      {statCols.map(col => {
+        const val = p[col.key] ?? 0;
+        const isPM = col.key === 'plus_minus';
+        const num = isPM ? parseInt(val) : null;
+        return (
+          <td key={col.key} className="py-2 sm:py-2.5 px-1.5 text-center whitespace-nowrap">
+            <span className={`text-[12px] tabular-nums ${
+              col.primary ? 'font-black text-white' :
+              isPM && num > 0 ? 'font-bold text-emerald-400' :
+              isPM && num < 0 ? 'font-bold text-red-400' :
+              'font-medium text-white/50'
+            }`}>
+              {isPM && num > 0 ? `+${val}` : val}
+            </span>
+          </td>
+        );
+      })}
+    </tr>
+  );
+
+  const renderLabel = (label) => (
+    <tr>
+      <td colSpan={statCols.length + 1} className="py-1.5 px-4 bg-white/[0.015]">
+        <span className="text-[9px] font-black text-white/15 uppercase tracking-[0.3em]">{label}</span>
+      </td>
+    </tr>
+  );
+
+  const totalLabelMap = { minutes: 'MIN', fg: 'FG', three_pt: '3PT', ft: 'FT', rebounds: 'REB', assists: 'AST', steals: 'STL', blocks: 'BLK', turnovers: 'TO', fouls: 'PF', plus_minus: '+/-', points: 'PTS' };
+
+  return (
+    <div className="rounded-[2rem] bg-[#111624] border border-white/5 overflow-hidden shadow-2xl">
+      {/* Team header */}
+      <div className="flex items-center justify-between px-4 py-2.5 sm:px-5 sm:py-3 bg-white/[0.02] border-b border-white/5">
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-full bg-[#050a18] border border-white/10 flex items-center justify-center p-1 overflow-hidden">
+            <img src={logo} alt="" className="w-full h-full object-contain" />
+          </div>
+          <span className="text-[13px] font-black text-white uppercase tracking-widest">{teamAbbrev}</span>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto scrollbar-thin">
+        <table style={{ width: '100%', tableLayout: 'auto', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr className="border-b border-white/5">
+              <th className="py-1.5 sm:py-2 pl-3 pr-2 sm:pl-4 sm:pr-3 text-left">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Player</span>
+              </th>
+              {statCols.map(col => (
+                <th key={col.key} className="py-1.5 sm:py-2 px-1.5 text-center">
+                  <span className={`text-[9px] font-black uppercase tracking-wider ${col.primary ? 'text-white/40' : 'text-white/20'}`}>
+                    {col.label}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {starters.length > 0 && renderLabel('Starters')}
+            {starters.map(renderRow)}
+            {bench.length > 0 && renderLabel('Bench')}
+            {bench.map(renderRow)}
+            {totals && Object.keys(totals).length > 0 && (
+              <tr className="border-t border-white/10 bg-white/[0.03]">
+                <td className="py-2.5 pl-4 pr-3">
+                  <span className="text-[11px] font-black text-white/30 uppercase tracking-widest">Totals</span>
+                </td>
+                {statCols.map(col => (
+                  <td key={col.key} className="py-2 sm:py-2.5 px-1.5 text-center whitespace-nowrap">
+                    <span className={`text-[12px] tabular-nums ${col.primary ? 'font-black text-white' : 'font-bold text-white/30'}`}>
+                      {totals[totalLabelMap[col.key]] || ''}
+                    </span>
+                  </td>
+                ))}
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function FullBoxScore({ gameId, homeTeam, awayTeam, status }) {
+  const [boxData, setBoxData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(() => {
+    return fetchBoxScore(gameId).catch(() => null).then(box => {
+      if (box) setBoxData(box);
+    });
+  }, [gameId]);
+
+  useEffect(() => {
+    refresh().finally(() => setLoading(false));
+  }, [refresh]);
+
+  const isLive = status === "live" || status === "halftime";
+  useEffect(() => {
+    if (!isLive) return;
+    const id = setInterval(refresh, 30000);
+    return () => clearInterval(id);
+  }, [isLive, refresh]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton variant="rectangle" height="h-64" className="w-full rounded-[2rem] bg-white/5 opacity-5" />
+        <Skeleton variant="rectangle" height="h-64" className="w-full rounded-[2rem] bg-white/5 opacity-5" />
+      </div>
+    );
+  }
+
+  if (!boxData) return null;
+
+  return (
+    <div className="space-y-6">
+      <FullTeamTable teamAbbrev={awayTeam} players={boxData.away?.players || []} totals={boxData.away?.totals} />
+      <FullTeamTable teamAbbrev={homeTeam} players={boxData.home?.players || []} totals={boxData.home?.totals} />
+    </div>
+  );
+}
+
+/* ─── On-Court (Sidebar) ─── */
 
 export function BoxScore({ gameId, homeTeam, awayTeam, status, side }) {
   const [boxData, setBoxData] = useState(null);

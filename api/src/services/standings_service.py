@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import structlog
 
+from ..models.schemas import StandingsResponse, StandingsTeam
 from . import espn_client
-from ..models.schemas import StandingsTeam, StandingsResponse
 from .team_mapping import ABBREV_BY_ESPN_ID
 
 logger = structlog.get_logger(__name__)
@@ -32,15 +32,24 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
     teams = []
     entries = conf_data.get("standings", {}).get("entries", [])
 
-    for i, entry in enumerate(entries):
+    for _i, entry in enumerate(entries):
         team_info = entry.get("team", {})
         espn_id = int(team_info.get("id", 0))
         abbrev = team_info.get("abbreviation", ABBREV_BY_ESPN_ID.get(espn_id, "???"))
 
         # Map ESPN abbreviations to our local ones
-        abbrev_map = {"GS": "GS", "GSW": "GS", "WSH": "WSH", "WAS": "WSH",
-                      "NY": "NY", "NYK": "NY", "NO": "NO", "NOP": "NO",
-                      "SA": "SA", "SAS": "SA"}
+        abbrev_map = {
+            "GS": "GS",
+            "GSW": "GS",
+            "WSH": "WSH",
+            "WAS": "WSH",
+            "NY": "NY",
+            "NYK": "NY",
+            "NO": "NO",
+            "NOP": "NO",
+            "SA": "SA",
+            "SAS": "SA",
+        }
         abbrev = abbrev_map.get(abbrev, abbrev)
 
         wins = int(_get_stat(entry, "wins") or _get_stat(entry, "W") or 0)
@@ -68,24 +77,26 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
 
         logo_url = team_info.get("logos", [{}])[0].get("href", "") if team_info.get("logos") else ""
 
-        teams.append(StandingsTeam(
-            rank=0,  # assigned after sorting
-            name=team_info.get("displayName", team_info.get("name", "")),
-            abbrev=abbrev,
-            w=wins,
-            l=losses,
-            pct=pct,
-            gb=gb if gb != "0" else "-",
-            conf=conf_record,
-            home=home_record,
-            road=road_record,
-            l10=l10_record,
-            strk=streak,
-            logo_url=logo_url,
-        ))
+        teams.append(
+            StandingsTeam(
+                rank=0,  # assigned after sorting
+                name=team_info.get("displayName", team_info.get("name", "")),
+                abbrev=abbrev,
+                w=wins,
+                l=losses,
+                pct=pct,
+                gb=gb if gb != "0" else "-",
+                conf=conf_record,
+                home=home_record,
+                road=road_record,
+                l10=l10_record,
+                strk=streak,
+                logo_url=logo_url,
+            )
+        )
 
     # Sort by winning percentage descending (best teams first)
-    teams.sort(key=lambda t: (t.w / (t.w + t.l) if (t.w + t.l) > 0 else 0), reverse=True)
+    teams.sort(key=lambda t: t.w / (t.w + t.l) if (t.w + t.l) > 0 else 0, reverse=True)
     for i, team in enumerate(teams):
         team.rank = i + 1
 

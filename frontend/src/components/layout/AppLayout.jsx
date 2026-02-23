@@ -80,34 +80,28 @@ const AppLayout = () => {
   ];
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', backgroundColor: '#000105' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#000105' }}>
 
       {/* Skip to Content */}
       <a href="#main-content" className="skip-to-content">Skip to content</a>
 
-      {/* Background layers — fixed to viewport */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
+      {/* Background layers — absolute within fixed shell */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none' }}>
         <img src="/branding/background-1-alt.jpg" alt="" className="w-full h-full object-cover opacity-40" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#000105]/30 via-[#000105]/60 to-[#000105]" />
       </div>
       <div
-        className="fixed inset-0 pointer-events-none transition-opacity duration-1000 z-0"
-        style={{
-          opacity: arenaIntensity,
-          backgroundImage: `
-            radial-gradient(circle at 0% 0%, ${accentColors.primary} 0px, transparent 60%),
-            radial-gradient(circle at 100% 0%, var(--accent-alt) 0px, transparent 60%),
-            radial-gradient(at 50% 100%, var(--accent-warm) 0px, transparent 50%)
-          `
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', opacity: arenaIntensity, transition: 'opacity 1s',
+          backgroundImage: `radial-gradient(circle at 0% 0%, ${accentColors.primary} 0px, transparent 60%), radial-gradient(circle at 100% 0%, var(--accent-alt) 0px, transparent 60%), radial-gradient(at 50% 100%, var(--accent-warm) 0px, transparent 50%)`
         }}
       />
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0 texture-grain mix-blend-overlay" />
-      <div className="fixed inset-0 pointer-events-none opacity-10 z-0 texture-mesh" />
-      <div className="fixed inset-0 pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] z-0" />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.03 }} className="texture-grain mix-blend-overlay" />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.1 }} className="texture-mesh" />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', boxShadow: 'inset 0 0 150px rgba(0,0,0,0.9)' }} />
 
       {/* Cinematic Transition Overlay */}
       {isTransitioning && (
-        <div className="fixed inset-0 z-[200] bg-white animate-flash flex flex-col items-center justify-center">
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200 }} className="bg-white animate-flash flex flex-col items-center justify-center">
            <div className="absolute inset-0 z-0 overflow-hidden">
               <img
                 src={transitionImage || BRANDING_IMAGES.transitions.main1}
@@ -131,18 +125,16 @@ const AppLayout = () => {
         </div>
       )}
 
-      {/* HEADER — Disabled for now */}
-      <header style={{ display: 'none' }}>
-          <div className="max-w-[1800px] mx-auto flex flex-col gap-2">
+      {/* SCROLLABLE CONTENT — everything scrolls together */}
+      <div style={{ flex: '1 1 0%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'relative', zIndex: 30, WebkitOverflowScrolling: 'touch' }}>
 
-            {/* Upper Deck: Brand & Primary Navigation */}
+        {/* UPPER NAV — scrolls with content */}
+        <div style={{ position: 'relative', zIndex: 40, padding: '8px 12px 0' }}>
+          <div className="max-w-[1800px] mx-auto">
             <div className="relative group/header">
-              {/* Outer Shell */}
               <div className="absolute inset-0 bg-[#050a18]/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
                 <div className="absolute inset-0 texture-mesh opacity-5" />
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent" />
-
-                {/* Hardware Details (Industrial "Personality") */}
                 <div className="absolute top-4 left-4 flex gap-1 opacity-20">
                   <div className="h-1 w-1 rounded-full bg-white" />
                   <div className="h-1 w-1 rounded-full bg-white" />
@@ -162,7 +154,6 @@ const AppLayout = () => {
               </div>
 
               <div className="relative h-20 px-8 flex items-center justify-between">
-                {/* LOGO MODULE */}
                 <Link to="/" onClick={handleNavClick} className="flex items-center gap-5 group/logo">
                   <div className="relative">
                     <div className="absolute -inset-2 bg-indigo-500/20 blur-xl opacity-0 group-hover/logo:opacity-100 transition-opacity" />
@@ -183,7 +174,6 @@ const AppLayout = () => {
                   </div>
                 </Link>
 
-                {/* TACTICAL NAVIGATION */}
                 <nav className="hidden lg:flex items-center gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-inner">
                   {NAV_LINKS.map(link => {
                     const active = isActive(link.path);
@@ -198,8 +188,6 @@ const AppLayout = () => {
                       >
                         <link.icon className={`h-4 w-4 ${active ? 'text-black' : 'text-indigo-400/60 group-hover/nav:text-indigo-400'} transition-colors`} />
                         <span className="text-[13px] font-black uppercase tracking-widest">{link.label}</span>
-
-                        {/* Dynamic Active Indicator */}
                         {active && (
                           <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white shadow-[0_0_10px_white]" />
                         )}
@@ -208,7 +196,6 @@ const AppLayout = () => {
                   })}
                 </nav>
 
-                {/* SYSTEM DIAGNOSTICS */}
                 <div className="flex items-center gap-6">
                   <div className="hidden xl:flex flex-col items-end border-r border-white/5 pr-6">
                     <span className="text-[9px] font-black text-white/70 uppercase tracking-[0.4em] mb-1">System Frequency</span>
@@ -235,7 +222,6 @@ const AppLayout = () => {
                     </button>
                   </div>
 
-                  {/* Mobile Trigger */}
                   <button
                     className="lg:hidden h-12 w-12 flex flex-col items-center justify-center gap-1.5 rounded-xl bg-white/5 border border-white/5"
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -247,24 +233,23 @@ const AppLayout = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Lower Deck: The Data Stream Console */}
+        {/* SCORE TICKER — scrolls with content */}
+        <div style={{ position: 'relative', zIndex: 40, padding: '4px 12px 8px' }}>
+          <div className="max-w-[1800px] mx-auto">
             <div className="relative">
               <div className="absolute inset-0 bg-[#050a18]/90 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
                 <div className="absolute inset-0 texture-mesh opacity-[0.02]" />
                 <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/[0.02] to-transparent" />
               </div>
-
               <div className="relative">
                 <ScoreTicker />
               </div>
             </div>
-
           </div>
-        </header>
-
-      {/* SCROLLABLE CONTENT — this is the only thing that scrolls */}
-      <div style={{ flex: '1 1 0%', overflowY: 'auto', overflowX: 'clip', position: 'relative', zIndex: 30 }}>
+        </div>
         {/* Settings Drawer */}
         {settingsOpen && (
           <>
@@ -501,9 +486,9 @@ const AppLayout = () => {
           </>
         )}
 
-        <JumbotronAlert 
-          message={activeAlert?.message} 
-          subtext={activeAlert?.subtext} 
+        <JumbotronAlert
+          message={activeAlert?.message}
+          subtext={activeAlert?.subtext}
         />
 
         <CommandBar />

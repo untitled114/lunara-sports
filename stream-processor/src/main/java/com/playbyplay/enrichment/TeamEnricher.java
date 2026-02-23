@@ -1,8 +1,8 @@
 package com.playbyplay.enrichment;
 
-import com.playbyplay.models.EnrichedEvent;
-import com.playbyplay.models.GameEvent;
-import com.playbyplay.models.ScoreboardSnapshot;
+import com.playbyplay.avro.EnrichedEvent;
+import com.playbyplay.avro.PlayEvent;
+import com.playbyplay.avro.ScoreboardEvent;
 import org.apache.kafka.streams.kstream.ValueJoiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 
 /**
- * Joins a raw GameEvent with a ScoreboardSnapshot to produce an EnrichedEvent.
+ * Joins a raw PlayEvent with a ScoreboardEvent to produce an EnrichedEvent.
  *
  * <p>The scoreboard provides team display names, venue, and abbreviations that
  * the raw play event doesn't carry. The enricher also computes the score
@@ -20,12 +20,12 @@ import java.time.Instant;
  * If no scoreboard snapshot is available (null), the enricher still produces
  * an event with the fields it can populate from the play alone.</p>
  */
-public class TeamEnricher implements ValueJoiner<GameEvent, ScoreboardSnapshot, EnrichedEvent> {
+public class TeamEnricher implements ValueJoiner<PlayEvent, ScoreboardEvent, EnrichedEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(TeamEnricher.class);
 
     @Override
-    public EnrichedEvent apply(GameEvent event, ScoreboardSnapshot scoreboard) {
+    public EnrichedEvent apply(PlayEvent event, ScoreboardEvent scoreboard) {
         EnrichedEvent enriched = new EnrichedEvent();
 
         // Copy all play fields
@@ -41,7 +41,7 @@ public class TeamEnricher implements ValueJoiner<GameEvent, ScoreboardSnapshot, 
         enriched.setPlayerName(event.getPlayerName());
         enriched.setHomeScore(event.getHomeScore());
         enriched.setAwayScore(event.getAwayScore());
-        enriched.setScoringPlay(event.isScoringPlay());
+        enriched.setScoringPlay(event.getScoringPlay());
         enriched.setScoreValue(event.getScoreValue());
         enriched.setWallclock(event.getWallclock());
 

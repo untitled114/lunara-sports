@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, HTTPException
 
-from ..services.boxscore_service import get_boxscore
 from ..models.schemas import BoxScoreResponse
+from ..services.boxscore_service import get_boxscore
 
 router = APIRouter(tags=["boxscore"])
 

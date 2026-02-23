@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter
 
-from ..services.standings_service import get_standings
 from ..models.schemas import StandingsResponse
+from ..services.standings_service import get_standings
 
 router = APIRouter(tags=["standings"])
 

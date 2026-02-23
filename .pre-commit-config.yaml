@@ -1,0 +1,35 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.7
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: pytest-api
+        name: pytest api (75% coverage)
+        entry: bash -c 'cd api && python3 -m pytest tests/ -q --tb=short --no-header --cov=src --cov-fail-under=75'
+        language: system
+        pass_filenames: false
+        files: ^api/
+        types: [python]
+
+      - id: pytest-ingestion
+        name: pytest ingestion (75% coverage)
+        entry: bash -c 'cd ingestion && python3 -m pytest tests/ -q --tb=short --no-header --cov=src --cov-fail-under=75'
+        language: system
+        pass_filenames: false
+        files: ^ingestion/
+        types: [python]
