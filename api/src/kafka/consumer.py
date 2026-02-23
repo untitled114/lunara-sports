@@ -2,27 +2,43 @@
 
 Runs as an asyncio background task inside the API process. Uses
 ``asyncio.to_thread`` to wrap the blocking ``confluent_kafka.Consumer.poll``
-call so the event loop stays responsive.
+call so the event loop stays responsive. Deserializes Avro messages using
+Schema Registry, with DLQ routing for failures.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import traceback
+from datetime import timezone
+from pathlib import Path
 
 import structlog
 from confluent_kafka import Consumer, KafkaError
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroDeserializer
+from confluent_kafka.serialization import MessageField, SerializationContext
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 
 from ..config import Settings
 from ..db.models import Game, Play
 from ..db.session import get_session_factory
-from ..metrics import kafka_messages_consumed_total
+from ..metrics import dlq_messages_total, kafka_messages_consumed_total
+from .dead_letter import DeadLetterProducer
 
 logger = structlog.get_logger(__name__)
 
 TOPICS = ["raw.scoreboard", "raw.plays", "prediction.results", "user.reactions"]
+
+# Map topic → .avsc schema file for Avro-deserialized topics
+_SCHEMA_FILES = {
+    "raw.scoreboard": "scoreboard_event.avsc",
+    "raw.plays": "play_event.avsc",
+}
+
+_SCHEMA_DIR = Path(__file__).resolve().parents[3] / "schemas" / "avro"
 
 
 class KafkaConsumerLoop:
@@ -36,15 +52,43 @@ class KafkaConsumerLoop:
         self._settings = settings
         self._consumer: Consumer | None = None
         self._running = False
+        self._dlq = DeadLetterProducer(settings.kafka_bootstrap_servers)
+
+        # Build Avro deserializers per topic
+        self._deserializers: dict[str, AvroDeserializer] = {}
+        try:
+            registry_client = SchemaRegistryClient({"url": settings.schema_registry_url})
+            for topic, schema_file in _SCHEMA_FILES.items():
+                schema_path = _SCHEMA_DIR / schema_file
+                if schema_path.exists():
+                    schema_str = schema_path.read_text()
+                    self._deserializers[topic] = AvroDeserializer(
+                        registry_client,
+                        schema_str,
+                    )
+        except Exception:
+            logger.warning("kafka_consumer.avro_init_failed", exc_info=True)
+
+    def _deserialize(self, topic: str, raw: bytes) -> dict:
+        """Deserialize message value, trying Avro first then JSON fallback."""
+        deserializer = self._deserializers.get(topic)
+        if deserializer and raw and len(raw) > 5 and raw[0] == 0:
+            # Avro wire format: magic byte 0x00 + 4-byte schema ID
+            ctx = SerializationContext(topic, MessageField.VALUE)
+            return deserializer(raw, ctx)
+        # JSON fallback for non-Avro topics or legacy messages
+        return json.loads(raw.decode("utf-8"))
 
     async def run(self) -> None:
         """Main loop — poll Kafka and dispatch messages to handlers."""
-        self._consumer = Consumer({
-            "bootstrap.servers": self._settings.kafka_bootstrap_servers,
-            "group.id": "api-db-writer",
-            "auto.offset.reset": "latest",
-            "enable.auto.commit": True,
-        })
+        self._consumer = Consumer(
+            {
+                "bootstrap.servers": self._settings.kafka_bootstrap_servers,
+                "group.id": "api-db-writer",
+                "auto.offset.reset": "latest",
+                "enable.auto.commit": True,
+            }
+        )
         self._consumer.subscribe(TOPICS)
         self._running = True
 
@@ -63,9 +107,11 @@ class KafkaConsumerLoop:
 
                 topic = msg.topic()
                 try:
-                    value = json.loads(msg.value().decode("utf-8"))
-                except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                    value = self._deserialize(topic, msg.value())
+                except Exception as exc:
                     logger.warning("kafka_consumer.bad_message", error=str(exc))
+                    self._dlq.send_to_dlq(topic, msg.key(), msg.value(), str(exc))
+                    dlq_messages_total.labels(topic=topic).inc()
                     continue
 
                 kafka_messages_consumed_total.labels(topic=topic).inc()
@@ -80,8 +126,12 @@ class KafkaConsumerLoop:
                     elif topic == "user.reactions":
                         await self._handle_reaction(value)
                 except Exception:
+                    tb = traceback.format_exc()
                     logger.exception("kafka_consumer.handler_error", topic=topic)
+                    self._dlq.send_to_dlq(topic, msg.key(), msg.value(), f"Handler error: {tb}")
+                    dlq_messages_total.labels(topic=topic).inc()
         finally:
+            self._dlq.flush()
             self._consumer.close()
             logger.info("kafka_consumer.stopped")
 
@@ -95,7 +145,7 @@ class KafkaConsumerLoop:
         if factory is None:
             return
 
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         start_time_raw = data.get("start_time")
         if isinstance(start_time_raw, str):
@@ -103,6 +153,9 @@ class KafkaConsumerLoop:
                 start_time = datetime.fromisoformat(start_time_raw.replace("Z", "+00:00"))
             except (ValueError, AttributeError):
                 start_time = datetime.now(timezone.utc)
+        elif isinstance(start_time_raw, int | float):
+            # Avro timestamp-millis → epoch millis
+            start_time = datetime.fromtimestamp(start_time_raw / 1000, tz=timezone.utc)
         else:
             start_time = datetime.now(timezone.utc)
 
@@ -119,16 +172,20 @@ class KafkaConsumerLoop:
             "venue": data.get("venue"),
         }
 
-        stmt = pg_insert(Game).values(**values).on_conflict_do_update(
-            index_elements=["id"],
-            set_={
-                "status": values["status"],
-                "home_score": values["home_score"],
-                "away_score": values["away_score"],
-                "quarter": values["quarter"],
-                "clock": values["clock"],
-                "venue": values["venue"],
-            },
+        stmt = (
+            pg_insert(Game)
+            .values(**values)
+            .on_conflict_do_update(
+                index_elements=["id"],
+                set_={
+                    "status": values["status"],
+                    "home_score": values["home_score"],
+                    "away_score": values["away_score"],
+                    "quarter": values["quarter"],
+                    "clock": values["clock"],
+                    "venue": values["venue"],
+                },
+            )
         )
 
         async with factory() as session:
@@ -168,8 +225,12 @@ class KafkaConsumerLoop:
             "away_score": data.get("away_score"),
         }
 
-        stmt = pg_insert(Play).values(**values).on_conflict_do_nothing(
-            constraint="uq_plays_game_seq",
+        stmt = (
+            pg_insert(Play)
+            .values(**values)
+            .on_conflict_do_nothing(
+                index_elements=["game_id", "sequence_number"],
+            )
         )
 
         async with factory() as session:
@@ -213,10 +274,13 @@ class KafkaConsumerLoop:
 
         game_id = data.get("game_id")
         if game_id:
-            await manager.broadcast(game_id, {
-                "type": "prediction_result",
-                "data": data,
-            })
+            await manager.broadcast(
+                game_id,
+                {
+                    "type": "prediction_result",
+                    "data": data,
+                },
+            )
 
     async def _handle_reaction(self, data: dict) -> None:
         """Broadcast a reaction event to all game viewers via WebSocket."""
@@ -224,7 +288,10 @@ class KafkaConsumerLoop:
 
         game_id = data.get("game_id")
         if game_id:
-            await manager.broadcast(game_id, {
-                "type": "reaction",
-                "data": data,
-            })
+            await manager.broadcast(
+                game_id,
+                {
+                    "type": "reaction",
+                    "data": data,
+                },
+            )

@@ -151,6 +151,7 @@ services:
     env_file: .env
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
       ESPN_POLL_INTERVAL_SECONDS: ${ESPN_POLL_INTERVAL_SECONDS:-30}
     deploy:
       resources:
@@ -190,10 +191,60 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-playbyplay}:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/${POSTGRES_DB:-playbyplay}
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
     deploy:
       resources:
         limits:
           memory: 512M
+
+  # --- Exporters ---
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: pbp-kafka-exporter
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: --kafka.server=kafka:9092
+    ports:
+      - "9308:9308"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: pbp-postgres-exporter
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-playbyplay}:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/${POSTGRES_DB:-playbyplay}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: pbp-redis-exporter
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    ports:
+      - "9121:9121"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   # --- Monitoring ---
 

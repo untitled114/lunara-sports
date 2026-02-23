@@ -7,9 +7,9 @@ import { useTheme } from '@/context/ThemeContext';
 
 function LeaderboardCard({ title, icon: Icon, data, unit, delay = 0 }) {
   const { playGlassClick } = useTheme();
-  
+
   return (
-    <div 
+    <div
       className="liquid-mirror rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl flex flex-col h-full animate-fadeIn transition-all duration-500 hover:border-white/10 group/card"
       style={{ animationDelay: `${delay}s` }}
     >
@@ -44,7 +44,7 @@ function LeaderboardCard({ title, icon: Icon, data, unit, delay = 0 }) {
                        )}
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <Link 
+                      <Link
                         to={`/player/${row.player_id}`}
                         onClick={() => playGlassClick()}
                         className="text-sm font-black text-white uppercase tracking-tight group-hover:text-indigo-400 transition-colors truncate"
@@ -66,8 +66,8 @@ function LeaderboardCard({ title, icon: Icon, data, unit, delay = 0 }) {
 
       {/* Card Footer */}
       <div className="p-4 bg-white/5 border-t border-white/5">
-         <Link 
-           to="/players" 
+         <Link
+           to="/players"
            onClick={() => playGlassClick()}
            className="flex items-center justify-center gap-2 py-3 rounded-xl hover:bg-white/5 transition-all group/link"
          >

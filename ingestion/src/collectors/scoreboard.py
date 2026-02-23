@@ -16,6 +16,8 @@ import structlog
 from src.collectors.base import BaseCollector
 from src.config import Settings
 from src.producers.kafka_producer import KafkaProducer
+from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
+from src.resilience.retry import espn_retry
 from src.schemas.events import ScoreboardEvent
 
 logger = structlog.get_logger(__name__)
@@ -108,9 +110,11 @@ class ScoreboardCollector(BaseCollector):
         self.settings = settings
         self.producer = producer
         self.client = httpx.AsyncClient(timeout=10.0)
+        self._circuit_breaker = CircuitBreaker()
 
-    async def collect(self) -> list[dict]:
-        """GET /scoreboard and return a list of parsed ScoreboardEvent dicts."""
+    @espn_retry
+    async def _fetch(self) -> dict:
+        """Fetch scoreboard JSON from ESPN with retry."""
         url = f"{self.settings.espn_base_url}/scoreboard"
         params = {}
         if self.settings.espn_date:
@@ -119,7 +123,11 @@ class ScoreboardCollector(BaseCollector):
 
         resp = await self.client.get(url, params=params)
         resp.raise_for_status()
-        data = resp.json()
+        return resp.json()
+
+    async def collect(self) -> list[dict]:
+        """GET /scoreboard and return a list of parsed ScoreboardEvent dicts."""
+        data = await self._circuit_breaker.call(self._fetch())
 
         polled_at = datetime.now(timezone.utc)
         events = data.get("events", [])
@@ -137,6 +145,9 @@ class ScoreboardCollector(BaseCollector):
         """Run one poll cycle: collect scoreboard data and produce to Kafka."""
         try:
             games = await self.collect()
+        except CircuitOpenError:
+            logger.warning("scoreboard.circuit_open", action="skipping_cycle")
+            return
         except httpx.HTTPStatusError as exc:
             logger.error("scoreboard.http_error", status=exc.response.status_code)
             return
@@ -189,7 +200,7 @@ async def _run_polling_loop() -> None:
                     shutdown.wait(),
                     timeout=settings.espn_poll_interval_seconds,
                 )
-            except (TimeoutError, asyncio.TimeoutError):
+            except TimeoutError:
                 pass
     finally:
         logger.info("scoreboard.shutting_down")

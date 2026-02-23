@@ -74,10 +74,10 @@ def from_sport_suite_abbrev(ss_abbrev: str) -> str:
 # ESPN scoreboard abbreviations that differ from PBP
 _ESPN_TO_PBP: dict[str, str] = {
     "UTAH": "UTA",
-    "GS": "GS",   # same
-    "SA": "SA",    # same
-    "NY": "NY",    # same
-    "NO": "NO",    # same
+    "GS": "GS",  # same
+    "SA": "SA",  # same
+    "NY": "NY",  # same
+    "NO": "NO",  # same
 }
 
 

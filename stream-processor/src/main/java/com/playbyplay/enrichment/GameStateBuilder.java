@@ -1,7 +1,7 @@
 package com.playbyplay.enrichment;
 
-import com.playbyplay.models.EnrichedEvent;
-import com.playbyplay.models.GameState;
+import com.playbyplay.avro.EnrichedEvent;
+import com.playbyplay.avro.GameState;
 import org.apache.kafka.streams.kstream.Aggregator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +49,7 @@ public class GameStateBuilder implements Aggregator<String, EnrichedEvent, GameS
         state.setLastPlayType(event.getEventType());
 
         // Scoring stats
-        if (event.isScoringPlay()) {
+        if (event.getScoringPlay()) {
             state.setScoringPlayCount(state.getScoringPlayCount() + 1);
         }
 

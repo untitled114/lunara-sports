@@ -2,7 +2,6 @@
 
 import pytest
 
-
 USER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
 

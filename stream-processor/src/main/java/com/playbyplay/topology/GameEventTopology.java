@@ -1,12 +1,13 @@
 package com.playbyplay.topology;
 
+import com.playbyplay.avro.EnrichedEvent;
+import com.playbyplay.avro.GameState;
+import com.playbyplay.avro.PlayEvent;
+import com.playbyplay.avro.ScoreboardEvent;
 import com.playbyplay.enrichment.GameStateBuilder;
 import com.playbyplay.enrichment.TeamEnricher;
-import com.playbyplay.models.EnrichedEvent;
-import com.playbyplay.models.GameEvent;
-import com.playbyplay.models.GameState;
-import com.playbyplay.models.ScoreboardSnapshot;
-import com.playbyplay.serdes.JsonSerde;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
+import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -15,6 +16,9 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Defines the Kafka Streams topology for processing play-by-play events.
@@ -54,45 +58,51 @@ public class GameEventTopology {
     private GameEventTopology() {}
 
     /**
-     * Builds and returns the stream processing topology.
+     * Creates a configured SpecificAvroSerde for the given type.
      */
-    public static Topology build() {
+    private static <T extends SpecificRecord> SpecificAvroSerde<T> avroSerde(
+            String schemaRegistryUrl, boolean isKey) {
+        SpecificAvroSerde<T> serde = new SpecificAvroSerde<>();
+        Map<String, String> config = Collections.singletonMap(
+                "schema.registry.url", schemaRegistryUrl);
+        serde.configure(config, isKey);
+        return serde;
+    }
+
+    /**
+     * Builds and returns the stream processing topology.
+     *
+     * @param schemaRegistryUrl URL of the Confluent Schema Registry.
+     */
+    public static Topology build(String schemaRegistryUrl) {
         StreamsBuilder builder = new StreamsBuilder();
 
         // Serdes
         var stringSerde = Serdes.String();
-        var gameEventSerde = JsonSerde.of(GameEvent.class);
-        var scoreboardSerde = JsonSerde.of(ScoreboardSnapshot.class);
-        var enrichedEventSerde = JsonSerde.of(EnrichedEvent.class);
-        var gameStateSerde = JsonSerde.of(GameState.class);
+        SpecificAvroSerde<PlayEvent> playEventSerde = avroSerde(schemaRegistryUrl, false);
+        SpecificAvroSerde<ScoreboardEvent> scoreboardSerde = avroSerde(schemaRegistryUrl, false);
+        SpecificAvroSerde<EnrichedEvent> enrichedEventSerde = avroSerde(schemaRegistryUrl, false);
+        SpecificAvroSerde<GameState> gameStateSerde = avroSerde(schemaRegistryUrl, false);
 
         // ── 1. Scoreboard GlobalKTable (team metadata registry) ──────────
-        //
-        // Every scoreboard poll produces snapshots keyed by game_id.
-        // The GlobalKTable keeps the latest snapshot per game, available
-        // on all stream processor instances for join lookups.
-        GlobalKTable<String, ScoreboardSnapshot> scoreboardTable = builder.globalTable(
+        GlobalKTable<String, ScoreboardEvent> scoreboardTable = builder.globalTable(
                 SCOREBOARD_TOPIC,
                 Consumed.with(stringSerde, scoreboardSerde),
-                Materialized.<String, ScoreboardSnapshot, KeyValueStore<Bytes, byte[]>>as(SCOREBOARD_STORE)
+                Materialized.<String, ScoreboardEvent, KeyValueStore<Bytes, byte[]>>as(SCOREBOARD_STORE)
                         .withKeySerde(stringSerde)
                         .withValueSerde(scoreboardSerde)
         );
 
         // ── 2. Raw play-by-play events ──────────────────────────────────
-        KStream<String, GameEvent> rawPlays = builder.stream(
+        KStream<String, PlayEvent> rawPlays = builder.stream(
                 PLAYS_TOPIC,
-                Consumed.with(stringSerde, gameEventSerde)
+                Consumed.with(stringSerde, playEventSerde)
         );
 
         // ── 3. Enrich plays with team metadata via left join ────────────
-        //
-        // Key mapper: both stream and table are keyed by game_id, so the
-        // mapper extracts the stream record key directly.
-        // Left join ensures plays flow even before the first scoreboard poll.
         KStream<String, EnrichedEvent> enrichedPlays = rawPlays.leftJoin(
                 scoreboardTable,
-                (key, play) -> key,     // map stream key → GlobalKTable key
+                (key, play) -> key,
                 new TeamEnricher()
         );
 
@@ -103,9 +113,6 @@ public class GameEventTopology {
         );
 
         // ── 5. Aggregate enriched events into per-game state ────────────
-        //
-        // Enriched events carry team names from the scoreboard join, so the
-        // aggregated GameState gets team info on the first event.
         KTable<String, GameState> gameState = enrichedPlays
                 .groupByKey(Grouped.with(stringSerde, enrichedEventSerde))
                 .aggregate(
@@ -127,5 +134,12 @@ public class GameEventTopology {
                 PLAYS_TOPIC, SCOREBOARD_TOPIC, ENRICHED_TOPIC, GAME_STATE_TOPIC);
 
         return topology;
+    }
+
+    /**
+     * Backwards-compatible build with default Schema Registry URL.
+     */
+    public static Topology build() {
+        return build("http://localhost:8081");
     }
 }

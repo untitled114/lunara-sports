@@ -15,16 +15,32 @@ from starlette.responses import Response
 from .config import Settings
 from .db.redis import close_redis, init_redis, redis_ping
 from .db.session import close_db, create_tables, db_ping, init_db, seed_teams
-from .models.schemas import HealthResponse
-from .routers import boxscore, comments, games, leaderboard, picks, players, plays, predictions, reactions, standings, stats, teams
 from .db.sport_suite import close_sport_suite, init_sport_suite
 from .kafka.consumer import KafkaConsumerLoop
 from .kafka.producer import close_producer, init_producer
 from .metrics import instrumentator
+from .models.schemas import HealthResponse
+from .routers import (
+    auth,
+    boxscore,
+    comments,
+    games,
+    leaderboard,
+    picks,
+    players,
+    plays,
+    predictions,
+    reactions,
+    standings,
+    stats,
+    teams,
+)
 from .services.espn_client import close_espn_client, init_espn_client
+from .services.pick_sync_poller import run_pick_sync_poller
+from .services.pick_tracker_poller import run_pick_tracker_poller
+from .services.scoreboard_poller import run_scoreboard_poller
 from .services.team_logos import populate_team_logos
 from .ws.live_feed import manager
-from .services.scoreboard_poller import run_scoreboard_poller
 from .ws.play_poller import get_recent_plays, run_play_poller
 
 logger = structlog.get_logger(__name__)
@@ -61,6 +77,12 @@ async def lifespan(app: FastAPI):
     # Start background scoreboard poller (keeps game scores current from ESPN)
     scoreboard_task = asyncio.create_task(run_scoreboard_poller())
 
+    # Start pick sync poller (syncs Sport-suite predictions once per day)
+    pick_sync_task = asyncio.create_task(run_pick_sync_poller(settings))
+
+    # Start pick tracker poller (updates live stats for pending picks)
+    pick_tracker_task = asyncio.create_task(run_pick_tracker_poller())
+
     yield
 
     # Shutdown
@@ -68,6 +90,8 @@ async def lifespan(app: FastAPI):
         kafka_consumer.stop()
     poller_task.cancel()
     scoreboard_task.cancel()
+    pick_sync_task.cancel()
+    pick_tracker_task.cancel()
     if consumer_task:
         try:
             await consumer_task
@@ -79,6 +103,14 @@ async def lifespan(app: FastAPI):
         pass
     try:
         await scoreboard_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await pick_sync_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await pick_tracker_task
     except asyncio.CancelledError:
         pass
     close_producer()
@@ -96,14 +128,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 class NoCacheMiddleware(BaseHTTPMiddleware):
     """Prevent Cloudflare and browsers from caching API responses."""
+
     async def dispatch(self, request: Request, call_next):
         response: Response = await call_next(request)
         if request.url.path not in ("/metrics", "/docs", "/openapi.json"):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["CDN-Cache-Control"] = "no-store"
         return response
+
 
 app.add_middleware(NoCacheMiddleware)
 
@@ -129,6 +164,7 @@ app.include_router(stats.router)
 app.include_router(boxscore.router)
 app.include_router(reactions.router)
 app.include_router(comments.router)
+app.include_router(auth.router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
@@ -176,10 +212,15 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
     try:
         # Send recent play history
         recent = await get_recent_plays(game_id, limit=50)
-        await websocket.send_text(json.dumps({
-            "type": "history",
-            "data": recent,
-        }, default=str))
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "history",
+                    "data": recent,
+                },
+                default=str,
+            )
+        )
 
         # Keep-alive loop — read client messages (pings, etc.)
         while True:

@@ -1,5 +1,6 @@
 package com.playbyplay;
 
+import com.playbyplay.serdes.DlqDeserializationHandler;
 import com.playbyplay.topology.GameEventTopology;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
@@ -21,8 +22,13 @@ public class App {
     private static final Logger log = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
+        String schemaRegistryUrl = System.getenv("SCHEMA_REGISTRY_URL");
+        if (schemaRegistryUrl == null || schemaRegistryUrl.isBlank()) {
+            schemaRegistryUrl = "http://localhost:8081";
+        }
+
         Properties props = buildConfig();
-        Topology topology = GameEventTopology.build();
+        Topology topology = GameEventTopology.build(schemaRegistryUrl);
 
         log.info("Starting Play-by-Play stream processor");
         log.info("Topology:\n{}", topology.describe());
@@ -58,6 +64,12 @@ public class App {
 
         // Commit interval — low latency for live sports
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
+
+        // Route deserialization failures to DLQ topics instead of crashing
+        props.put(
+                StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+                DlqDeserializationHandler.class
+        );
 
         return props;
     }

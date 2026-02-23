@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import structlog
 
-from . import espn_client
 from ..models.schemas import BoxScorePlayer, BoxScoreResponse, BoxScoreTeam
+from . import espn_client
 
 logger = structlog.get_logger(__name__)
 
@@ -39,7 +39,9 @@ def _parse_player_stats(player_data: dict, labels: list[str]) -> BoxScorePlayer:
 
     return BoxScorePlayer(
         name=athlete.get("displayName", ""),
-        position=athlete.get("position", {}).get("abbreviation", "") if athlete.get("position") else "",
+        position=athlete.get("position", {}).get("abbreviation", "")
+        if athlete.get("position")
+        else "",
         starter=player_data.get("starter", False),
         headshot_url=headshot_url,
         jersey=athlete.get("jersey", ""),
@@ -79,7 +81,7 @@ def _parse_team_boxscore(team_data: dict) -> BoxScoreTeam:
         totals_list = stat_group.get("totals", [])
         if totals_list:
             labels = stat_group.get("labels", [])
-            for label, val in zip(labels, totals_list):
+            for label, val in zip(labels, totals_list, strict=False):
                 totals[label] = val
 
     return BoxScoreTeam(

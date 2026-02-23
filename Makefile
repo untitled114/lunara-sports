@@ -1,13 +1,16 @@
 COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
 .PHONY: infra up down logs db-migrate db-reset topics topics-list \
-       dev-ingestion dev-api dev-frontend test lint build deploy
+       dev-ingestion dev-api dev-frontend test lint build deploy \
+       test-infra test-infra-down test-integration
 
 # --- Infrastructure ---
 
 infra: ## Start infrastructure only (kafka, pg, redis, minio, monitoring)
 	$(COMPOSE) up -d zookeeper kafka schema-registry kafka-init \
-		postgres redis minio prometheus grafana
+		postgres redis minio \
+		kafka-exporter postgres-exporter redis-exporter \
+		prometheus grafana
 
 up: ## Start all services
 	$(COMPOSE) up -d
@@ -67,6 +70,23 @@ test: ## Run all tests
 	cd api && pytest tests/ -v
 	cd frontend && npm test
 	cd stream-processor && ./gradlew test
+
+test-infra: ## Start test infrastructure (kafka, schema-registry, postgres, redis)
+	$(COMPOSE) up -d zookeeper kafka schema-registry kafka-init postgres redis
+	@echo "Waiting for Kafka to be ready..."
+	@for i in $$(seq 1 30); do \
+		$(COMPOSE) exec -T kafka kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1 && break; \
+		sleep 1; \
+	done
+	@echo "Test infrastructure ready."
+
+test-infra-down: ## Tear down test infrastructure
+	$(COMPOSE) down -v
+
+test-integration: test-infra ## Run integration tests (starts infra, runs tests, tears down)
+	@echo "Running integration tests..."
+	cd tests && python3 -m pytest integration/ -v --timeout=60 || ($(MAKE) test-infra-down && exit 1)
+	@$(MAKE) test-infra-down
 
 lint: ## Run linters
 	cd ingestion && ruff check src/ tests/

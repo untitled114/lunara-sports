@@ -78,21 +78,25 @@ async def resolve_prediction(
 
     # Upsert leaderboard row for current season
     season = f"{prediction.resolved_at.year}-{prediction.resolved_at.year + 1}"
-    lb_stmt = pg_insert(Leaderboard).values(
-        user_id=prediction.user_id,
-        season=season,
-        total_points=points_awarded,
-        correct_predictions=1 if is_correct else 0,
-        total_predictions=1,
-        streak=1 if is_correct else 0,
-    ).on_conflict_do_update(
-        index_elements=["user_id", "season"],
-        set_={
-            "total_points": Leaderboard.total_points + points_awarded,
-            "correct_predictions": Leaderboard.correct_predictions + (1 if is_correct else 0),
-            "total_predictions": Leaderboard.total_predictions + 1,
-            "streak": (Leaderboard.streak + 1) if is_correct else 0,
-        },
+    lb_stmt = (
+        pg_insert(Leaderboard)
+        .values(
+            user_id=prediction.user_id,
+            season=season,
+            total_points=points_awarded,
+            correct_predictions=1 if is_correct else 0,
+            total_predictions=1,
+            streak=1 if is_correct else 0,
+        )
+        .on_conflict_do_update(
+            index_elements=["user_id", "season"],
+            set_={
+                "total_points": Leaderboard.total_points + points_awarded,
+                "correct_predictions": Leaderboard.correct_predictions + (1 if is_correct else 0),
+                "total_predictions": Leaderboard.total_predictions + 1,
+                "streak": (Leaderboard.streak + 1) if is_correct else 0,
+            },
+        )
     )
     await session.execute(lb_stmt)
     await session.commit()

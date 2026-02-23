@@ -1,12 +1,11 @@
 """Tests for WebSocket live feed functionality."""
 
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
 from src.ws.live_feed import ConnectionManager
-
 
 # ── ConnectionManager unit tests ────────────────────────────────────────
 
@@ -44,6 +43,7 @@ async def test_manager_broadcast():
 
     # Simulate CONNECTED state
     from starlette.websockets import WebSocketState
+
     ws1.client_state = WebSocketState.CONNECTED
     ws2.client_state = WebSocketState.CONNECTED
 
@@ -66,6 +66,7 @@ async def test_manager_broadcast_removes_dead():
     ws_dead = AsyncMock()
 
     from starlette.websockets import WebSocketState
+
     ws_good.client_state = WebSocketState.CONNECTED
     ws_dead.client_state = WebSocketState.DISCONNECTED
 

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
+    ARRAY,
     BigInteger,
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -32,8 +34,11 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(100))
     avatar_url: Mapped[str | None] = mapped_column(Text)
-    favorite_teams: Mapped[str | None] = mapped_column(Text)  # JSON array string
+    favorite_teams: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
     prediction_score: Mapped[int] = mapped_column(Integer, default=0)
+    email: Mapped[str | None] = mapped_column(String(255), unique=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    membership_tier: Mapped[str] = mapped_column(String(10), default="free", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     predictions: Mapped[list[Prediction]] = relationship(back_populates="user")
@@ -77,7 +82,7 @@ class Play(Base):
     sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
     quarter: Mapped[int] = mapped_column(Integer, nullable=False)
     clock: Mapped[str | None] = mapped_column(String(10))
-    event_type: Mapped[str | None] = mapped_column(String(30))
+    event_type: Mapped[str | None] = mapped_column(String(50))
     description: Mapped[str | None] = mapped_column(Text)
     team: Mapped[str | None] = mapped_column(String(3))
     player_name: Mapped[str | None] = mapped_column(String(100))
@@ -87,9 +92,7 @@ class Play(Base):
 
     game: Mapped[Game] = relationship(back_populates="plays")
 
-    __table_args__ = (
-        UniqueConstraint("game_id", "sequence_number", name="uq_plays_game_seq"),
-    )
+    __table_args__ = (UniqueConstraint("game_id", "sequence_number", name="uq_plays_game_seq"),)
 
 
 class Prediction(Base):
@@ -135,9 +138,7 @@ class Reaction(Base):
     emoji: Mapped[str] = mapped_column(String(10), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "play_id", name="uq_reactions_user_play"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "play_id", name="uq_reactions_user_play"),)
 
 
 class Comment(Base):
@@ -165,7 +166,36 @@ class ModelPick(Base):
     edge: Mapped[float | None] = mapped_column(Numeric(5, 2))
     book: Mapped[str | None] = mapped_column(String(30))
     model_version: Mapped[str | None] = mapped_column(String(10))
-    tier: Mapped[str | None] = mapped_column(String(10))
+    tier: Mapped[str | None] = mapped_column(String(20))
     actual_value: Mapped[float | None] = mapped_column(Numeric(5, 1))
     is_hit: Mapped[bool | None] = mapped_column(Boolean)
+    edge_pct: Mapped[float | None] = mapped_column(Numeric(6, 2))
+    consensus_line: Mapped[float | None] = mapped_column(Numeric(5, 1))
+    opponent_team: Mapped[str | None] = mapped_column(String(5))
+    reasoning: Mapped[str | None] = mapped_column(Text)
+    is_home: Mapped[bool | None] = mapped_column(Boolean)
+    confidence: Mapped[str | None] = mapped_column(String(10))
+    line_spread: Mapped[float | None] = mapped_column(Numeric(5, 1))
+    game_date: Mapped[date | None] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint(
+            "game_id", "player_name", "market", "model_version", name="uq_model_picks_dedup"
+        ),
+    )
+
+
+class UserTail(Base):
+    __tablename__ = "user_tails"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    pick_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("model_picks.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("user_id", "pick_id", name="uq_user_tails_user_pick"),)

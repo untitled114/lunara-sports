@@ -19,28 +19,28 @@ def _parse_athlete(a: dict) -> dict:
         "position": a.get("position", {}).get("abbreviation", ""),
         "height": a.get("displayHeight", ""),
         "weight": a.get("displayWeight", "").replace(" lbs", ""),
-        "headshot_url": (
-            a.get("headshot", {}).get("href", "") if a.get("headshot") else ""
-        ),
+        "headshot_url": (a.get("headshot", {}).get("href", "") if a.get("headshot") else ""),
     }
 
 
 def _parse_athlete_full(a: dict) -> dict:
     """Parse an ESPN athlete with full bio details."""
     base = _parse_athlete(a)
-    base.update({
-        "age": a.get("age"),
-        "experience": (
-            str(a.get("experience", {}).get("years", ""))
-            if isinstance(a.get("experience"), dict)
-            else str(a.get("experience", ""))
-        ),
-        "college": (
-            a.get("college", {}).get("name", "")
-            if isinstance(a.get("college"), dict)
-            else str(a.get("college", ""))
-        ),
-    })
+    base.update(
+        {
+            "age": a.get("age"),
+            "experience": (
+                str(a.get("experience", {}).get("years", ""))
+                if isinstance(a.get("experience"), dict)
+                else str(a.get("experience", ""))
+            ),
+            "college": (
+                a.get("college", {}).get("name", "")
+                if isinstance(a.get("college"), dict)
+                else str(a.get("college", ""))
+            ),
+        }
+    )
     return base
 
 
@@ -95,11 +95,13 @@ async def get_all_players(search: str = "") -> list[dict]:
             players.append(_parse_athlete(a))
 
         if players or not search:
-            results.append({
-                "team": team_name,
-                "abbrev": abbrev,
-                "players": players[:10] if not search else players,
-            })
+            results.append(
+                {
+                    "team": team_name,
+                    "abbrev": abbrev,
+                    "players": players[:10] if not search else players,
+                }
+            )
 
     results.sort(key=lambda x: x["team"])
     return results

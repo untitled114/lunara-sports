@@ -1,0 +1,55 @@
+version: "3.8"
+
+# Override file for integration tests.
+# Starts only infrastructure services — no application containers.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.test.yml up -d
+
+services:
+  # Keep infrastructure services as-is
+  zookeeper:
+    profiles: ["test"]
+
+  kafka:
+    profiles: ["test"]
+
+  schema-registry:
+    profiles: ["test"]
+
+  kafka-init:
+    profiles: ["test"]
+
+  postgres:
+    profiles: ["test"]
+    environment:
+      POSTGRES_DB: playbyplay_test
+
+  redis:
+    profiles: ["test"]
+
+  # Disable all application and monitoring services
+  ingestion:
+    profiles: ["disabled"]
+
+  stream-processor:
+    profiles: ["disabled"]
+
+  api:
+    profiles: ["disabled"]
+
+  kafka-exporter:
+    profiles: ["disabled"]
+
+  postgres-exporter:
+    profiles: ["disabled"]
+
+  redis-exporter:
+    profiles: ["disabled"]
+
+  prometheus:
+    profiles: ["disabled"]
+
+  grafana:
+    profiles: ["disabled"]
+
+  minio:
+    profiles: ["disabled"]

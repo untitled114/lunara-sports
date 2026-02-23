@@ -23,3 +23,9 @@ kafka_messages_consumed_total = Counter(
     "Total Kafka messages consumed by the API",
     ["topic"],
 )
+
+dlq_messages_total = Counter(
+    "dlq_messages_total",
+    "Total messages sent to dead letter queues",
+    ["topic"],
+)

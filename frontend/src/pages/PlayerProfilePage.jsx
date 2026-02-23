@@ -18,7 +18,7 @@ export default function PlayerProfilePage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    
+
     Promise.all([
       fetchPlayerDetail(id).catch(() => null),
       fetchPlayerStats(id).catch(() => null),
@@ -105,7 +105,7 @@ export default function PlayerProfilePage() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        
+
         {/* Statistics Console */}
         <div className="lg:col-span-8 space-y-10">
            <div className="liquid-mirror rounded-[2.5rem] p-1 border-white/5 shadow-2xl overflow-hidden">
@@ -121,7 +121,7 @@ export default function PlayerProfilePage() {
                    ]}
                  />
               </div>
-              
+
               <div className="p-10 animate-scaleIn">
                  {activeTab === 'overview' && (
                    <div className="space-y-12">
@@ -332,7 +332,7 @@ export default function PlayerProfilePage() {
                  <UserIcon className="h-5 w-5 text-indigo-400" />
                  <h3 className="text-sm font-black uppercase tracking-[0.3em] text-white">Bio Telemetry</h3>
               </div>
-              
+
               <div className="space-y-8">
                  {[
                    { label: 'Height / Weight', val: `${player.height || '—'} / ${player.weight || '—'} lbs` },
@@ -347,14 +347,14 @@ export default function PlayerProfilePage() {
                    </div>
                  ))}
               </div>
-              
+
               <div className="pt-6 border-t border-white/5">
                  <button className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-black uppercase tracking-[0.3em] text-white hover:bg-white hover:text-black transition-all duration-500">
                     Full Bio Profile
                  </button>
               </div>
            </div>
-           
+
            <div className="rounded-[2.5rem] deboss p-10 border-white/5 space-y-6">
               <div className="flex items-center gap-3">
                  <MapPin className="h-4 w-4 text-white/50" />

@@ -10,7 +10,7 @@ export function ReactionOverlay() {
   const addReaction = useCallback((emoji) => {
     const id = Date.now() + Math.random();
     const x = 20 + Math.random() * 60; // 20% to 80% width
-    
+
     setReactions(prev => [...prev, { id, emoji, x }]);
     playGlassClick();
 
@@ -28,7 +28,7 @@ export function ReactionOverlay() {
           <div
             key={r.id}
             className="absolute bottom-0 text-3xl animate-reaction-float transition-opacity"
-            style={{ 
+            style={{
               left: `${r.x}%`,
               filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))'
             }}

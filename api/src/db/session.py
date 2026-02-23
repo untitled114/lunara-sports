@@ -38,6 +38,7 @@ async def create_tables() -> None:
     if _engine is None:
         raise RuntimeError("Database not initialized — call init_db() first")
     from .models import Base
+
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("db.tables_created")
@@ -48,6 +49,7 @@ async def seed_teams() -> None:
     if _session_factory is None:
         return
     from sqlalchemy.dialects.postgresql import insert as pg_insert
+
     from .models import Team
 
     teams = [
@@ -84,9 +86,16 @@ async def seed_teams() -> None:
     ]
     async with _session_factory() as session:
         for abbrev, name, conf, div in teams:
-            stmt = pg_insert(Team).values(
-                abbrev=abbrev, name=name, conference=conf, division=div,
-            ).on_conflict_do_nothing(index_elements=["abbrev"])
+            stmt = (
+                pg_insert(Team)
+                .values(
+                    abbrev=abbrev,
+                    name=name,
+                    conference=conf,
+                    division=div,
+                )
+                .on_conflict_do_nothing(index_elements=["abbrev"])
+            )
             await session.execute(stmt)
         await session.commit()
     logger.info("db.teams_seeded", count=len(teams))
@@ -121,9 +130,7 @@ async def db_ping() -> bool:
         return False
     try:
         async with _engine.connect() as conn:
-            await conn.execute(
-                __import__("sqlalchemy").text("SELECT 1")
-            )
+            await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
         return True
     except Exception:
         return False

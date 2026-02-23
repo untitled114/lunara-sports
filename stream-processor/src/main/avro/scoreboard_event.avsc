@@ -1,0 +1,21 @@
+{
+  "type": "record",
+  "name": "ScoreboardEvent",
+  "namespace": "com.playbyplay.avro",
+  "fields": [
+    {"name": "game_id", "type": "string"},
+    {"name": "home_team", "type": "string"},
+    {"name": "away_team", "type": "string"},
+    {"name": "home_team_name", "type": "string"},
+    {"name": "away_team_name", "type": "string"},
+    {"name": "home_score", "type": "int"},
+    {"name": "away_score", "type": "int"},
+    {"name": "status", "type": "string"},
+    {"name": "status_detail", "type": "string"},
+    {"name": "quarter", "type": ["null", "int"], "default": null},
+    {"name": "clock", "type": ["null", "string"], "default": null},
+    {"name": "start_time", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "venue", "type": ["null", "string"], "default": null},
+    {"name": "polled_at", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+  ]
+}

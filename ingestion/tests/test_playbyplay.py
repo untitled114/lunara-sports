@@ -47,7 +47,9 @@ class TestExtractPlayerName:
         assert _extract_player_name("LeBron James makes 15-foot jumper") == "LeBron James"
 
     def test_hyphenated_name(self):
-        assert _extract_player_name("Shai Gilgeous-Alexander makes layup") == "Shai Gilgeous-Alexander"
+        assert (
+            _extract_player_name("Shai Gilgeous-Alexander makes layup") == "Shai Gilgeous-Alexander"
+        )
 
     def test_apostrophe_name(self):
         assert _extract_player_name("De'Aaron Fox misses jump shot") == "De'Aaron Fox"

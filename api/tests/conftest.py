@@ -9,11 +9,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.compiler import compiles
 
-from src.db.models import Base, Game, Leaderboard, Play, Prediction, Team, User
+from src.db.models import Base, Game, Leaderboard, Play, Team, User
 from src.db.session import get_session
 from src.main import app
+
+
+# Make ARRAY render as TEXT in SQLite (PG-only type)
+@compiles(ARRAY, "sqlite")
+def _compile_array_sqlite(type_, compiler, **kw):
+    return "TEXT"
 
 
 @pytest.fixture(scope="session")
@@ -51,13 +59,16 @@ async def session_factory(engine):
 async def seeded_session(session):
     """Session with seed data: 2 teams, 1 game, 3 plays, 1 user."""
     # Teams
-    session.add_all([
-        Team(abbrev="BOS", name="Boston Celtics", conference="Eastern", division="Atlantic"),
-        Team(abbrev="LAL", name="Los Angeles Lakers", conference="Western", division="Pacific"),
-    ])
+    session.add_all(
+        [
+            Team(abbrev="BOS", name="Boston Celtics", conference="Eastern", division="Atlantic"),
+            Team(abbrev="LAL", name="Los Angeles Lakers", conference="Western", division="Pacific"),
+        ]
+    )
     await session.flush()
 
-    # Game
+    # Game — 7:30pm ET on Feb 17 = midnight+30min timezone.utc Feb 18
+    # This falls in the ET-aware query window for Feb 17.
     game = Game(
         id="401810001",
         home_team="BOS",
@@ -67,24 +78,55 @@ async def seeded_session(session):
         away_score=48,
         quarter=3,
         clock="8:30",
-        start_time=datetime(2026, 2, 17, 0, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 2, 18, 0, 30, tzinfo=timezone.utc),
         venue="TD Garden",
     )
     session.add(game)
     await session.flush()
 
     # Plays (explicit IDs for SQLite compatibility)
-    session.add_all([
-        Play(id=1, game_id="401810001", sequence_number=1, quarter=1, clock="12:00",
-             event_type="jump_ball", description="Tip-off", team="BOS",
-             home_score=0, away_score=0),
-        Play(id=2, game_id="401810001", sequence_number=10, quarter=1, clock="11:00",
-             event_type="jump_shot", description="Tatum makes jumper", team="BOS",
-             player_name="Jayson Tatum", home_score=2, away_score=0),
-        Play(id=3, game_id="401810001", sequence_number=20, quarter=1, clock="10:30",
-             event_type="layup", description="LeBron makes layup", team="LAL",
-             player_name="LeBron James", home_score=2, away_score=2),
-    ])
+    session.add_all(
+        [
+            Play(
+                id=1,
+                game_id="401810001",
+                sequence_number=1,
+                quarter=1,
+                clock="12:00",
+                event_type="jump_ball",
+                description="Tip-off",
+                team="BOS",
+                home_score=0,
+                away_score=0,
+            ),
+            Play(
+                id=2,
+                game_id="401810001",
+                sequence_number=10,
+                quarter=1,
+                clock="11:00",
+                event_type="jump_shot",
+                description="Tatum makes jumper",
+                team="BOS",
+                player_name="Jayson Tatum",
+                home_score=2,
+                away_score=0,
+            ),
+            Play(
+                id=3,
+                game_id="401810001",
+                sequence_number=20,
+                quarter=1,
+                clock="10:30",
+                event_type="layup",
+                description="LeBron makes layup",
+                team="LAL",
+                player_name="LeBron James",
+                home_score=2,
+                away_score=2,
+            ),
+        ]
+    )
     await session.flush()
 
     # User
@@ -93,11 +135,17 @@ async def seeded_session(session):
     await session.flush()
 
     # Leaderboard
-    session.add(Leaderboard(
-        user_id=user_id, season="2025-26",
-        total_points=150, correct_predictions=30, total_predictions=50,
-        streak=5, rank=1,
-    ))
+    session.add(
+        Leaderboard(
+            user_id=user_id,
+            season="2025-26",
+            total_points=150,
+            correct_predictions=30,
+            total_predictions=50,
+            streak=5,
+            rank=1,
+        )
+    )
     await session.commit()
 
     yield session
@@ -127,8 +175,13 @@ async def client(seeded_session):
         yield seeded_session
 
     patches = [
-        patch(target, new_callable=lambda: type(mock) if callable(mock) else lambda: mock, return_value=mock() if isinstance(mock, type) else mock)
-        if isinstance(mock, type) else patch(target, mock)
+        patch(
+            target,
+            new_callable=lambda: type(mock) if callable(mock) else lambda: mock,
+            return_value=mock() if isinstance(mock, type) else mock,
+        )
+        if isinstance(mock, type)
+        else patch(target, mock)
         for target, mock in _MOCK_PATCHES
     ]
 
@@ -138,18 +191,36 @@ async def client(seeded_session):
     mock_consumer_instance.stop = MagicMock()
     mock_consumer_cls = MagicMock(return_value=mock_consumer_instance)
 
-    with patch("src.services.game_service.get_cached_game_list", new_callable=AsyncMock, return_value=None), \
-         patch("src.services.game_service.get_cached_game_state", new_callable=AsyncMock, return_value=None), \
-         patch("src.services.game_service.cache_game_list", new_callable=AsyncMock), \
-         patch("src.services.game_service.cache_game_state", new_callable=AsyncMock), \
-         patch("src.main.init_redis", new_callable=AsyncMock), \
-         patch("src.main.close_redis", new_callable=AsyncMock), \
-         patch("src.main.redis_ping", new_callable=AsyncMock, return_value=True), \
-         patch("src.main.db_ping", new_callable=AsyncMock, return_value=True), \
-         patch("src.main.init_db"), \
-         patch("src.main.close_db", new_callable=AsyncMock), \
-         patch("src.main.run_play_poller", new_callable=AsyncMock), \
-         patch("src.main.KafkaConsumerLoop", mock_consumer_cls):
+    with (
+        patch(
+            "src.services.game_service.get_cached_game_list",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "src.services.game_service.get_cached_game_state",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch("src.services.game_service.cache_game_list", new_callable=AsyncMock),
+        patch("src.services.game_service.cache_game_state", new_callable=AsyncMock),
+        patch(
+            "src.services.game_service.espn_client",
+            MagicMock(
+                get_scoreboard=AsyncMock(return_value=None),
+                get_game_summary=AsyncMock(return_value=None),
+                get_game_summary_live=AsyncMock(return_value=None),
+            ),
+        ),
+        patch("src.main.init_redis", new_callable=AsyncMock),
+        patch("src.main.close_redis", new_callable=AsyncMock),
+        patch("src.main.redis_ping", new_callable=AsyncMock, return_value=True),
+        patch("src.main.db_ping", new_callable=AsyncMock, return_value=True),
+        patch("src.main.init_db"),
+        patch("src.main.close_db", new_callable=AsyncMock),
+        patch("src.main.run_play_poller", new_callable=AsyncMock),
+        patch("src.main.KafkaConsumerLoop", mock_consumer_cls),
+    ):
         app.dependency_overrides[get_session] = _override_session
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:

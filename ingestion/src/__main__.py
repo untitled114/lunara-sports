@@ -61,17 +61,11 @@ async def run() -> None:
                     active_game_ids.add(gid)
                     if gid not in pbp_collectors:
                         logger.info("ingestion.pbp_start", game_id=gid, status=status)
-                        pbp_collectors[gid] = PlayByPlayCollector(
-                            settings, producer, gid
-                        )
+                        pbp_collectors[gid] = PlayByPlayCollector(settings, producer, gid)
 
             # 4. Poll all active play-by-play collectors concurrently
             if pbp_collectors:
-                active = {
-                    gid: c
-                    for gid, c in pbp_collectors.items()
-                    if gid in active_game_ids
-                }
+                active = {gid: c for gid, c in pbp_collectors.items() if gid in active_game_ids}
                 if active:
                     await asyncio.gather(
                         *(c.poll() for c in active.values()),
@@ -102,7 +96,7 @@ async def run() -> None:
                     shutdown.wait(),
                     timeout=settings.espn_poll_interval_seconds,
                 )
-            except (TimeoutError, asyncio.TimeoutError):
+            except TimeoutError:
                 pass
 
     finally:

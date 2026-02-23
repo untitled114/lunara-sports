@@ -10,7 +10,7 @@ function TeamRow({ team, idx = 0, baseDelay = 0 }) {
   const logoUrl = getLogoUrl(team.abbrev);
   const colors = getTeamColor(team.abbrev);
   const { playGlassClick } = useTheme();
-  
+
   return (
     <Link
       to={`/team/${team.abbrev}`}

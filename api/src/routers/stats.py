@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, Query
 
-from ..services.stats_service import get_stat_leaders, get_team_stats_list
 from ..models.schemas import StatLeadersResponse, TeamStatsRow
+from ..services.stats_service import get_stat_leaders, get_team_stats_list
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 

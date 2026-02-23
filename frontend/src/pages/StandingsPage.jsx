@@ -100,7 +100,7 @@ function StandingsTable({ teams, title, subtitle, delay = 0 }) {
               const logoUrl = getLogoUrl(team.abbrev);
               const isTop = team.rank <= 6;
               const isPlayIn = team.rank > 6 && team.rank <= 10;
-              
+
               return (
                 <tr
                   key={team.abbrev}
@@ -111,7 +111,7 @@ function StandingsTable({ teams, title, subtitle, delay = 0 }) {
                   <td className="py-5 px-6 relative overflow-hidden">
                     {/* Team Color Accent */}
                     <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: colors.primary }} />
-                    
+
                     <div className="flex items-center gap-5">
                       <div className="relative flex items-center justify-center w-6">
                         <span className={`text-sm font-black tabular-nums transition-all ${isTop ? 'text-[var(--green)]' : isPlayIn ? 'text-yellow-500' : 'text-white/10'}`}>
@@ -316,7 +316,7 @@ export default function StandingsPage() {
           <div key="conference" className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start relative">
             {/* Conference Divider Line */}
             <div className="hidden lg:block absolute left-1/2 top-20 bottom-20 w-px bg-gradient-to-b from-transparent via-white/5 to-transparent -translate-x-1/2" />
-            
+
             <StandingsTable teams={eastern} title="Eastern" subtitle="CONFERENCE" delay={0.3} />
             <StandingsTable teams={western} title="Western" subtitle="CONFERENCE" delay={0.45} />
           </div>

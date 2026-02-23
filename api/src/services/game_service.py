@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
 
-# US Eastern offset (EST = UTC-5; simplification — ignoring DST for now)
+# US Eastern offset (EST = timezone.utc-5; simplification — ignoring DST for now)
 _ET_OFFSET = timedelta(hours=5)
 
 import structlog
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ..db.models import Game
 from ..db.redis import (
@@ -94,7 +94,7 @@ async def get_game(session: AsyncSession, game_id: str) -> dict | None:
 
 async def _query_pg(session: AsyncSession, target: date) -> list[dict]:
     """Query PostgreSQL for games on a given date (ET-aware window)."""
-    # NBA games are scheduled in ET. A 7pm ET game on Feb 19 = midnight UTC Feb 20.
+    # NBA games are scheduled in ET. A 7pm ET game on Feb 19 = midnight timezone.utc Feb 20.
     # Shift the window by 5 hours (EST) so queries match the local game date.
     et_offset = timedelta(hours=5)
     day_start = datetime.combine(target, time.min, tzinfo=timezone.utc) + et_offset
@@ -160,7 +160,11 @@ async def _fetch_and_upsert_espn(session: AsyncSession, target: date) -> list[di
 
             # Parse start time
             start_str = comp.get("date", event.get("date", ""))
-            start_time = datetime.fromisoformat(start_str.replace("Z", "+00:00")) if start_str else datetime.now(timezone.utc)
+            start_time = (
+                datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+                if start_str
+                else datetime.now(timezone.utc)
+            )
 
             # Venue
             venue = comp.get("venue", {}).get("fullName", "")
@@ -174,43 +178,49 @@ async def _fetch_and_upsert_espn(session: AsyncSession, target: date) -> list[di
                 clock = status_detail.get("displayClock", None)
 
             # Upsert into PG
-            stmt = pg_insert(Game).values(
-                id=game_id,
-                home_team=home_team,
-                away_team=away_team,
-                status=status,
-                home_score=home_score,
-                away_score=away_score,
-                quarter=quarter,
-                clock=clock,
-                start_time=start_time,
-                venue=venue,
-            ).on_conflict_do_update(
-                index_elements=[Game.id],
-                set_={
-                    "status": status,
-                    "home_score": home_score,
-                    "away_score": away_score,
-                    "quarter": quarter,
-                    "clock": clock,
-                    "venue": venue,
-                },
+            stmt = (
+                pg_insert(Game)
+                .values(
+                    id=game_id,
+                    home_team=home_team,
+                    away_team=away_team,
+                    status=status,
+                    home_score=home_score,
+                    away_score=away_score,
+                    quarter=quarter,
+                    clock=clock,
+                    start_time=start_time,
+                    venue=venue,
+                )
+                .on_conflict_do_update(
+                    index_elements=[Game.id],
+                    set_={
+                        "status": status,
+                        "home_score": home_score,
+                        "away_score": away_score,
+                        "quarter": quarter,
+                        "clock": clock,
+                        "venue": venue,
+                    },
+                )
             )
             await session.execute(stmt)
 
-            rows.append({
-                "id": game_id,
-                "home_team": home_team,
-                "away_team": away_team,
-                "home_score": home_score,
-                "away_score": away_score,
-                "status": status,
-                "quarter": quarter,
-                "clock": clock,
-                "start_time": start_time.isoformat(),
-                "venue": venue,
-                "updated_at": None,
-            })
+            rows.append(
+                {
+                    "id": game_id,
+                    "home_team": home_team,
+                    "away_team": away_team,
+                    "home_score": home_score,
+                    "away_score": away_score,
+                    "status": status,
+                    "quarter": quarter,
+                    "clock": clock,
+                    "start_time": start_time.isoformat(),
+                    "venue": venue,
+                    "updated_at": None,
+                }
+            )
         except Exception as e:
             logger.warning("games.espn_parse_error", event_id=event.get("id"), error=str(e))
             continue

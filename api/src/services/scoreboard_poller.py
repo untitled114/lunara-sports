@@ -97,7 +97,7 @@ def _parse_event(event: dict) -> dict | None:
 
 
 def _eastern_today() -> date:
-    """Return today's date in US Eastern time (UTC-5)."""
+    """Return today's date in US Eastern time (timezone.utc-5)."""
     utc_now = datetime.now(timezone.utc)
     et_now = utc_now - timedelta(hours=5)
     return et_now.date()
@@ -129,27 +129,31 @@ async def _poll_scoreboard() -> None:
                 continue
 
             # Upsert into PG
-            stmt = pg_insert(Game).values(
-                id=parsed["id"],
-                home_team=parsed["home_team"],
-                away_team=parsed["away_team"],
-                status=parsed["status"],
-                home_score=parsed["home_score"],
-                away_score=parsed["away_score"],
-                quarter=parsed["quarter"],
-                clock=parsed["clock"],
-                start_time=parsed["start_time"],
-                venue=parsed["venue"],
-            ).on_conflict_do_update(
-                index_elements=[Game.id],
-                set_={
-                    "status": parsed["status"],
-                    "home_score": parsed["home_score"],
-                    "away_score": parsed["away_score"],
-                    "quarter": parsed["quarter"],
-                    "clock": parsed["clock"],
-                    "venue": parsed["venue"],
-                },
+            stmt = (
+                pg_insert(Game)
+                .values(
+                    id=parsed["id"],
+                    home_team=parsed["home_team"],
+                    away_team=parsed["away_team"],
+                    status=parsed["status"],
+                    home_score=parsed["home_score"],
+                    away_score=parsed["away_score"],
+                    quarter=parsed["quarter"],
+                    clock=parsed["clock"],
+                    start_time=parsed["start_time"],
+                    venue=parsed["venue"],
+                )
+                .on_conflict_do_update(
+                    index_elements=[Game.id],
+                    set_={
+                        "status": parsed["status"],
+                        "home_score": parsed["home_score"],
+                        "away_score": parsed["away_score"],
+                        "quarter": parsed["quarter"],
+                        "clock": parsed["clock"],
+                        "venue": parsed["venue"],
+                    },
+                )
             )
             await session.execute(stmt)
 
@@ -163,10 +167,13 @@ async def _poll_scoreboard() -> None:
             # Cache individual live game states in Redis + broadcast via WebSocket
             if parsed["status"] in ("live", "halftime"):
                 await cache_game_state(parsed["id"], row)
-                await manager.broadcast(parsed["id"], {
-                    "type": "game_update",
-                    "data": row,
-                })
+                await manager.broadcast(
+                    parsed["id"],
+                    {
+                        "type": "game_update",
+                        "data": row,
+                    },
+                )
 
         await session.commit()
 

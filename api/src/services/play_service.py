@@ -23,12 +23,7 @@ async def get_plays(
     Supports filtering by quarter and cursor-based pagination via
     after_sequence (returns plays with sequence_number > after_sequence).
     """
-    stmt = (
-        select(Play)
-        .where(Play.game_id == game_id)
-        .order_by(Play.sequence_number)
-        .limit(limit)
-    )
+    stmt = select(Play).where(Play.game_id == game_id).order_by(Play.sequence_number).limit(limit)
 
     if quarter is not None:
         stmt = stmt.where(Play.quarter == quarter)

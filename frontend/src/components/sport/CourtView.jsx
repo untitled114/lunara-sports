@@ -37,7 +37,7 @@ export function CourtView({ game, plays = [] }) {
         {/* Skeuomorphic Court */}
         <div className="relative aspect-[16/9] w-full bg-[#050a18] rounded-[2rem] border border-white/10 shadow-inner overflow-hidden court-grid group/court">
            {/* Dynamic Territory Glow */}
-           <div 
+           <div
              className="absolute inset-0 opacity-10 transition-opacity duration-1000"
              style={{
                background: `linear-gradient(90deg, ${awayColors.primary} 0%, transparent 50%, ${homeColors.primary} 100%)`
@@ -49,16 +49,16 @@ export function CourtView({ game, plays = [] }) {
               <div className="h-full w-px bg-white/10" />
               <div className="h-32 w-32 rounded-full border border-white/10" />
            </div>
-           
+
            {/* Interactive Zones */}
-           <button 
+           <button
              onClick={() => handleZoneClick('Left Paint')}
              className="absolute inset-y-0 left-0 w-1/4 bg-white/[0.02] border-r border-white/5 hover:bg-white/5 transition-colors group/zone"
            >
               <span className="absolute top-4 left-4 text-[13px] font-black text-white/10 group-hover/zone:text-white/40 uppercase tracking-widest">Left Paint</span>
            </button>
-           
-           <button 
+
+           <button
              onClick={() => handleZoneClick('Right Paint')}
              className="absolute inset-y-0 right-0 w-1/4 bg-white/[0.02] border-l border-white/5 hover:bg-white/5 transition-colors group/zone"
            >
@@ -66,23 +66,23 @@ export function CourtView({ game, plays = [] }) {
            </button>
 
            {/* Live Shot Pings */}
-           <div 
+           <div
              className="absolute top-[40%] left-[15%] h-4 w-4 rounded-full border-2 border-white/50 animate-ping cursor-help"
              style={{ backgroundColor: awayColors.primary, boxShadow: `0 0 20px ${awayColors.primary}` }}
              title="Curry: 3PT Made"
            />
-           <div 
+           <div
              className="absolute top-[65%] right-[18%] h-4 w-4 rounded-full border-2 border-white/50 animate-ping cursor-help"
              style={{ backgroundColor: homeColors.primary, boxShadow: `0 0 20px ${homeColors.primary}` }}
              title="James: Layup Made"
            />
-           
+
            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-2 glass-pill rounded-full border-white/10 shadow-2xl backdrop-blur-xl">
               <span className="text-[13px] font-black text-white uppercase tracking-[0.5em] ml-1">Live Telemetry Active</span>
            </div>
         </div>
       </div>
-      
+
       {/* Precision Detail */}
       <div className="px-10 pb-8 flex justify-between items-center text-[13px] font-black text-white/50 uppercase tracking-widest">
          <div className="flex gap-4">
