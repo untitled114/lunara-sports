@@ -152,7 +152,9 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      ESPN_POLL_INTERVAL_SECONDS: ${ESPN_POLL_INTERVAL_SECONDS:-30}
+      ESPN_POLL_INTERVAL_SECONDS: ${ESPN_POLL_INTERVAL_SECONDS:-5}
+    volumes:
+      - ./schemas:/schemas:ro
     deploy:
       resources:
         limits:

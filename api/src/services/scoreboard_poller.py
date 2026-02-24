@@ -21,7 +21,7 @@ from .team_mapping import from_espn_abbrev
 
 logger = structlog.get_logger(__name__)
 
-POLL_INTERVAL = 10  # seconds
+POLL_INTERVAL = 5  # seconds
 
 
 def _parse_event(event: dict) -> dict | None:

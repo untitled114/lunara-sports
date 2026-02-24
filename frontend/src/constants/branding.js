@@ -3,7 +3,7 @@ export const BRANDING_IMAGES = {
     nba: '/branding/nba-logo.jpg',
     nfl: '/branding/nfl-logo.jpg',
     mlb: '/branding/mllb-logo.jpg',
-    general: '/branding/branding-1.jpg'
+    general: '/branding/branding-1.webp'
   },
   backgrounds: {
     main: '/branding/background-1.jpg',

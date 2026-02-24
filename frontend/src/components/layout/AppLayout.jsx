@@ -87,7 +87,7 @@ const AppLayout = () => {
 
       {/* Background layers — absolute within fixed shell */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none' }}>
-        <img src="/branding/background-1-alt.jpg" alt="" width={1920} height={1080} className="w-full h-full object-cover opacity-40" />
+        <img src="/branding/background-1-alt.webp" alt="" width={1920} height={1080} className="w-full h-full object-cover opacity-40" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#000105]/30 via-[#000105]/60 to-[#000105]" />
       </div>
       <div
@@ -209,12 +209,14 @@ const AppLayout = () => {
 
                   <div className="flex items-center gap-2">
                     <button
+                      aria-label="Open search"
                       onClick={() => { playGlassClick(); window.dispatchEvent(new KeyboardEvent('keydown', { 'metaKey': true, 'key': 'k' })); }}
                       className="h-12 w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl"
                     >
                       <Search className="h-5 w-5" />
                     </button>
                     <button
+                      aria-label="Open settings"
                       onClick={() => { playGlassClick(); setSettingsOpen(true); }}
                       className="h-12 w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl group/settings"
                     >
@@ -223,6 +225,7 @@ const AppLayout = () => {
                   </div>
 
                   <button
+                    aria-label="Toggle navigation menu"
                     className="lg:hidden h-12 w-12 flex flex-col items-center justify-center gap-1.5 rounded-xl bg-white/5 border border-white/5"
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   >

@@ -40,6 +40,10 @@ export default {
         'slideInDown': 'slideInDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
       },
       keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
         scaleIn: {
           '0%': { transform: 'scale(0.95)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },

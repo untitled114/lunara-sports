@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "localhost:9092"
     schema_registry_url: str = "http://localhost:8081"
     espn_base_url: str = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
-    espn_poll_interval_seconds: int = 30
+    espn_poll_interval_seconds: int = 5
     espn_date: str | None = None  # Override date: YYYYMMDD format, None = today/next
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
