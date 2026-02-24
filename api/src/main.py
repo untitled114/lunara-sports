@@ -211,7 +211,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
     await manager.connect(websocket, game_id)
     try:
         # Send recent play history
-        recent = await get_recent_plays(game_id, limit=50)
+        recent = await get_recent_plays(game_id, limit=500)
         await websocket.send_text(
             json.dumps(
                 {
