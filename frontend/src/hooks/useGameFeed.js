@@ -122,10 +122,16 @@ export function useGameFeed(gameId, status = "scheduled") {
         const msg = JSON.parse(event.data);
 
         if (msg.type === "history" && Array.isArray(msg.data)) {
-          const sorted = [...msg.data].sort(
-            (a, b) => b.sequence_number - a.sequence_number,
-          );
-          setPlays(sorted);
+          // Merge WS history with existing plays (don't overwrite REST data)
+          setPlays((prev) => {
+            const existing = new Map(prev.map((p) => [p.sequence_number, p]));
+            for (const p of msg.data) {
+              existing.set(p.sequence_number, p);
+            }
+            return [...existing.values()].sort(
+              (a, b) => b.sequence_number - a.sequence_number,
+            );
+          });
         } else if (msg.type === "play" && msg.data && !Array.isArray(msg.data)) {
           setPlays((prev) => {
             const play = msg.data;
