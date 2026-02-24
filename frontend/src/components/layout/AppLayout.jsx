@@ -18,7 +18,7 @@ function SegmentedControl({ options, value, onChange }) {
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className={`flex-1 py-2.5 px-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`flex-1 py-2.5 px-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
             value === opt.value
               ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]'
               : 'bg-white/5 text-white/30 hover:text-white/60 hover:bg-white/10'
@@ -87,7 +87,7 @@ const AppLayout = () => {
 
       {/* Background layers — absolute within fixed shell */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none' }}>
-        <img src="/branding/background-1-alt.jpg" alt="" className="w-full h-full object-cover opacity-40" />
+        <img src="/branding/background-1-alt.jpg" alt="" width={1920} height={1080} className="w-full h-full object-cover opacity-40" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#000105]/30 via-[#000105]/60 to-[#000105]" />
       </div>
       <div
@@ -106,7 +106,7 @@ const AppLayout = () => {
               <img
                 src={transitionImage || BRANDING_IMAGES.transitions.main1}
                 alt=""
-                className="w-full h-full object-cover animate-scaleIn transition-all duration-1000"
+                className="w-full h-full object-cover animate-scaleIn transition-transform duration-1000"
               />
               <div className="absolute inset-0 bg-white/40 mix-blend-overlay" />
            </div>
@@ -182,7 +182,7 @@ const AppLayout = () => {
                         key={link.path}
                         to={link.path}
                         onClick={handleNavClick}
-                        className={`relative h-12 px-8 flex items-center gap-3 rounded-xl transition-all duration-500 group/nav ${
+                        className={`relative h-12 px-8 flex items-center gap-3 rounded-xl transition-colors duration-500 group/nav ${
                           active ? 'bg-white text-black shadow-2xl' : 'text-white/40 hover:text-white hover:bg-white/5'
                         }`}
                       >
@@ -210,13 +210,13 @@ const AppLayout = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => { playGlassClick(); window.dispatchEvent(new KeyboardEvent('keydown', { 'metaKey': true, 'key': 'k' })); }}
-                      className="h-12 w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all shadow-xl"
+                      className="h-12 w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl"
                     >
                       <Search className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => { playGlassClick(); setSettingsOpen(true); }}
-                      className="h-12 w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all shadow-xl group/settings"
+                      className="h-12 w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl group/settings"
                     >
                       <Settings className={`h-5 w-5 group-hover/settings:rotate-180 transition-transform duration-[1.5s] ${settingsOpen ? 'text-indigo-400' : ''}`} />
                     </button>
@@ -226,9 +226,9 @@ const AppLayout = () => {
                     className="lg:hidden h-12 w-12 flex flex-col items-center justify-center gap-1.5 rounded-xl bg-white/5 border border-white/5"
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   >
-                    <div className={`h-0.5 bg-white/60 transition-all ${mobileMenuOpen ? 'w-6 rotate-45 translate-y-2' : 'w-6'}`} />
-                    <div className={`h-0.5 bg-white/60 transition-all ${mobileMenuOpen ? 'opacity-0' : 'w-4'}`} />
-                    <div className={`h-0.5 bg-white/60 transition-all ${mobileMenuOpen ? 'w-6 -rotate-45 -translate-y-2' : 'w-6'}`} />
+                    <div className={`h-0.5 w-6 bg-white/60 transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+                    <div className={`h-0.5 bg-white/60 transition-opacity ${mobileMenuOpen ? 'opacity-0 w-4' : 'w-4'}`} />
+                    <div className={`h-0.5 w-6 bg-white/60 transition-transform ${mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
                   </button>
                 </div>
               </div>
@@ -291,7 +291,7 @@ const AppLayout = () => {
                        </div>
                        <button
                          onClick={toggleReducedMotion}
-                         className="w-full flex items-center justify-between p-4 rounded-xl deboss hover:border-indigo-500/30 transition-all group"
+                         className="w-full flex items-center justify-between p-4 rounded-xl deboss hover:border-indigo-500/30 transition-colors group"
                        >
                          <div className="flex items-center gap-3">
                             <Eye className="h-4 w-4 text-white/30" />
@@ -307,7 +307,7 @@ const AppLayout = () => {
                     <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Audio Hardware</span>
                     <button
                       onClick={toggleSound}
-                      className="w-full flex items-center justify-between p-5 rounded-[1.5rem] deboss hover:border-indigo-500/30 transition-all group"
+                      className="w-full flex items-center justify-between p-5 rounded-[1.5rem] deboss hover:border-indigo-500/30 transition-colors group"
                     >
                       <div className="flex items-center gap-4">
                          <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
@@ -358,7 +358,7 @@ const AppLayout = () => {
                           <button
                             key={team}
                             onClick={() => selectFavoriteTeam(team)}
-                            className={`h-10 rounded-lg border flex items-center justify-center text-[9px] font-black transition-all ${favoriteTeam === team ? 'bg-white text-black border-white shadow-2xl scale-110' : 'bg-white/5 border-white/5 text-white/20 hover:border-white/20'}`}
+                            className={`h-10 rounded-lg border flex items-center justify-center text-[9px] font-black transition-colors ${favoriteTeam === team ? 'bg-white text-black border-white shadow-2xl scale-110' : 'bg-white/5 border-white/5 text-white/20 hover:border-white/20'}`}
                           >
                             {team}
                           </button>
@@ -409,7 +409,7 @@ const AppLayout = () => {
                        <Link
                          to="/terms"
                          onClick={() => setSettingsOpen(false)}
-                         className="flex items-center justify-between p-4 rounded-xl deboss hover:bg-white/5 transition-all group"
+                         className="flex items-center justify-between p-4 rounded-xl deboss hover:bg-white/5 transition-colors group"
                        >
                          <div className="flex items-center gap-3">
                             <FileText className="h-4 w-4 text-white/30 group-hover:text-indigo-400 transition-colors" />
@@ -420,7 +420,7 @@ const AppLayout = () => {
                        <Link
                          to="/privacy"
                          onClick={() => setSettingsOpen(false)}
-                         className="flex items-center justify-between p-4 rounded-xl deboss hover:bg-white/5 transition-all group"
+                         className="flex items-center justify-between p-4 rounded-xl deboss hover:bg-white/5 transition-colors group"
                        >
                          <div className="flex items-center gap-3">
                             <Shield className="h-4 w-4 text-white/30 group-hover:text-indigo-400 transition-colors" />
@@ -474,7 +474,7 @@ const AppLayout = () => {
                     key={link.path}
                     to={link.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`text-xl p-6 rounded-2xl transition-all uppercase tracking-widest font-black ${
+                    className={`text-xl p-6 rounded-2xl transition-colors uppercase tracking-widest font-black ${
                       isActive(link.path) ? 'bg-white text-black shadow-2xl translate-x-2' : 'text-white/20 hover:text-white hover:bg-white/5'
                     }`}
                   >

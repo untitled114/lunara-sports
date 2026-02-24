@@ -333,14 +333,16 @@ body {
   background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(0, 0, 0, 0) 100%);
   opacity: 0.1;
   position: absolute;
-  bottom: 100%;
+  top: 0;
+  left: 0;
   animation: scan 4s linear infinite;
   pointer-events: none;
+  will-change: transform;
 }
 
 @keyframes scan {
-  0% { bottom: 100%; }
-  100% { bottom: -100px; }
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(calc(100vh + 100px)); }
 }
 
 @keyframes diagnostic-flash {

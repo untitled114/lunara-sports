@@ -28,7 +28,7 @@ function TickerItem({ game }) {
     <Link
       to={`/game/${game.id}`}
       onClick={() => playGlassClick()}
-      className={`relative flex items-stretch px-8 border-r border-white/5 hover:bg-white/5 transition-all min-w-[300px] group/tick h-full ${isLive ? 'bg-indigo-500/[0.03]' : ''}`}
+      className={`relative flex items-stretch px-8 border-r border-white/5 hover:bg-white/5 transition-colors min-w-[300px] group/tick h-full ${isLive ? 'bg-indigo-500/[0.03]' : ''}`}
     >
       {/* Hardware Link Detail */}
       <div className="absolute top-0 left-0 bottom-0 w-px bg-gradient-to-b from-white/10 via-transparent to-white/10" />
@@ -52,7 +52,7 @@ function TickerItem({ game }) {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
             <div className="h-9 w-9 rounded-xl bg-[#0a0f1e] border border-white/10 flex items-center justify-center p-1.5 shadow-2xl shrink-0 group-hover/tick:scale-110 transition-transform ring-1 ring-white/5">
-               <img src={awayLogo} alt="" className="h-full w-full object-contain drop-shadow-md" />
+               <img src={awayLogo} alt="" width={24} height={24} className="h-full w-full object-contain drop-shadow-md" />
             </div>
             <div className="flex flex-col">
               <span className={`text-sm font-black uppercase tracking-tight truncate ${
@@ -77,7 +77,7 @@ function TickerItem({ game }) {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
             <div className="h-9 w-9 rounded-xl bg-[#0a0f1e] border border-white/10 flex items-center justify-center p-1.5 shadow-2xl shrink-0 group-hover/tick:scale-110 transition-transform ring-1 ring-white/5">
-               <img src={homeLogo} alt="" className="h-full w-full object-contain drop-shadow-md" />
+               <img src={homeLogo} alt="" width={24} height={24} className="h-full w-full object-contain drop-shadow-md" />
             </div>
             <div className="flex flex-col">
               <span className={`text-sm font-black uppercase tracking-tight truncate ${
@@ -125,7 +125,7 @@ function TickerItem({ game }) {
             )}
           </div>
         ) : isFinal ? (
-          <div className="flex flex-col items-center gap-2 opacity-70 group-hover/tick:opacity-100 transition-all duration-500">
+          <div className="flex flex-col items-center gap-2 opacity-70 group-hover/tick:opacity-100 transition-opacity duration-500">
             <Database className="h-4 w-4 text-white/70" />
             <span className="text-[10px] font-black text-white/70 uppercase tracking-[0.3em]">Archived</span>
             <div className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[9px] font-black text-white/90">
@@ -162,7 +162,19 @@ export function ScoreTicker() {
   useEffect(() => { loadGames(); }, []);
   usePolling(loadGames);
 
-  if (games.length === 0) return null;
+  if (games.length === 0) {
+    return (
+      <div className="h-[120px] flex items-center justify-center relative">
+        <div className="absolute inset-0 bg-[#050a18]/95 backdrop-blur-3xl border-b border-white/10 overflow-hidden">
+          <div className="absolute inset-0 texture-mesh opacity-[0.03] pointer-events-none" />
+        </div>
+        <div className="relative z-10 flex items-center gap-3">
+          <Signal className="h-4 w-4 text-white/20" />
+          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Loading Telemetry...</span>
+        </div>
+      </div>
+    );
+  }
 
   // Sort: live first, then scheduled, then final
   const sorted = [...games].sort((a, b) => {
@@ -216,7 +228,7 @@ export function ScoreTicker() {
       <Link
         to="/scoreboard"
         onClick={() => playGlassClick()}
-        className="flex-shrink-0 px-12 flex flex-col items-center justify-center border-l border-white/10 hover:bg-white/[0.05] transition-all min-w-[180px] group/archive bg-black/40 relative overflow-hidden"
+        className="flex-shrink-0 px-12 flex flex-col items-center justify-center border-l border-white/10 hover:bg-white/[0.05] transition-colors min-w-[180px] group/archive bg-black/40 relative overflow-hidden"
       >
         <div className="absolute inset-0 bg-indigo-500/[0.02] group-hover/archive:bg-indigo-500/[0.08] transition-colors duration-1000" />
         <div className="flex flex-col items-center gap-3 relative z-10">
