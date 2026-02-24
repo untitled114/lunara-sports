@@ -259,7 +259,7 @@ const AppLayout = () => {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] animate-fadeIn" onClick={() => setSettingsOpen(false)} aria-hidden="true" />
             <div className="fixed top-0 right-0 bottom-0 w-80 bg-[#050a18] z-[210] shadow-2xl border-l border-white/10 animate-slideInRight flex flex-col" role="dialog" aria-label="Settings" aria-modal="true">
               <div className="p-10 border-b border-white/5 flex items-center justify-between bg-white/5 relative overflow-hidden">
-                 <img src={BRANDING_IMAGES.logos.general} alt="" className="absolute inset-0 w-full h-full object-cover opacity-10" />
+                 <img src={BRANDING_IMAGES.logos.general} alt="" width={320} height={80} loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-10" />
                  <div className="flex items-center gap-4 relative z-10">
                     <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
                        <Settings className="h-4 w-4 text-indigo-400" />
@@ -436,7 +436,7 @@ const AppLayout = () => {
               </div>
 
               <div className="p-8 bg-black/40 border-t border-white/5 relative overflow-hidden">
-                 <img src={BRANDING_IMAGES.transitions.brand2} alt="" className="absolute inset-0 w-full h-full object-cover opacity-5" />
+                 <img src={BRANDING_IMAGES.transitions.brand2} alt="" width={320} height={60} loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-5" />
                  <p className="relative z-10 text-[9px] font-black uppercase tracking-[0.5em] text-white/10 text-center italic">Hardware V1.04.2</p>
               </div>
             </div>

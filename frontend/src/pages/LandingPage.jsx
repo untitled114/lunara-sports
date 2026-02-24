@@ -28,7 +28,7 @@ function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var
       >
         {image && (
           <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-40 transition-opacity duration-1000 pointer-events-none">
-            <img src={image} alt="" className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-1000" />
+            <img src={image} alt="" width={600} height={400} loading="lazy" className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-1000" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#050a18] via-[#050a18]/80 to-transparent" />
           </div>
         )}
@@ -38,7 +38,7 @@ function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var
             <div className="absolute inset-0 opacity-10 blur-xl" style={{ backgroundColor: color }} />
             <Icon className="h-8 w-8 relative z-10" style={{ color: color }} />
           </div>
-          <h3 className="text-2xl font-black uppercase tracking-tight text-white mb-5 leading-tight">{title}</h3>
+          <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-5 leading-tight">{title}</h2>
           <p className="text-[13px] font-bold text-white/80 uppercase tracking-[0.3em] leading-relaxed mb-10">{desc}</p>
           <div className="flex items-center gap-3 text-sm font-black uppercase tracking-[0.4em] text-white/30 group-hover:text-white transition-all">
             Explore <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
@@ -74,9 +74,7 @@ export default function LandingPage() {
           <div className="drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
             <h1 className="text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic">
               Lunara
-            </h1>
-            <h1 className="text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic opacity-90">
-              Sports
+              <span className="block opacity-90">Sports</span>
             </h1>
           </div>
 
@@ -142,7 +140,7 @@ export default function LandingPage() {
       {/* What We Offer */}
       <div className="pb-40">
         <div className="liquid-mirror rounded-[5rem] p-16 md:p-24 relative overflow-hidden group shadow-[inset_0_0_150px_rgba(0,0,0,0.8)] border-white/5 luxury-edge deep-occlusion">
-           <img src={BRANDING_IMAGES.transitions.main1} alt="" className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-30 transition-opacity duration-[2s]" />
+           <img src={BRANDING_IMAGES.transitions.main1} alt="" width={1200} height={800} loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-30 transition-opacity duration-[2s]" />
            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent" />
 
            <div className="relative z-10">
@@ -165,7 +163,7 @@ export default function LandingPage() {
                           <BarChart2 className="h-5 w-5" />
                        </div>
                        <div>
-                          <h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Live Stats & Scores</h4>
+                          <h3 className="text-sm font-black text-white uppercase tracking-widest mb-1">Live Stats & Scores</h3>
                           <p className="text-sm text-white/80 leading-relaxed">Real-time scoreboards, box scores, and play-by-play across NBA — with MLB and NFL on the way.</p>
                        </div>
                     </div>
@@ -175,7 +173,7 @@ export default function LandingPage() {
                           <Brain className="h-5 w-5" />
                        </div>
                        <div>
-                          <h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">ML-Powered Picks</h4>
+                          <h3 className="text-sm font-black text-white uppercase tracking-widest mb-1">ML-Powered Picks</h3>
                           <p className="text-sm text-white/80 leading-relaxed">Our Sport-suite models analyze 100+ features per prop across 7 sportsbooks to find edges others miss. Player points and rebounds picks with verified win rates.</p>
                        </div>
                     </div>
@@ -185,7 +183,7 @@ export default function LandingPage() {
                           <Users className="h-5 w-5" />
                        </div>
                        <div>
-                          <h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Player Profiles</h4>
+                          <h3 className="text-sm font-black text-white uppercase tracking-widest mb-1">Player Profiles</h3>
                           <p className="text-sm text-white/80 leading-relaxed">Full rosters for all 30 teams. Season averages, recent game logs, shooting splits, and performance trends for every player.</p>
                        </div>
                     </div>

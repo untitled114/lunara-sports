@@ -78,7 +78,7 @@ export default function PlayerProfilePage() {
         {/* Player Image - Cinematic Scale */}
         <div className="absolute right-10 bottom-0 h-full w-[40%] flex items-end justify-end pointer-events-none overflow-hidden">
            {player.headshot_url && (
-             <img src={player.headshot_url} alt={player.name} className="h-[110%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] translate-y-10" />
+             <img src={player.headshot_url} alt={player.name} width={350} height={254} className="h-[110%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] translate-y-10" />
            )}
         </div>
 
@@ -88,7 +88,7 @@ export default function PlayerProfilePage() {
         <div className="relative z-10 p-12 w-full flex items-end justify-between">
            <div className="flex items-center gap-10 max-w-[55%]">
               <div className="h-28 w-28 rounded-[2rem] bg-[#050a18] border-t-2 border-white/20 border-x border-white/5 border-b-2 border-black/80 shadow-2xl p-5 overflow-hidden flex items-center justify-center shrink-0">
-                 <img src={teamLogo} alt={player.team_abbrev} className="w-full h-full object-contain drop-shadow-2xl" />
+                 <img src={teamLogo} alt={player.team_abbrev} width={72} height={72} className="w-full h-full object-contain drop-shadow-2xl" />
               </div>
 
               <div className="flex flex-col gap-2">
@@ -199,7 +199,7 @@ export default function PlayerProfilePage() {
                                        <div className="flex items-center gap-5 p-5 flex-1 min-w-0">
                                           {/* Opponent Logo */}
                                           <div className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 p-2 shrink-0 overflow-hidden shadow-lg">
-                                             <img src={oppLogo} alt={g.opponent} className="w-full h-full object-contain" />
+                                             <img src={oppLogo} alt={g.opponent} width={32} height={32} loading="lazy" className="w-full h-full object-contain" />
                                           </div>
 
                                           {/* Main stats */}
@@ -330,7 +330,7 @@ export default function PlayerProfilePage() {
            <div className="liquid-mirror rounded-[2.5rem] p-10 space-y-10 luxury-edge shadow-2xl">
               <div className="flex items-center gap-4">
                  <UserIcon className="h-5 w-5 text-indigo-400" />
-                 <h3 className="text-sm font-black uppercase tracking-[0.3em] text-white">Bio Telemetry</h3>
+                 <h2 className="text-sm font-black uppercase tracking-[0.3em] text-white">Bio Telemetry</h2>
               </div>
 
               <div className="space-y-8">

@@ -81,7 +81,7 @@ export default function PlayersPage() {
                       <div className="relative shrink-0">
                         <div className="h-12 w-12 rounded-full bg-[#050a18] border border-white/10 flex items-center justify-center overflow-hidden shadow-xl relative z-10">
                           {p.headshot_url ? (
-                            <img src={p.headshot_url} alt={p.name} className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-500" />
+                            <img src={p.headshot_url} alt={p.name} width={96} height={70} loading="lazy" className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-500" />
                           ) : (
                             <div className="text-sm font-black text-white/70 uppercase">{p.name[0]}</div>
                           )}
