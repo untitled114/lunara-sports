@@ -125,7 +125,7 @@ function StandingsTable({ teams, title, subtitle, delay = 0 }) {
                       <div className="relative">
                         <div className="h-11 w-11 rounded-2xl bg-[#050a18] flex items-center justify-center border-t border-white/10 border-b border-black/40 shadow-2xl relative z-10 p-2 overflow-hidden">
                           <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-                          <img src={logoUrl} alt={team.abbrev} className="w-full h-full object-contain drop-shadow-lg group-hover:scale-110 transition-transform duration-500" />
+                          <img src={logoUrl} alt={team.abbrev} width={44} height={44} loading="lazy" className="w-full h-full object-contain drop-shadow-lg group-hover:scale-110 transition-transform duration-500" />
                         </div>
                         <div
                           className="absolute -inset-2 rounded-2xl blur-xl opacity-0 group-hover:opacity-20 transition-opacity"

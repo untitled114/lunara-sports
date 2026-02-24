@@ -38,7 +38,7 @@ function LeaderboardCard({ title, icon: Icon, data, unit, delay = 0 }) {
                     <div className="h-12 w-12 rounded-full bg-[#050a18] border border-white/10 overflow-hidden shadow-lg shrink-0 relative">
                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                        {row.headshot_url ? (
-                         <img src={row.headshot_url} alt={row.player} className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-500" />
+                         <img src={row.headshot_url} alt={row.player} width={96} height={70} loading="lazy" className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-500" />
                        ) : (
                          <div className="w-full h-full flex items-center justify-center text-sm font-black text-white/10 uppercase">{row.player[0]}</div>
                        )}
@@ -178,7 +178,7 @@ export default function StatsPage() {
                    <Award className="h-10 w-10 text-indigo-400" />
                 </div>
                 <div>
-                   <h3 className="text-2xl font-black uppercase tracking-tight text-white mb-2 leading-none">Advanced Analytics Console</h3>
+                   <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-2 leading-none">Advanced Analytics Console</h2>
                    <p className="text-sm font-bold text-white/50 uppercase tracking-[0.3em]">Player Impact Estimate (PIE) & True Shooting Percentages</p>
                 </div>
              </div>
@@ -191,7 +191,7 @@ export default function StatsPage() {
         <div className="space-y-6 animate-scaleIn">
           <div className="liquid-mirror rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl luxury-edge">
             <div className="px-10 py-8 bg-white/5 border-b border-white/5 flex items-center justify-between">
-              <h3 className="text-lg font-black uppercase tracking-[0.3em] text-white">Consolidated Team Matrix</h3>
+              <h2 className="text-lg font-black uppercase tracking-[0.3em] text-white">Consolidated Team Matrix</h2>
               <div className="glass-pill px-4 py-1.5 rounded-full text-sm font-black text-indigo-400 uppercase tracking-widest">Global Rank</div>
             </div>
             {teamStats.length === 0 ? (
