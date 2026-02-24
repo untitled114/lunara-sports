@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Users, Trophy, BarChart2, X } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
@@ -18,10 +18,28 @@ const QUICK_LINKS = [
   { name: 'Stats', path: '/stats', icon: BarChart2 },
 ];
 
+const ResultItem = memo(function ResultItem({ item, onSelect }) {
+  return (
+    <button
+      onClick={() => onSelect(item)}
+      className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white/[0.03] transition-colors text-left border border-transparent hover:border-white/5 group"
+    >
+      <div className="h-10 w-10 rounded-xl bg-[#050a18] flex items-center justify-center border border-white/10 font-black text-sm text-white/50 group-hover:text-white group-hover:border-white/20 shadow-lg transition-colors">
+        {item.abbrev || item.name[0]}
+      </div>
+      <div className="flex flex-col">
+        <span className="text-sm font-bold text-white uppercase tracking-tight group-hover:text-indigo-400 transition-colors">
+          {item.name}
+        </span>
+        <span className="text-[13px] font-black text-white/50 uppercase tracking-widest">{item.type}</span>
+      </div>
+    </button>
+  );
+});
+
 export function CommandBar() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
   const [players, setPlayers] = useState([]);
   const { playGlassClick, playThud } = useTheme();
   const navigate = useNavigate();
@@ -40,12 +58,16 @@ export function CommandBar() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, playGlassClick]);
 
+  // Defer focus to next animation frame to avoid synchronous layout recalc
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
     }
   }, [isOpen]);
 
+  // Debounced player search
   useEffect(() => {
     if (!query) {
       setPlayers([]);
@@ -64,20 +86,18 @@ export function CommandBar() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  useEffect(() => {
-    if (!query) {
-      setResults([]);
-      return;
-    }
+  // Memoize filtered results to avoid recomputing on every render
+  const results = useMemo(() => {
+    if (!query) return [];
     const filtered = [
       ...ALL_TEAMS.filter(t => t.abbrev.toLowerCase().includes(query.toLowerCase())),
       ...players,
       ...QUICK_LINKS.filter(l => l.name.toLowerCase().includes(query.toLowerCase()))
     ];
-    setResults(filtered.slice(0, 8));
+    return filtered.slice(0, 8);
   }, [query, players]);
 
-  const handleSelect = (item) => {
+  const handleSelect = useCallback((item) => {
     playThud();
     if (item.type === 'team') {
       navigate(`/team/${item.abbrev}`);
@@ -88,7 +108,7 @@ export function CommandBar() {
     }
     setIsOpen(false);
     setQuery('');
-  };
+  }, [playThud, navigate]);
 
   if (!isOpen) return null;
 
@@ -121,7 +141,7 @@ export function CommandBar() {
                   <button
                     key={link.path}
                     onClick={() => handleSelect(link)}
-                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-all text-left group"
+                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors text-left group"
                   >
                     <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:border-indigo-500/50 transition-colors">
                       <link.icon className="h-5 w-5 text-white/50 group-hover:text-indigo-400" />
@@ -138,21 +158,7 @@ export function CommandBar() {
             <div className="p-2 space-y-1">
               {results.length > 0 ? (
                 results.map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSelect(item)}
-                    className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white/[0.03] transition-all text-left border border-transparent hover:border-white/5 group"
-                  >
-                    <div className="h-10 w-10 rounded-xl bg-[#050a18] flex items-center justify-center border border-white/10 font-black text-sm text-white/50 group-hover:text-white group-hover:border-white/20 shadow-lg">
-                      {item.abbrev || item.name[0]}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-white uppercase tracking-tight group-hover:text-indigo-400 transition-colors">
-                        {item.name}
-                      </span>
-                      <span className="text-[13px] font-black text-white/50 uppercase tracking-widest">{item.type}</span>
-                    </div>
-                  </button>
+                  <ResultItem key={item.id || item.abbrev || item.path || idx} item={item} onSelect={handleSelect} />
                 ))
               ) : (
                 <div className="p-8 text-center">

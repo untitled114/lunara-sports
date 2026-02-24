@@ -241,7 +241,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
     return (
       <div className="relative">
         <div className="flex items-center gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8 lg:py-3.5">
-          {tl && <img src={tl} alt="" className="h-5 w-5 opacity-50" />}
+          {tl && <img src={tl} alt="" width={20} height={20} className="h-5 w-5 opacity-50" />}
           <span className="text-[13px] sm:text-[14px] lg:text-[15px] font-bold text-white/70">{play.description}</span>
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-px bg-white/[0.12]" />
@@ -275,7 +275,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
         {/* ── Score Row ── */}
         <div className="flex items-center mb-4">
           <div className="flex items-center gap-2.5">
-            {aLogo && <img src={aLogo} alt="" className="h-6 w-6 object-contain drop-shadow-md" />}
+            {aLogo && <img src={aLogo} alt="" width={24} height={24} className="h-6 w-6 object-contain drop-shadow-md" />}
             <span className={`text-lg tabular-nums font-black ${aWin ? "text-[var(--green)]" : "text-white/70"}`}>
               {as_}
             </span>
@@ -283,7 +283,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
             <span className={`text-lg tabular-nums font-black ${hWin ? "text-[var(--green)]" : "text-white/70"}`}>
               {hs}
             </span>
-            {hLogo && <img src={hLogo} alt="" className="h-6 w-6 object-contain drop-shadow-md" />}
+            {hLogo && <img src={hLogo} alt="" width={24} height={24} className="h-6 w-6 object-contain drop-shadow-md" />}
 
             <span className="text-[14px] tabular-nums text-white/60 ml-3 font-bold">
               Q{play.quarter} {play.clock ?? ""}
@@ -314,16 +314,16 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
               }}
             >
               {headshot ? (
-                <img src={headshot} alt="" className="w-full h-full object-cover scale-110" />
+                <img src={headshot} alt="" width={64} height={64} className="w-full h-full object-cover scale-110" />
               ) : tl ? (
-                <img src={tl} alt="" className="w-full h-full object-contain p-3 drop-shadow-lg" />
+                <img src={tl} alt="" width={64} height={64} className="w-full h-full object-contain p-3 drop-shadow-lg" />
               ) : null}
             </div>
             {/* Team logo badge */}
             {tl && (
               <div className="absolute -bottom-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-[#080c18] shadow-md flex items-center justify-center"
                 style={{ boxShadow: `0 0 0 2px #080c18, 0 2px 6px rgba(0,0,0,0.4)` }}>
-                <img src={tl} alt="" className="h-4 w-4 object-contain" />
+                <img src={tl} alt="" width={16} height={16} className="h-4 w-4 object-contain" />
               </div>
             )}
           </div>
@@ -349,7 +349,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
             {/* Assist line */}
             {assist && (
               <p className="text-[15px] text-white/55 mt-1 flex items-center gap-2 font-bold">
-                {tl && <img src={tl} alt="" className="h-4 w-4 object-contain opacity-70" />}
+                {tl && <img src={tl} alt="" width={16} height={16} className="h-4 w-4 object-contain opacity-70" />}
                 {abbr(assist)}
                 {aStats && aStats.ast > 0 && (
                   <span className="text-white/40 font-medium"> &middot; {aStats.ast} ast</span>
@@ -364,7 +364,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
           <div className="flex items-center gap-4 mt-4 ml-[52px] sm:ml-[64px] lg:ml-[84px]">
             <button
               onClick={() => onReact("fire")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-300 ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors duration-300 ${
                 myReaction === "fire"
                   ? "bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.05)]"
                   : "opacity-30 hover:opacity-60 hover:bg-white/5"
@@ -397,7 +397,7 @@ function TimeoutDivider({ play }) {
   return (
     <div className="flex items-center justify-center gap-3 py-3.5 px-8">
       <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10" />
-      {tl && <img src={tl} alt="" className="h-4 w-4 opacity-40" />}
+      {tl && <img src={tl} alt="" width={16} height={16} className="h-4 w-4 opacity-40" />}
       <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">Timeout</span>
       <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10" />
     </div>
