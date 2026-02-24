@@ -207,7 +207,10 @@ class KafkaConsumerLoop:
                 )
 
     async def _handle_play(self, data: dict) -> None:
-        """Insert a play row, skipping duplicates."""
+        """Insert a play row, skipping duplicates, and broadcast immediately."""
+        from ..ws.live_feed import manager
+        from ..ws.play_poller import _play_to_dict_raw
+
         factory = get_session_factory()
         if factory is None:
             return
@@ -250,6 +253,12 @@ class KafkaConsumerLoop:
                     game_id=data["game_id"],
                     seq=data["sequence_number"],
                 )
+
+        # Broadcast immediately to WebSocket clients — don't wait for play_poller
+        game_id = data["game_id"]
+        if manager.connection_count(game_id) > 0:
+            msg = {"type": "play", "data": _play_to_dict_raw(values)}
+            await manager.broadcast(game_id, msg)
 
     async def _handle_prediction_result(self, data: dict) -> None:
         """Resolve a prediction and broadcast the result via WebSocket."""

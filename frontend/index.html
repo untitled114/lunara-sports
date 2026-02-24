@@ -8,12 +8,15 @@
 <meta name="theme-color" content="#0a1628">
 <meta name="description" content="Lunara Sports - Live scores, stats, and real-time game intelligence.">
 
-<!-- Performance: Preconnect to Google Fonts -->
+<!-- Performance: Preconnect to critical origins -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.lunara-app.com" crossorigin>
+<link rel="preconnect" href="https://a.espncdn.com" crossorigin>
 
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Fonts: preload for non-blocking, reduced to 4 used weights -->
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" as="style">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 <div id="react-root"></div>

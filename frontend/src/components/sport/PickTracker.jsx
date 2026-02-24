@@ -163,6 +163,7 @@ export function PickTracker({ gameId, pickUpdates }) {
     <div className="mt-4 sm:mt-5 lg:mt-6">
       {/* Section header */}
       <button
+        aria-label="Toggle AI picks section"
         onClick={() => setCollapsed((c) => !c)}
         className="flex items-center gap-3 mb-3 w-full group"
       >

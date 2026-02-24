@@ -32,7 +32,7 @@ function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf 
         />
         <div className="relative h-14 w-14 sm:h-20 sm:w-20 lg:h-24 lg:w-24 flex items-center justify-center rounded-[1.5rem] sm:rounded-[2rem] lg:rounded-[2.5rem] bg-[#050a18] border-t-2 border-white/20 border-x border-white/5 border-b-2 border-black/80 shadow-2xl group-hover:scale-110 transition-transform active:scale-95 p-3 sm:p-4 lg:p-5 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
-          <img src={logoUrl} alt={abbrev} className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
+          <img src={logoUrl} alt={abbrev} width={96} height={96} className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
         </div>
       </Link>
 
@@ -254,11 +254,11 @@ export default function GameDetailPage() {
   if (loading) {
     return (
       <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-8">
-        <Skeleton variant="rectangle" width="w-full" height="h-64" className="rounded-[3rem] mb-8" />
+        <Skeleton variant="rectangle" width="w-full" height="h-[420px]" className="rounded-[3rem] mb-8" />
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-3"><Skeleton variant="rectangle" height="h-[400px]" className="rounded-[2rem]" /></div>
-          <div className="lg:col-span-6"><Skeleton variant="rectangle" height="h-[600px]" className="rounded-[2rem]" /></div>
-          <div className="lg:col-span-3 space-y-6"><Skeleton variant="rectangle" height="h-48" className="rounded-[2rem]" /><Skeleton variant="rectangle" height="h-32" className="rounded-[2rem]" /></div>
+          <div className="lg:col-span-3"><Skeleton variant="rectangle" height="h-[520px]" className="rounded-[2rem]" /></div>
+          <div className="lg:col-span-6"><Skeleton variant="rectangle" height="h-[520px]" className="rounded-[2rem]" /></div>
+          <div className="lg:col-span-3 space-y-6"><Skeleton variant="rectangle" height="h-[520px]" className="rounded-[2rem]" /></div>
         </div>
       </div>
     );
@@ -266,11 +266,11 @@ export default function GameDetailPage() {
 
   if (error || !game) {
     return (
-      <div className="flex flex-col items-center justify-center py-40 px-6 text-center animate-fadeIn">
+      <div className="flex flex-col items-center justify-center py-40 px-6 text-center">
         <div className="h-16 w-16 rounded-full bg-[var(--red)]/10 flex items-center justify-center mb-4 border border-[var(--red)]/20">
           <Info className="h-8 w-8 text-[var(--red)]" />
         </div>
-        <h2 className="text-2xl font-black text-white mb-3">{error || "Game not found"}</h2>
+        <h1 className="text-2xl font-black text-white mb-3">{error || "Game not found"}</h1>
         <Link to="/scoreboard" onClick={() => playGlassClick()} className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl text-[12px] font-black uppercase tracking-widest hover:scale-105 transition">
           <ChevronLeft className="h-4 w-4" /> Back to Scores
         </Link>
@@ -279,7 +279,8 @@ export default function GameDetailPage() {
   }
 
   return (
-    <div className="animate-fadeIn pb-24 sm:pb-20 max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div className="pb-24 sm:pb-20 max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+      <h1 className="sr-only">{game.away_team} vs {game.home_team} — Game Details</h1>
       {/* Back link */}
       <div className="mb-3 sm:mb-4 lg:mb-6">
         <Link

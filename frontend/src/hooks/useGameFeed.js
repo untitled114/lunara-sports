@@ -4,9 +4,9 @@ import { useTheme } from '@/context/ThemeContext';
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
 
-const MAX_RETRIES = 5;
-const BASE_DELAY = 2000;
-const MAX_DELAY = 30000;
+const MAX_RETRIES = 10;
+const BASE_DELAY = 500;
+const MAX_DELAY = 10000;
 
 /**
  * @param {string} gameId
@@ -69,8 +69,8 @@ export function useGameFeed(gameId, status = "scheduled") {
         .catch(() => {});
     };
 
-    // Poll at the user's configured refresh interval
-    const intervalMs = (refreshInterval || 15) * 1000;
+    // Poll at the user's configured refresh interval (fallback if WS is down)
+    const intervalMs = (refreshInterval || 5) * 1000;
     pollRef.current = setInterval(poll, intervalMs);
 
     return () => {
@@ -147,16 +147,16 @@ export function useGameFeed(gameId, status = "scheduled") {
     wsRef.current = ws;
   }, [gameId, isLive]);
 
-  // Ping to keep WS alive
+  // Ping to keep WS alive (every 15s)
   useEffect(() => {
     if (!isLive) return;
     const interval = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send("ping");
       }
-    }, refreshInterval * 1000);
+    }, 15000);
     return () => clearInterval(interval);
-  }, [isLive, refreshInterval]);
+  }, [isLive]);
 
   useEffect(() => {
     if (!isLive) return;

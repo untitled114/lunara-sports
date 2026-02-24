@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchPlays, fetchBoxScore } from "@/services/api";
 import { Skeleton } from "@/components/ui";
 import { useTheme } from "@/context/ThemeContext";
-import { getLogoUrl } from "@/utils/teamColors";
+import { getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
 
 /* ─── On-Court Tracking ─── */
 
@@ -53,7 +53,7 @@ function StatBlock({ label, value, isPrimary = false }) {
       <span className={`tabular-nums leading-none mb-1.5 ${isPrimary ? 'text-[15px] sm:text-[16px] lg:text-[18px] font-black text-white' : 'text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white/80'}`}>
         {value}
       </span>
-      <span className="text-[8px] font-black text-white/20 uppercase tracking-tighter">
+      <span className="text-[8px] font-black text-white/40 uppercase tracking-tighter">
         {label}
       </span>
     </div>
@@ -65,13 +65,13 @@ function PlayerRow({ player, teamAbbrev }) {
   const teamLogo = getLogoUrl(teamAbbrev);
 
   return (
-    <div className="group relative py-3 px-4 sm:py-4 sm:px-5 lg:py-5 lg:px-6 border-b border-white/[0.03] hover:bg-white/[0.02] transition-all">
+    <div className="group relative py-3 px-4 sm:py-4 sm:px-5 lg:py-5 lg:px-6 border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
       <div className="flex items-center gap-4 sm:gap-5">
         <div className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 rounded-full border border-white/10 bg-[#050a18] flex items-center justify-center overflow-hidden shadow-inner shrink-0">
           {player.headshot_url ? (
-            <img src={player.headshot_url} alt="" className="w-full h-full object-cover scale-110" />
+            <img src={getHeadshotUrl(player.headshot_url)} alt="" width={56} height={56} loading="lazy" className="w-full h-full object-cover scale-110" />
           ) : teamLogo ? (
-            <img src={teamLogo} alt="" className="w-8 h-8 object-contain opacity-30" />
+            <img src={teamLogo} alt="" width={32} height={32} loading="lazy" className="w-8 h-8 object-contain opacity-30" />
           ) : (
             <span className="text-sm font-black text-white/10">{player.name?.[0]}</span>
           )}
@@ -87,7 +87,7 @@ function PlayerRow({ player, teamAbbrev }) {
               {player.name}
             </Link>
             {player.jersey && (
-              <span className="text-[12px] font-bold text-white/20 uppercase">
+              <span className="text-[12px] font-bold text-white/40 uppercase">
                 #{player.jersey} {player.position ? `· ${player.position}` : ""}
               </span>
             )}
@@ -103,7 +103,7 @@ function PlayerRow({ player, teamAbbrev }) {
         </div>
 
         <div className="shrink-0 pl-4 self-center">
-          <span className="text-[24px] font-black text-white/5 tabular-nums italic">
+          <span className="text-[24px] font-black text-white/15 tabular-nums italic">
             {player.jersey || "0"}
           </span>
         </div>
@@ -120,11 +120,11 @@ function TeamSection({ teamAbbrev, players }) {
       <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-5 bg-white/[0.02] border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="h-7 w-7 rounded-full bg-[#050a18] border border-white/10 flex items-center justify-center p-1.5 overflow-hidden">
-            <img src={logo} alt="" className="w-full h-full object-contain" />
+            <img src={logo} alt="" width={28} height={28} loading="lazy" className="w-full h-full object-contain" />
           </div>
           <span className="text-[15px] font-black text-white uppercase tracking-widest">{teamAbbrev}</span>
         </div>
-        <span className="text-[11px] font-black text-white/20 uppercase tracking-[0.3em]">On Court</span>
+        <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.3em]">On Court</span>
       </div>
 
       <div className="divide-y divide-white/[0.02]">
@@ -172,7 +172,7 @@ function FullTeamTable({ teamAbbrev, players, totals }) {
         <div className="flex items-center gap-2.5">
           <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-full border border-white/10 bg-[#050a18] flex items-center justify-center overflow-hidden shrink-0">
             {p.headshot_url ? (
-              <img src={p.headshot_url} alt="" className="w-full h-full object-cover scale-110" />
+              <img src={getHeadshotUrl(p.headshot_url, 56)} alt="" width={28} height={28} loading="lazy" className="w-full h-full object-cover scale-110" />
             ) : (
               <span className="text-[8px] font-black text-white/10">{p.name?.[0]}</span>
             )}
@@ -197,7 +197,7 @@ function FullTeamTable({ teamAbbrev, players, totals }) {
               col.primary ? 'font-black text-white' :
               isPM && num > 0 ? 'font-bold text-emerald-400' :
               isPM && num < 0 ? 'font-bold text-red-400' :
-              'font-medium text-white/50'
+              'font-medium text-white/150'
             }`}>
               {isPM && num > 0 ? `+${val}` : val}
             </span>
@@ -223,7 +223,7 @@ function FullTeamTable({ teamAbbrev, players, totals }) {
       <div className="flex items-center justify-between px-4 py-2.5 sm:px-5 sm:py-3 bg-white/[0.02] border-b border-white/5">
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 rounded-full bg-[#050a18] border border-white/10 flex items-center justify-center p-1 overflow-hidden">
-            <img src={logo} alt="" className="w-full h-full object-contain" />
+            <img src={logo} alt="" width={28} height={28} loading="lazy" className="w-full h-full object-contain" />
           </div>
           <span className="text-[13px] font-black text-white uppercase tracking-widest">{teamAbbrev}</span>
         </div>
@@ -235,11 +235,11 @@ function FullTeamTable({ teamAbbrev, players, totals }) {
           <thead>
             <tr className="border-b border-white/5">
               <th className="py-1.5 sm:py-2 pl-3 pr-2 sm:pl-4 sm:pr-3 text-left">
-                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Player</span>
+                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Player</span>
               </th>
               {statCols.map(col => (
                 <th key={col.key} className="py-1.5 sm:py-2 px-1.5 text-center">
-                  <span className={`text-[9px] font-black uppercase tracking-wider ${col.primary ? 'text-white/40' : 'text-white/20'}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-wider ${col.primary ? 'text-white/40' : 'text-white/40'}`}>
                     {col.label}
                   </span>
                 </th>

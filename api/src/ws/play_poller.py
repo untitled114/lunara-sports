@@ -22,7 +22,25 @@ logger = structlog.get_logger(__name__)
 # Track the highest sequence number we've broadcast per game
 _watermarks: dict[str, int] = {}
 
-POLL_INTERVAL = 2  # seconds
+POLL_INTERVAL = 0.5  # seconds — safety net; primary delivery is via Kafka consumer broadcast
+
+
+def _play_to_dict_raw(data: dict) -> dict:
+    """Convert a raw play dict (from Kafka) to the WebSocket payload format."""
+    return {
+        "id": data.get("id"),
+        "game_id": data.get("game_id"),
+        "sequence_number": data.get("sequence_number"),
+        "quarter": data.get("quarter"),
+        "clock": data.get("clock"),
+        "event_type": data.get("event_type"),
+        "description": data.get("description"),
+        "team": data.get("team"),
+        "player_name": data.get("player_name"),
+        "home_score": data.get("home_score"),
+        "away_score": data.get("away_score"),
+        "created_at": None,
+    }
 
 
 def _play_to_dict(play: Play) -> dict:

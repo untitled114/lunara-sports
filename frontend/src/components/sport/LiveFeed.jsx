@@ -3,7 +3,7 @@ import { useGameFeed } from "@/hooks/useGameFeed";
 import { addReaction, fetchBoxScore } from "@/services/api";
 import { Zap, Clock, MessageSquare } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
-import { getTeamColor, getLogoUrl } from "@/utils/teamColors";
+import { getTeamColor, getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
 
 /* ─── Running Stats Snapshots ─── */
 
@@ -55,7 +55,7 @@ function buildHeadshotMap(boxData) {
   const process = (players) => {
     for (const p of players || []) {
       if (p.name && p.headshot_url) {
-        map[p.name] = p.headshot_url;
+        map[p.name] = getHeadshotUrl(p.headshot_url);
         const parts = p.name.split(" ");
         if (parts.length >= 2) {
           const key = `_L_${parts.slice(1).join(" ").toLowerCase()}`;
@@ -314,9 +314,9 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
               }}
             >
               {headshot ? (
-                <img src={headshot} alt="" width={64} height={64} className="w-full h-full object-cover scale-110" />
+                <img src={headshot} alt="" width={64} height={64} loading="lazy" className="w-full h-full object-cover scale-110" />
               ) : tl ? (
-                <img src={tl} alt="" width={64} height={64} className="w-full h-full object-contain p-3 drop-shadow-lg" />
+                <img src={tl} alt="" width={64} height={64} loading="lazy" className="w-full h-full object-contain p-3 drop-shadow-lg" />
               ) : null}
             </div>
             {/* Team logo badge */}
@@ -330,11 +330,11 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
 
           {/* Play info */}
           <div className="flex-1 min-w-0 pt-1">
-            <h4 className={`text-lg sm:text-xl lg:text-2xl font-black leading-tight tracking-[-0.02em] ${
+            <h3 className={`text-lg sm:text-xl lg:text-2xl font-black leading-tight tracking-[-0.02em] ${
               scoring ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-white/80"
             }`}>
               {title}
-            </h4>
+            </h3>
 
             {/* Player + running stats */}
             {play.player_name && (
@@ -363,6 +363,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
         {(scoring || miss) && (
           <div className="flex items-center gap-4 mt-4 ml-[52px] sm:ml-[64px] lg:ml-[84px]">
             <button
+              aria-label="React with fire"
               onClick={() => onReact("fire")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors duration-300 ${
                 myReaction === "fire"
@@ -375,11 +376,11 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
                 <span className="text-[12px] tabular-nums font-black text-white/60">{reactions.fire}</span>
               )}
             </button>
-            <button className="flex items-center gap-1.5 opacity-20 hover:opacity-40 transition-opacity px-2.5 py-1.5 rounded-xl hover:bg-white/5">
+            <button aria-label="0 comments" className="flex items-center gap-1.5 opacity-20 hover:opacity-40 transition-opacity px-2.5 py-1.5 rounded-xl hover:bg-white/5">
               <MessageSquare className="h-4 w-4" />
               <span className="text-[12px] tabular-nums font-bold text-white/40">0</span>
             </button>
-            <button className="text-white/15 hover:text-white/30 transition-colors ml-auto text-base">&#10148;</button>
+            <button aria-label="Share play" className="text-white/15 hover:text-white/30 transition-colors ml-auto text-base">&#10148;</button>
           </div>
         )}
       </div>

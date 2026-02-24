@@ -45,5 +45,13 @@ export const getLogoUrl = (abbrev) => {
     'UTA': 'utah'
   };
   const code = (map[abbrev] || abbrev).toLowerCase();
-  return `https://a.espncdn.com/i/teamlogos/nba/500/${code}.png`;
+  return `https://a.espncdn.com/combiner/i?img=/i/teamlogos/nba/500/${code}.png&w=100&h=100`;
+};
+
+/** Resize ESPN headshot URL via combiner (default 96px for retina at 48px display) */
+export const getHeadshotUrl = (url, size = 96) => {
+  if (!url) return null;
+  if (url.includes('/combiner/')) return url;
+  const path = url.replace('https://a.espncdn.com', '');
+  return `https://a.espncdn.com/combiner/i?img=${path}&w=${size}&h=${size}`;
 };
