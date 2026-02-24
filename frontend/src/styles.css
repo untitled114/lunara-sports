@@ -218,7 +218,7 @@ body {
     linear-gradient(45deg, rgba(255,255,255,0.01) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.01) 75%, rgba(255,255,255,0.01));
   background-size: 100% 100%, 100% 100%, 100% 100%, 4px 4px, 4px 4px;
   background-position: 0 0, 0 0, 0 0, 0 0, 2px 2px;
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 /* === JUMBOTRON GRADIENT TEXT === */
@@ -335,9 +335,8 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  animation: scan 4s linear infinite;
+  animation: scan 4s linear forwards;
   pointer-events: none;
-  will-change: transform;
 }
 
 @keyframes scan {

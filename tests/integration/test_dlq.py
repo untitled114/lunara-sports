@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import time
 
+from src.kafka.dead_letter import DeadLetterProducer
 
 from tests.integration.conftest import KAFKA_BOOTSTRAP
 
@@ -32,14 +33,6 @@ class TestDeadLetterQueue:
         self, kafka_producer, kafka_consumer_factory, ensure_topics
     ):
         """Produce non-Avro garbage to raw.plays → verify dlq.raw.plays receives it."""
-        import sys
-        from pathlib import Path
-
-        ROOT = Path(__file__).resolve().parents[2]
-        sys.path.insert(0, str(ROOT / "api"))
-
-        from src.kafka.dead_letter import DeadLetterProducer
-
         dlq = DeadLetterProducer(KAFKA_BOOTSTRAP)
 
         # Simulate what the consumer does when it gets a bad message
@@ -67,14 +60,6 @@ class TestDeadLetterQueue:
         self, kafka_producer, kafka_consumer_factory, ensure_topics
     ):
         """Simulate a handler exception and verify DLQ routing."""
-        import sys
-        from pathlib import Path
-
-        ROOT = Path(__file__).resolve().parents[2]
-        sys.path.insert(0, str(ROOT / "api"))
-
-        from src.kafka.dead_letter import DeadLetterProducer
-
         dlq = DeadLetterProducer(KAFKA_BOOTSTRAP)
 
         # Simulate handler error with valid JSON but bad data

@@ -110,8 +110,6 @@ export function GameCard({ game, standings = {} }) {
   const { playGlassClick } = useTheme();
   const fmt = useFormatTime();
 
-  const floatDelay = (String(game.id).charCodeAt(0) % 5) * 0.5;
-
   const awaySt = standings[game.away_team];
   const homeSt = standings[game.home_team];
 
@@ -131,8 +129,7 @@ export function GameCard({ game, standings = {} }) {
 
   return (
     <div
-      className={`group relative rounded-[2.5rem] liquid-mirror gloss-sweep transition-all duration-700 hover:border-white/20 animate-float active:scale-[0.98] h-full overflow-hidden ${isLive ? 'ring-1 ring-[var(--green)]/20' : ''}`}
-      style={{ animationDelay: `${floatDelay}s` }}
+      className={`group relative rounded-[2.5rem] liquid-mirror gloss-sweep transition-all duration-700 hover:border-white/20 active:scale-[0.98] h-full overflow-hidden ${isLive ? 'ring-1 ring-[var(--green)]/20' : ''}`}
     >
       {/* Team color ambient glow — subtle */}
       <div

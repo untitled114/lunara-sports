@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from "react";
-import { fetchPlays } from "@/services/api";
+import { fetchPlays, fetchBoxScore } from "@/services/api";
 import { useTheme } from '@/context/ThemeContext';
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
@@ -25,6 +25,7 @@ export function useGameFeed(gameId, status = "scheduled") {
   const [error, setError] = useState(null);
   const [gameUpdate, setGameUpdate] = useState(null);
   const [pickUpdates, setPickUpdates] = useState(null);
+  const [boxData, setBoxData] = useState(null);
 
   const isLive = status === "live" || status === "halftime";
 
@@ -46,10 +47,21 @@ export function useGameFeed(gameId, status = "scheduled") {
     return () => { cancelled = true; };
   }, [gameId]);
 
-  // REST polling fallback for live/halftime games
-  // Runs every refreshInterval seconds to ensure plays update even if WS is down
+  // One-shot box score fetch
   useEffect(() => {
-    if (!isLive || !gameId) return;
+    if (!gameId) return;
+    let cancelled = false;
+    fetchBoxScore(gameId)
+      .then((data) => {
+        if (!cancelled && data) setBoxData(data);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [gameId]);
+
+  // REST polling fallback — only when WS is DISCONNECTED and game is live
+  useEffect(() => {
+    if (!isLive || !gameId || connected) return;
 
     const poll = () => {
       fetchPlays(gameId)
@@ -59,7 +71,6 @@ export function useGameFeed(gameId, status = "scheduled") {
             (a, b) => b.sequence_number - a.sequence_number,
           );
           setPlays((prev) => {
-            // Only update if we have new plays
             if (sorted.length > prev.length || (sorted[0]?.sequence_number !== prev[0]?.sequence_number)) {
               return sorted;
             }
@@ -69,14 +80,13 @@ export function useGameFeed(gameId, status = "scheduled") {
         .catch(() => {});
     };
 
-    // Poll at the user's configured refresh interval (fallback if WS is down)
     const intervalMs = (refreshInterval || 2) * 1000;
     pollRef.current = setInterval(poll, intervalMs);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [gameId, isLive, refreshInterval]);
+  }, [gameId, isLive, refreshInterval, connected]);
 
   // WebSocket for live games (provides instant updates when available)
   const connect = useCallback(() => {
@@ -110,7 +120,6 @@ export function useGameFeed(gameId, status = "scheduled") {
           if (mountedRef.current) connect();
         }, delay);
       }
-      // Don't show error - REST polling is the fallback
     };
 
     ws.onerror = () => {};
@@ -122,7 +131,6 @@ export function useGameFeed(gameId, status = "scheduled") {
         const msg = JSON.parse(event.data);
 
         if (msg.type === "history" && Array.isArray(msg.data)) {
-          // Merge WS history with existing plays (don't overwrite REST data)
           setPlays((prev) => {
             const existing = new Map(prev.map((p) => [p.sequence_number, p]));
             for (const p of msg.data) {
@@ -179,5 +187,5 @@ export function useGameFeed(gameId, status = "scheduled") {
     };
   }, [connect, isLive]);
 
-  return { plays, connected: isLive ? connected : status === "final", error, gameUpdate, pickUpdates };
+  return { plays, connected: isLive ? connected : status === "final", error, gameUpdate, pickUpdates, boxData };
 }

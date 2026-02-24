@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Activity, Zap, Radio, Signal, Database, Cpu } from 'lucide-react';
-import { fetchGames } from '@/services/api';
 import { getTeamColor, getLogoUrl } from '@/utils/teamColors';
 import { useTheme } from '@/context/ThemeContext';
-import { usePolling } from '@/hooks/usePolling';
+import { useScoreboard } from '@/hooks/useScoreboard';
 import { useFormatTime } from '@/utils/formatTime';
 
 function TickerItem({ game }) {
@@ -155,12 +154,12 @@ function TickerItem({ game }) {
 }
 
 export function ScoreTicker() {
-  const [games, setGames] = useState([]);
   const { playGlassClick } = useTheme();
-
-  const loadGames = () => fetchGames().then(setGames).catch(() => {});
-  useEffect(() => { loadGames(); }, []);
-  usePolling(loadGames);
+  // Eastern time "today" for scoreboard
+  const now = new Date();
+  const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  const todayStr = `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, '0')}-${String(et.getDate()).padStart(2, '0')}`;
+  const { games } = useScoreboard(todayStr);
 
   if (games.length === 0) {
     return (
@@ -186,8 +185,8 @@ export function ScoreTicker() {
 
   return (
     <div className="h-[120px] flex items-stretch overflow-hidden relative">
-      {/* Main Container Shell */}
-      <div className="absolute inset-0 bg-[#050a18]/95 backdrop-blur-3xl border-b border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden">
+      {/* Main Container Shell — single bg layer, blur handled by AppLayout parent */}
+      <div className="absolute inset-0 bg-[#050a18]/95 border-b border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden">
         <div className="absolute inset-0 texture-mesh opacity-[0.03] pointer-events-none" />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-white/5" />
       </div>

@@ -177,9 +177,13 @@ async def _poll_scoreboard() -> None:
 
         await session.commit()
 
-    # Refresh the game list cache for today
+    # Refresh the game list cache for today + broadcast to scoreboard WS clients
     if rows:
         await cache_game_list(today.isoformat(), rows)
+        await manager.broadcast(
+            "scoreboard",
+            {"type": "scoreboard_update", "data": rows},
+        )
         live_count = sum(1 for r in rows if r.get("status") in ("live", "halftime"))
         logger.info(
             "scoreboard_poller.updated",
