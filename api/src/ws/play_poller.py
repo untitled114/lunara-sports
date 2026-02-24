@@ -22,7 +22,7 @@ logger = structlog.get_logger(__name__)
 # Track the highest sequence number we've broadcast per game
 _watermarks: dict[str, int] = {}
 
-POLL_INTERVAL = 0.5  # seconds — safety net; primary delivery is via Kafka consumer broadcast
+POLL_INTERVAL = 0.25  # seconds — safety net; primary delivery is via Kafka consumer broadcast
 
 
 def _play_to_dict_raw(data: dict) -> dict:
