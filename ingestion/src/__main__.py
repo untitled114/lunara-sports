@@ -23,7 +23,7 @@ logger = structlog.get_logger(__name__)
 
 LIVE_STATUSES = {"live", "halftime"}
 
-PBP_INTERVAL = 3  # seconds — fast loop for play-by-play
+PBP_INTERVAL = 1  # seconds — fast loop for play-by-play
 SCOREBOARD_INTERVAL = 10  # seconds — slower loop for game discovery
 
 

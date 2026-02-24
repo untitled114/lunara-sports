@@ -70,7 +70,7 @@ export function useGameFeed(gameId, status = "scheduled") {
     };
 
     // Poll at the user's configured refresh interval (fallback if WS is down)
-    const intervalMs = (refreshInterval || 5) * 1000;
+    const intervalMs = (refreshInterval || 2) * 1000;
     pollRef.current = setInterval(poll, intervalMs);
 
     return () => {
