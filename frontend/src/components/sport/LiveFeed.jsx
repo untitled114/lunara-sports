@@ -407,22 +407,30 @@ function TimeoutDivider({ play }) {
 
 /* ─── Live Feed ─── */
 
-export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam }) {
-  const { plays, connected, error } = useGameFeed(gameId, status);
+export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam, plays: playsProp, connected: connectedProp, boxData: boxDataProp }) {
+  // When props provided (from GameDetailPage), use them directly — no second WS connection
+  const internal = useGameFeed(playsProp ? null : gameId, playsProp ? "scheduled" : status);
+  const plays = playsProp || internal.plays;
+  const connected = connectedProp !== undefined ? connectedProp : internal.connected;
+  const error = playsProp ? null : internal.error;
+
   const feedRef = useRef(null);
   const prevCount = useRef(0);
   const { playGlassClick } = useTheme();
-  const [headshotMap, setHeadshotMap] = useState({});
 
   const snapshots = useMemo(() => buildStatsSnapshots(plays), [plays]);
 
-  // Fetch box score for player headshots
+  // Build headshot map from boxData prop or fetch if standalone
+  const [headshotMap, setHeadshotMap] = useState({});
   useEffect(() => {
-    fetchBoxScore(gameId).then((data) => {
-      if (!data) return;
-      setHeadshotMap(buildHeadshotMap(data));
-    }).catch(() => {});
-  }, [gameId]);
+    if (boxDataProp) {
+      setHeadshotMap(buildHeadshotMap(boxDataProp));
+    } else if (gameId && !playsProp) {
+      fetchBoxScore(gameId).then((data) => {
+        if (data) setHeadshotMap(buildHeadshotMap(data));
+      }).catch(() => {});
+    }
+  }, [gameId, boxDataProp, playsProp]);
 
   useEffect(() => {
     if (plays.length > prevCount.current && feedRef.current) feedRef.current.scrollTop = 0;

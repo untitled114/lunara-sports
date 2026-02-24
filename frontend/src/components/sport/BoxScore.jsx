@@ -272,9 +272,17 @@ function FullTeamTable({ teamAbbrev, players, totals }) {
   );
 }
 
-export function FullBoxScore({ gameId, homeTeam, awayTeam, status }) {
-  const [boxData, setBoxData] = useState(null);
-  const [loading, setLoading] = useState(true);
+export function FullBoxScore({ gameId, homeTeam, awayTeam, status, boxData: boxDataProp }) {
+  const [boxData, setBoxData] = useState(boxDataProp || null);
+  const [loading, setLoading] = useState(!boxDataProp);
+
+  // Sync from prop when provided (from GameDetailPage)
+  useEffect(() => {
+    if (boxDataProp) {
+      setBoxData(boxDataProp);
+      setLoading(false);
+    }
+  }, [boxDataProp]);
 
   const refresh = useCallback(() => {
     return fetchBoxScore(gameId).catch(() => null).then(box => {
@@ -282,16 +290,18 @@ export function FullBoxScore({ gameId, homeTeam, awayTeam, status }) {
     });
   }, [gameId]);
 
+  // Only fetch independently when no prop provided
   useEffect(() => {
+    if (boxDataProp) return;
     refresh().finally(() => setLoading(false));
-  }, [refresh]);
+  }, [refresh, boxDataProp]);
 
   const isLive = status === "live" || status === "halftime";
   useEffect(() => {
-    if (!isLive) return;
+    if (!isLive || boxDataProp) return;
     const id = setInterval(refresh, 30000);
     return () => clearInterval(id);
-  }, [isLive, refresh]);
+  }, [isLive, refresh, boxDataProp]);
 
   if (loading) {
     return (
@@ -314,10 +324,22 @@ export function FullBoxScore({ gameId, homeTeam, awayTeam, status }) {
 
 /* ─── On-Court (Sidebar) ─── */
 
-export function BoxScore({ gameId, homeTeam, awayTeam, status, side }) {
-  const [boxData, setBoxData] = useState(null);
-  const [plays, setPlays] = useState([]);
-  const [loading, setLoading] = useState(true);
+export function BoxScore({ gameId, homeTeam, awayTeam, status, side, plays: playsProp, boxData: boxDataProp }) {
+  const hasProps = playsProp !== undefined && boxDataProp !== undefined;
+  const [boxData, setBoxData] = useState(boxDataProp || null);
+  const [plays, setPlays] = useState(playsProp || []);
+  const [loading, setLoading] = useState(!hasProps);
+
+  // Sync from props when provided (from GameDetailPage)
+  useEffect(() => {
+    if (playsProp !== undefined) setPlays(playsProp);
+  }, [playsProp]);
+  useEffect(() => {
+    if (boxDataProp) {
+      setBoxData(boxDataProp);
+      setLoading(false);
+    }
+  }, [boxDataProp]);
 
   const refresh = useCallback(() => {
     return Promise.all([
@@ -329,18 +351,19 @@ export function BoxScore({ gameId, homeTeam, awayTeam, status, side }) {
     });
   }, [gameId]);
 
-  // Initial fetch
+  // Only fetch independently when no props provided
   useEffect(() => {
+    if (hasProps) return;
     refresh().finally(() => setLoading(false));
-  }, [refresh]);
+  }, [refresh, hasProps]);
 
-  // Poll every 30s for live games
+  // Poll only when standalone (no props) and game is live
   const isLive = status === "live" || status === "halftime";
   useEffect(() => {
-    if (!isLive) return;
+    if (!isLive || hasProps) return;
     const id = setInterval(refresh, 30000);
     return () => clearInterval(id);
-  }, [isLive, refresh]);
+  }, [isLive, refresh, hasProps]);
 
   // Compute on-court players
   const { homeOnCourt, awayOnCourt } = getOnCourtNames(plays, boxData, homeTeam, awayTeam);

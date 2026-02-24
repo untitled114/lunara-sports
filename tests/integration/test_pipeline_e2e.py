@@ -6,25 +6,24 @@ Requires: make test-infra
 
 from __future__ import annotations
 
-import sys
 import time
+import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock
 
 import httpx
 import pytest
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroDeserializer
+from confluent_kafka.serialization import MessageField, SerializationContext
 
-# Add ingestion and api source to path for in-process testing
+from tests.integration.conftest import KAFKA_BOOTSTRAP, SCHEMA_REGISTRY_URL
+from tests.integration.mock_espn import SCOREBOARD_RESPONSE, SUMMARY_RESPONSE
+
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "ingestion"))
-sys.path.insert(0, str(ROOT / "api"))
 
-from confluent_kafka.schema_registry import SchemaRegistryClient  # noqa: E402
-from confluent_kafka.schema_registry.avro import AvroDeserializer  # noqa: E402
-from confluent_kafka.serialization import MessageField, SerializationContext  # noqa: E402
-
-from tests.integration.conftest import KAFKA_BOOTSTRAP, SCHEMA_REGISTRY_URL  # noqa: E402
-from tests.integration.mock_espn import SCOREBOARD_RESPONSE, SUMMARY_RESPONSE  # noqa: E402
+# Expected game ID from mock_espn fixtures
+GAME_ID = SCOREBOARD_RESPONSE["events"][0]["id"]
 
 
 @pytest.fixture
@@ -60,6 +59,25 @@ def _consume_one(consumer, timeout=10.0):
     return None
 
 
+def _consume_until_key(consumer, expected_key: bytes, timeout: float = 15.0):
+    """Consume messages until one with the expected key is found.
+
+    Kafka topics accumulate messages across runs, so a fresh consumer
+    (auto.offset.reset=earliest) may read thousands of stale messages.
+    This helper skips past them to find the one we just produced.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        msg = consumer.poll(1.0)
+        if msg is None:
+            continue
+        if msg.error():
+            continue
+        if msg.key() == expected_key:
+            return msg
+    return None
+
+
 class TestScoreboardToKafka:
     """Test scoreboard collector → Kafka Avro producer flow."""
 
@@ -85,13 +103,11 @@ class TestScoreboardToKafka:
 
         await collector.poll()
 
-        # Consume from Kafka and verify
-        consumer = kafka_consumer_factory(
-            ["raw.scoreboard"], group_id="test-scoreboard"
-        )
-        msg = _consume_one(consumer)
-        assert msg is not None, "No message received on raw.scoreboard"
-        assert msg.key() == b"401584701"
+        # Consume from Kafka — skip stale messages to find the one we just produced
+        group_id = f"test-scoreboard-{uuid.uuid4().hex[:8]}"
+        consumer = kafka_consumer_factory(["raw.scoreboard"], group_id=group_id)
+        msg = _consume_until_key(consumer, GAME_ID.encode())
+        assert msg is not None, f"No message with key={GAME_ID} on raw.scoreboard"
 
         # Verify Avro deserialization
         schema_path = ROOT / "schemas" / "avro" / "scoreboard_event.avsc"
@@ -100,7 +116,7 @@ class TestScoreboardToKafka:
         ctx = SerializationContext("raw.scoreboard", MessageField.VALUE)
         data = deser(msg.value(), ctx)
 
-        assert data["game_id"] == "401584701"
+        assert data["game_id"] == GAME_ID
         assert data["home_team"] == "BOS"
         assert data["away_team"] == "LAL"
         assert data["home_score"] == 55
@@ -125,7 +141,7 @@ class TestPlaysToKafka:
         from src.collectors.playbyplay import PlayByPlayCollector
 
         collector = PlayByPlayCollector(
-            ingestion_settings, ingestion_producer, game_id="401584701"
+            ingestion_settings, ingestion_producer, game_id=GAME_ID
         )
 
         mock_resp = httpx.Response(
@@ -136,16 +152,21 @@ class TestPlaysToKafka:
 
         await collector.poll()
 
-        # Consume all 3 plays from Kafka
-        consumer = kafka_consumer_factory(["raw.plays"], group_id="test-plays")
+        # Consume play messages — search by key (game_id) to skip stale data
+        group_id = f"test-plays-{uuid.uuid4().hex[:8]}"
+        consumer = kafka_consumer_factory(["raw.plays"], group_id=group_id)
         messages = []
-        for _ in range(3):
-            msg = _consume_one(consumer, timeout=10)
-            if msg:
+        deadline = time.monotonic() + 15.0
+        while time.monotonic() < deadline and len(messages) < 3:
+            msg = consumer.poll(1.0)
+            if msg is None or msg.error():
+                continue
+            # Only collect messages for our test game
+            if msg.key() == GAME_ID.encode():
                 messages.append(msg)
 
         assert len(messages) >= 2, (
-            f"Expected at least 2 play messages, got {len(messages)}"
+            f"Expected at least 2 play messages for {GAME_ID}, got {len(messages)}"
         )
 
         # Verify Avro deserialization of first message
@@ -155,7 +176,7 @@ class TestPlaysToKafka:
         ctx = SerializationContext("raw.plays", MessageField.VALUE)
         data = deser(messages[0].value(), ctx)
 
-        assert data["game_id"] == "401584701"
+        assert data["game_id"] == GAME_ID
         assert data["sequence_number"] in (1, 5, 8)
 
         await collector.close()
@@ -175,8 +196,10 @@ class TestAvroRoundtrip:
         """Produce Avro scoreboard → consume and deserialize → verify all fields."""
         from datetime import datetime, timezone
 
+        roundtrip_key = f"roundtrip-{uuid.uuid4().hex[:8]}"
+
         value = {
-            "game_id": "roundtrip-1",
+            "game_id": roundtrip_key,
             "home_team": "MIA",
             "away_team": "NYK",
             "home_team_name": "Miami Heat",
@@ -193,13 +216,14 @@ class TestAvroRoundtrip:
         }
 
         ingestion_producer.produce(
-            topic="raw.scoreboard", key="roundtrip-1", value=value
+            topic="raw.scoreboard", key=roundtrip_key, value=value
         )
         ingestion_producer.flush()
 
-        consumer = kafka_consumer_factory(["raw.scoreboard"], group_id="test-roundtrip")
-        msg = _consume_one(consumer)
-        assert msg is not None
+        group_id = f"test-roundtrip-{uuid.uuid4().hex[:8]}"
+        consumer = kafka_consumer_factory(["raw.scoreboard"], group_id=group_id)
+        msg = _consume_until_key(consumer, roundtrip_key.encode())
+        assert msg is not None, f"No message with key={roundtrip_key} on raw.scoreboard"
 
         schema_path = ROOT / "schemas" / "avro" / "scoreboard_event.avsc"
         registry = SchemaRegistryClient({"url": SCHEMA_REGISTRY_URL})
@@ -207,7 +231,7 @@ class TestAvroRoundtrip:
         ctx = SerializationContext("raw.scoreboard", MessageField.VALUE)
         result = deser(msg.value(), ctx)
 
-        assert result["game_id"] == "roundtrip-1"
+        assert result["game_id"] == roundtrip_key
         assert result["home_team"] == "MIA"
         assert result["away_team"] == "NYK"
         assert result["home_score"] == 99

@@ -13,7 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from .config import Settings
-from .db.redis import close_redis, init_redis, redis_ping
+from .db.redis import close_redis, get_cached_game_list, init_redis, redis_ping
 from .db.session import close_db, create_tables, db_ping, init_db, seed_teams
 from .db.sport_suite import close_sport_suite, init_sport_suite
 from .kafka.consumer import KafkaConsumerLoop
@@ -195,6 +195,38 @@ async def publish_play(game_id: str, play: dict):
     msg = {"type": "play", "data": play}
     await manager.broadcast(game_id, msg)
     return {"status": "broadcast", "clients": manager.connection_count(game_id)}
+
+
+@app.websocket("/ws/scoreboard")
+async def scoreboard_ws(websocket: WebSocket):
+    """WebSocket endpoint for live scoreboard updates.
+
+    On connect: sends cached game list.
+    Then streams scoreboard_update messages from the poller.
+    """
+    await manager.connect(websocket, "scoreboard")
+    try:
+        # Send current cached game list immediately
+        from datetime import datetime, timedelta, timezone
+
+        utc_now = datetime.now(timezone.utc)
+        et_now = utc_now - timedelta(hours=5)
+        today_str = et_now.date().isoformat()
+        cached = await get_cached_game_list(today_str)
+        if cached:
+            await websocket.send_text(
+                json.dumps({"type": "scoreboard_update", "data": cached}, default=str)
+            )
+
+        # Keep-alive loop
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text(json.dumps({"type": "pong"}))
+    except WebSocketDisconnect:
+        await manager.disconnect(websocket, "scoreboard")
+    except Exception:
+        await manager.disconnect(websocket, "scoreboard")
 
 
 @app.websocket("/ws/{game_id}")

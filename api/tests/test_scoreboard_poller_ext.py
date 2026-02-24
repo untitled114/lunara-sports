@@ -85,8 +85,21 @@ class TestPollScoreboard:
             mock_espn.get_scoreboard = AsyncMock(return_value={"events": [event]})
             mock_mgr.broadcast = mock_broadcast
             await _poll_scoreboard()
-            # Should have broadcast live game update
-            mock_broadcast.assert_called_once()
+            # Should have broadcast: 1) live game_update + 2) scoreboard_update
+            assert mock_broadcast.call_count == 2
+            # First call: per-game live update
+            mock_broadcast.assert_any_call(
+                "401810099",
+                {"type": "game_update", "data": mock_broadcast.call_args_list[0][0][1]["data"]},
+            )
+            # Second call: scoreboard-wide update
+            mock_broadcast.assert_any_call(
+                "scoreboard",
+                {
+                    "type": "scoreboard_update",
+                    "data": mock_broadcast.call_args_list[1][0][1]["data"],
+                },
+            )
 
 
 @pytest.mark.asyncio

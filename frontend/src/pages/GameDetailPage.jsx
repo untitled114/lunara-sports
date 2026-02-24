@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchGame, fetchStandings, fetchPlays, fetchBoxScore, buildStandingsLookup } from '@/services/api';
+import { fetchGame, fetchStandings, buildStandingsLookup } from '@/services/api';
 import { LiveFeed } from '@/components/sport/LiveFeed';
 import { BoxScore, FullBoxScore } from '@/components/sport/BoxScore';
 import { Skeleton, Badge } from '@/components/ui';
@@ -229,7 +229,7 @@ export default function GameDetailPage() {
     return () => { cancelled = true; setArenaTheme(null); };
   }, [id, setArenaTheme]);
 
-  const { gameUpdate, pickUpdates } = useGameFeed(id, game?.status);
+  const { plays, connected, gameUpdate, pickUpdates, boxData } = useGameFeed(id, game?.status);
 
   useEffect(() => {
     if (gameUpdate && game) {
@@ -303,24 +303,24 @@ export default function GameDetailPage() {
 
         {/* LEFT: Away Team On Court */}
         <div className="lg:col-span-3 hidden lg:block">
-          <BoxScore gameId={game.id} homeTeam={game.home_team} awayTeam={game.away_team} status={game.status} side="away" />
+          <BoxScore gameId={game.id} homeTeam={game.home_team} awayTeam={game.away_team} status={game.status} side="away" plays={plays} boxData={boxData} />
         </div>
 
         {/* CENTER: Live Feed */}
         <div className="lg:col-span-6">
-          <LiveFeed gameId={game.id} status={game.status} homeTeam={game.home_team} awayTeam={game.away_team} />
+          <LiveFeed gameId={game.id} status={game.status} homeTeam={game.home_team} awayTeam={game.away_team} plays={plays} connected={connected} boxData={boxData} />
         </div>
 
         {/* RIGHT: Home Team On Court */}
         <div className="lg:col-span-3 hidden lg:block">
-          <BoxScore gameId={game.id} homeTeam={game.home_team} awayTeam={game.away_team} status={game.status} side="home" />
+          <BoxScore gameId={game.id} homeTeam={game.home_team} awayTeam={game.away_team} status={game.status} side="home" plays={plays} boxData={boxData} />
         </div>
 
       </div>
 
       {/* Mobile: Both Teams (On Court) */}
       <div className="lg:hidden mt-4 sm:mt-5 lg:mt-6">
-        <BoxScore gameId={game.id} homeTeam={game.home_team} awayTeam={game.away_team} status={game.status} />
+        <BoxScore gameId={game.id} homeTeam={game.home_team} awayTeam={game.away_team} status={game.status} plays={plays} boxData={boxData} />
       </div>
 
       {/* Full Box Score */}
@@ -329,7 +329,7 @@ export default function GameDetailPage() {
           <BarChart3 className="h-5 w-5 text-indigo-400/60" />
           <h2 className="text-[13px] font-black text-white/40 uppercase tracking-[0.4em]">Full Box Score</h2>
         </div>
-        <FullBoxScore gameId={game.id} homeTeam={game.home_team} awayTeam={game.away_team} status={game.status} />
+        <FullBoxScore gameId={game.id} homeTeam={game.home_team} awayTeam={game.away_team} status={game.status} boxData={boxData} />
       </div>
     </div>
   );

@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { fetchGames, fetchStandings, buildStandingsLookup } from '@/services/api';
+import { fetchStandings, buildStandingsLookup } from '@/services/api';
 import { GameCard } from '@/components/sport/GameCard';
 import { DateNav } from '@/components/sport/DateNav';
 import { Skeleton } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
-import { usePolling } from '@/hooks/usePolling';
+import { useScoreboard } from '@/hooks/useScoreboard';
 
 const statusOrder = { live: 0, halftime: 1, scheduled: 2, final: 3 };
 
 export default function GamesPage() {
   const [searchParams] = useSearchParams();
-  const [games, setGames] = useState([]);
   const [standings, setStandings] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,24 +26,22 @@ export default function GamesPage() {
   const etDay = String(et.getDate()).padStart(2, '0');
   const dateStr = searchParams.get('date') || `${etYear}-${etMonth}-${etDay}`;
 
+  // Games come from shared WS scoreboard channel (REST fallback when disconnected)
+  const { games: rawGames } = useScoreboard(dateStr);
+  const games = [...rawGames].sort((a, b) => (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4));
+
+  // Standings: one-shot fetch (doesn't need WS)
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    Promise.all([
-      fetchGames(dateStr),
-      fetchStandings().catch(() => null),
-    ])
-      .then(([gamesData, standingsData]) => {
-        if (!cancelled) {
-          gamesData.sort((a, b) => (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4));
-          setGames(gamesData);
-          setStandings(buildStandingsLookup(standingsData));
-        }
+    fetchStandings()
+      .then((standingsData) => {
+        if (!cancelled) setStandings(buildStandingsLookup(standingsData));
       })
       .catch(() => {
-        if (!cancelled) setError("Unable to load games. Is the API running?");
+        if (!cancelled) setError("Unable to load standings.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -52,14 +49,6 @@ export default function GamesPage() {
 
     return () => { cancelled = true; };
   }, [dateStr]);
-
-  const hasLiveGames = games.some(g => g.status === 'live' || g.status === 'halftime');
-  usePolling(() => {
-    fetchGames(dateStr).then(data => {
-      data.sort((a, b) => (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4));
-      setGames(data);
-    }).catch(() => {});
-  }, { enabled: hasLiveGames });
 
   const filteredGames = games.filter(g => {
     if (filter === 'all') return true;

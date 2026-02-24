@@ -5,18 +5,13 @@ These tests don't require Kafka — they test the ingestion resilience layer.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "ingestion"))
-
-from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError  # noqa: E402
-from src.resilience.retry import espn_retry  # noqa: E402
+from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
+from src.resilience.retry import espn_retry
 
 
 class TestRetryIntegration:
