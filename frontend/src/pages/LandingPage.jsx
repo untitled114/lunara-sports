@@ -74,8 +74,10 @@ export default function LandingPage() {
           <div className="drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
             <h1 className="text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic">
               Lunara
-              <span className="block opacity-90">Sports</span>
             </h1>
+            <p className="text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic opacity-90" aria-hidden="true">
+              Sports
+            </p>
           </div>
 
           <p className="max-w-xl mx-auto text-sm md:text-base font-medium text-white/90 leading-relaxed tracking-wide">
