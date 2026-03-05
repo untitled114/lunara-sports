@@ -76,8 +76,8 @@ export default function GamesPage() {
         </div>
 
         {/* Interactive Control Strip */}
-        <div className="animate-boot flex flex-col md:flex-row items-center justify-between gap-6 bg-[#050a18]/60 p-2 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-md rim-light" style={{ animationDelay: '0.2s' }}>
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide w-full md:w-auto">
+        <div className="animate-boot flex flex-col md:flex-row items-center justify-between gap-4 bg-[#050a18]/60 p-2 rounded-2xl sm:rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-md rim-light" style={{ animationDelay: '0.2s' }}>
+          <div className="flex items-center gap-1 w-full md:w-auto">
             {[
               { id: 'all', label: 'All' },
               { id: 'live', label: 'Live' },
@@ -87,9 +87,9 @@ export default function GamesPage() {
               <button
                 key={f.id}
                 onClick={() => handleFilterChange(f.id)}
-                className={`shrink-0 px-5 sm:px-8 py-2.5 sm:py-3 rounded-2xl text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all duration-500 ${
+                className={`flex-1 text-center py-2.5 rounded-xl text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all duration-500 ${
                   filter === f.id
-                    ? 'bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] scale-105'
+                    ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]'
                     : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
