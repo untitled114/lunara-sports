@@ -13,6 +13,7 @@ const PlayersPage = lazy(() => import('./pages/PlayersPage'))
 const PlayerProfilePage = lazy(() => import('./pages/PlayerProfilePage'))
 const StatsPage = lazy(() => import('./pages/StatsPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
+const PicksPage = lazy(() => import('./pages/PicksPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/players" element={<PlayersPage />} />
             <Route path="/player/:id" element={<PlayerProfilePage />} />
             <Route path="/stats" element={<StatsPage />} />
+            <Route path="/picks" element={<PicksPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
           </Route>

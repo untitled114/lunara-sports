@@ -65,29 +65,29 @@ export default function GamesPage() {
   };
 
   return (
-    <div className="space-y-12 animate-fadeIn max-w-[1400px] mx-auto pb-32 relative pt-8">
+    <div className="space-y-8 sm:space-y-12 animate-fadeIn max-w-[1400px] mx-auto pb-24 sm:pb-32 relative pt-4 sm:pt-8">
       {/* Background Environment Detail */}
       <div className="absolute inset-0 -top-20 z-0 h-[500px] jumbotron-grid opacity-40 pointer-events-none" />
       <div className="scanline" />
 
-      <div className="relative z-10 space-y-12">
+      <div className="relative z-10 space-y-6 sm:space-y-12">
         <div className="animate-boot flex flex-col gap-2">
           <DateNav current={dateStr} />
         </div>
 
         {/* Interactive Control Strip */}
         <div className="animate-boot flex flex-col md:flex-row items-center justify-between gap-6 bg-[#050a18]/60 p-2 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-md rim-light" style={{ animationDelay: '0.2s' }}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide w-full md:w-auto">
             {[
-              { id: 'all', label: 'All Telemetry' },
-              { id: 'live', label: 'Active Feeds' },
+              { id: 'all', label: 'All' },
+              { id: 'live', label: 'Live' },
               { id: 'upcoming', label: 'Scheduled' },
-              { id: 'final', label: 'Archived' }
+              { id: 'final', label: 'Final' }
             ].map((f) => (
               <button
                 key={f.id}
                 onClick={() => handleFilterChange(f.id)}
-                className={`px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-500 ${
+                className={`shrink-0 px-5 sm:px-8 py-2.5 sm:py-3 rounded-2xl text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all duration-500 ${
                   filter === f.id
                     ? 'bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] scale-105'
                     : 'text-white/50 hover:text-white hover:bg-white/5'
@@ -126,7 +126,7 @@ export default function GamesPage() {
             <p className="text-sm font-black uppercase tracking-[0.5em] text-white/10">No matching telemetry found in local sector</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-10 relative">
             {/* Ambient Vertical Spotlights */}
             <div className="absolute -left-20 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent blur-sm" />
             <div className="absolute -right-20 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent blur-sm" />

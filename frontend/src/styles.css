@@ -377,3 +377,27 @@ body {
 .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+/* === MOBILE TOUCH TARGETS === */
+@media (max-width: 768px) {
+  /* Ensure minimum tap target on all interactive elements */
+  button, a, [role="button"] {
+    min-height: 36px;
+  }
+}
+
+/* === SAFE AREA SUPPORT === */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* === MOBILE FONT SCALE === */
+@media (max-width: 640px) {
+  /* Prevent text from being too large for the viewport */
+  h1, h2 {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+}

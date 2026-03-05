@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Search, Settings, Volume2, VolumeX, Sun, X as CloseIcon, Cpu, Activity, Wifi, Shield, Zap, Globe, Layers, FileText, ChevronRight, Monitor, Eye } from 'lucide-react';
+import { Search, Settings, Volume2, VolumeX, Sun, X as CloseIcon, Cpu, Activity, Wifi, Shield, Zap, Globe, Layers, FileText, ChevronRight, Monitor, Eye, TrendingUp } from 'lucide-react';
 import { BottomNav } from '@/components/sport/BottomNav';
 import { ScoreTicker } from '@/components/sport/ScoreTicker';
 import { CommandBar } from '@/components/ui/CommandBar';
@@ -76,7 +76,8 @@ const AppLayout = () => {
     { path: '/scoreboard', label: 'Scores', icon: Activity },
     { path: '/standings', label: 'Grid', icon: Shield },
     { path: '/teams', label: 'Nodes', icon: Globe },
-    { path: '/stats', label: 'Data', icon: Zap }
+    { path: '/stats', label: 'Data', icon: Zap },
+    { path: '/picks', label: 'Picks', icon: TrendingUp }
   ];
 
   return (
@@ -153,21 +154,21 @@ const AppLayout = () => {
                 </div>
               </div>
 
-              <div className="relative h-20 px-8 flex items-center justify-between">
-                <Link to="/" onClick={handleNavClick} className="flex items-center gap-5 group/logo">
+              <div className="relative h-14 sm:h-20 px-4 sm:px-8 flex items-center justify-between">
+                <Link to="/" onClick={handleNavClick} className="flex items-center gap-3 sm:gap-5 group/logo">
                   <div className="relative">
                     <div className="absolute -inset-2 bg-indigo-500/20 blur-xl opacity-0 group-hover/logo:opacity-100 transition-opacity" />
-                    <div className="h-14 w-14 rounded-2xl bg-black border border-white/10 flex items-center justify-center shadow-2xl relative overflow-hidden ring-1 ring-white/5">
+                    <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-black border border-white/10 flex items-center justify-center shadow-2xl relative overflow-hidden ring-1 ring-white/5">
                       <img src={BRANDING_IMAGES.logos.general} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />
-                      <span className="relative z-10 text-white font-black italic text-2xl mix-blend-difference">L</span>
+                      <span className="relative z-10 text-white font-black italic text-xl sm:text-2xl mix-blend-difference">L</span>
                     </div>
                   </div>
                   <div className="flex flex-col leading-none">
-                    <div className="flex items-baseline gap-2 group-hover:text-indigo-400 transition-colors">
-                      <span className="text-2xl font-black text-white tracking-tighter uppercase italic">Lunara</span>
-                      <span className="text-xl font-black text-white/80 tracking-tighter uppercase italic">Sports</span>
+                    <div className="flex items-baseline gap-1.5 sm:gap-2 group-hover:text-indigo-400 transition-colors">
+                      <span className="text-xl sm:text-2xl font-black text-white tracking-tighter uppercase italic">Lunara</span>
+                      <span className="text-base sm:text-xl font-black text-white/80 tracking-tighter uppercase italic">Sports</span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="hidden sm:flex items-center gap-2 mt-1">
                       <div className="h-1 w-1 rounded-full bg-indigo-500 animate-pulse" />
                       <span className="text-[10px] font-black text-white/70 uppercase tracking-[0.5em]">Intelligence Station</span>
                     </div>
@@ -196,7 +197,7 @@ const AppLayout = () => {
                   })}
                 </nav>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3 sm:gap-6">
                   <div className="hidden xl:flex flex-col items-end border-r border-white/5 pr-6">
                     <span className="text-[9px] font-black text-white/70 uppercase tracking-[0.4em] mb-1">System Frequency</span>
                     <div className="flex items-center gap-3">
@@ -207,26 +208,26 @@ const AppLayout = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     <button
                       aria-label="Open search"
                       onClick={() => { playGlassClick(); window.dispatchEvent(new KeyboardEvent('keydown', { 'metaKey': true, 'key': 'k' })); }}
-                      className="h-12 w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl"
+                      className="h-9 w-9 sm:h-12 sm:w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl"
                     >
-                      <Search className="h-5 w-5" />
+                      <Search className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                     <button
                       aria-label="Open settings"
                       onClick={() => { playGlassClick(); setSettingsOpen(true); }}
-                      className="h-12 w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl group/settings"
+                      className="h-9 w-9 sm:h-12 sm:w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl group/settings"
                     >
-                      <Settings className={`h-5 w-5 group-hover/settings:rotate-180 transition-transform duration-[1.5s] ${settingsOpen ? 'text-indigo-400' : ''}`} />
+                      <Settings className={`h-4 w-4 sm:h-5 sm:w-5 group-hover/settings:rotate-180 transition-transform duration-[1.5s] ${settingsOpen ? 'text-indigo-400' : ''}`} />
                     </button>
                   </div>
 
                   <button
                     aria-label="Toggle navigation menu"
-                    className="lg:hidden h-12 w-12 flex flex-col items-center justify-center gap-1.5 rounded-xl bg-white/5 border border-white/5"
+                    className="lg:hidden h-9 w-9 sm:h-12 sm:w-12 flex flex-col items-center justify-center gap-1.5 rounded-xl bg-white/5 border border-white/5"
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   >
                     <div className={`h-0.5 w-6 bg-white/60 transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`} />
@@ -471,7 +472,8 @@ const AppLayout = () => {
                   { path: '/scoreboard', label: 'Scoreboard' },
                   { path: '/standings', label: 'Standings' },
                   { path: '/teams', label: 'Teams' },
-                  { path: '/stats', label: 'Stats' }
+                  { path: '/stats', label: 'Stats' },
+                  { path: '/picks', label: 'Picks' }
                 ].map(link => (
                   <Link
                     key={link.path}
@@ -499,7 +501,7 @@ const AppLayout = () => {
         {/* Main Content Area */}
         <main
           id="main-content"
-          className={`flex-1 relative z-30 pb-20`}
+          className={`flex-1 relative z-30 pb-24 md:pb-10`}
         >
           {location.pathname === '/' ? (
             <Outlet />

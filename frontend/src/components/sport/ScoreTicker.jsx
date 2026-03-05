@@ -192,7 +192,7 @@ export function ScoreTicker() {
       </div>
 
       {/* Primary Control Hub Module */}
-      <div className="flex-shrink-0 px-12 flex flex-col items-center justify-center border-r border-white/10 min-w-[220px] bg-black/40 relative overflow-hidden group/hub">
+      <div className="hidden sm:flex flex-shrink-0 px-12 flex-col items-center justify-center border-r border-white/10 min-w-[220px] bg-black/40 relative overflow-hidden group/hub">
         <div className="absolute inset-0 bg-indigo-500/[0.03] group-hover/hub:bg-indigo-500/[0.08] transition-colors duration-1000" />
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500/40" />
 
@@ -227,7 +227,7 @@ export function ScoreTicker() {
       <Link
         to="/scoreboard"
         onClick={() => playGlassClick()}
-        className="flex-shrink-0 px-12 flex flex-col items-center justify-center border-l border-white/10 hover:bg-white/[0.05] transition-colors min-w-[180px] group/archive bg-black/40 relative overflow-hidden"
+        className="hidden sm:flex flex-shrink-0 px-12 flex-col items-center justify-center border-l border-white/10 hover:bg-white/[0.05] transition-colors min-w-[180px] group/archive bg-black/40 relative overflow-hidden"
       >
         <div className="absolute inset-0 bg-indigo-500/[0.02] group-hover/archive:bg-indigo-500/[0.08] transition-colors duration-1000" />
         <div className="flex flex-col items-center gap-3 relative z-10">
