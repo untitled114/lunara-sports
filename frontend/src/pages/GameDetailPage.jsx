@@ -20,25 +20,25 @@ function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf 
   const { playGlassClick } = useTheme();
 
   return (
-    <div className={`flex items-center gap-4 sm:gap-6 lg:gap-8 ${isAway ? 'flex-row' : 'flex-row-reverse text-right'}`}>
+    <div className={`flex items-center gap-2 sm:gap-6 lg:gap-8 ${isAway ? 'flex-row' : 'flex-row-reverse text-right'}`}>
       <Link
         to={`/team/${abbrev}`}
         onClick={() => playGlassClick()}
-        className="relative group"
+        className="relative group shrink-0"
       >
         <div
-          className="absolute -inset-3 sm:-inset-4 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"
+          className="absolute -inset-3 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"
           style={{ backgroundColor: colors.primary }}
         />
-        <div className="relative h-14 w-14 sm:h-20 sm:w-20 lg:h-24 lg:w-24 flex items-center justify-center rounded-[1.5rem] sm:rounded-[2rem] lg:rounded-[2.5rem] bg-[#050a18] border-t-2 border-white/20 border-x border-white/5 border-b-2 border-black/80 shadow-2xl group-hover:scale-110 transition-transform active:scale-95 p-3 sm:p-4 lg:p-5 overflow-hidden">
+        <div className="relative h-12 w-12 sm:h-20 sm:w-20 lg:h-24 lg:w-24 flex items-center justify-center rounded-full bg-[#050a18] border border-white/10 shadow-2xl group-hover:scale-110 transition-transform active:scale-95 p-2 sm:p-4 lg:p-5 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
           <img src={logoUrl} alt={abbrev} width={96} height={96} className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
         </div>
       </Link>
 
-      <div className="flex flex-col gap-1 min-w-0">
-        <div className={`flex items-center gap-3 ${isAway ? 'flex-row' : 'flex-row-reverse'}`}>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter text-white leading-none truncate uppercase italic">{abbrev}</h2>
+      <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+        <div className={`flex items-center gap-2 ${isAway ? 'flex-row' : 'flex-row-reverse'}`}>
+          <h2 className="text-xl sm:text-3xl lg:text-4xl font-black tracking-tighter text-white leading-none truncate uppercase italic">{abbrev}</h2>
           {seed && (
             <span className="hidden sm:inline text-[11px] font-black bg-white/10 border border-white/20 px-2 py-0.5 rounded text-white/70 uppercase tracking-widest">{conf || 'Conf'} #{seed}</span>
           )}
@@ -47,18 +47,18 @@ function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf 
           {name}
         </p>
         {record && (
-          <p className="text-sm font-bold text-indigo-400 tabular-nums tracking-[0.2em]">
+          <p className="text-xs sm:text-sm font-bold text-indigo-400 tabular-nums tracking-[0.2em]">
             {record}
           </p>
         )}
       </div>
 
-      <div className="relative flex items-center justify-center min-w-[50px] sm:min-w-[80px]">
-        <div className={`text-5xl sm:text-6xl lg:text-7xl font-black tabular-nums tracking-tighter mix-blend-plus-lighter ${isWinner ? 'text-white' : 'text-white/15'}`}>
+      <div className="relative flex items-center justify-center min-w-[38px] sm:min-w-[80px]">
+        <div className={`text-4xl sm:text-6xl lg:text-7xl font-black tabular-nums tracking-tighter mix-blend-plus-lighter ${isWinner ? 'text-white' : 'text-white/15'}`}>
           {score}
         </div>
         {isWinner && (
-          <div className="absolute -right-4 top-0 h-2 w-2 rounded-full bg-white animate-ping" />
+          <div className="absolute -right-3 top-0 h-2 w-2 rounded-full bg-white animate-ping" />
         )}
       </div>
     </div>
@@ -100,7 +100,7 @@ function ScoreboardHeader({ game, standings }) {
       <div className="absolute inset-0 texture-mesh opacity-5 pointer-events-none" />
       <div className="scanline opacity-10 pointer-events-none" />
 
-      <div className="relative p-5 sm:p-8 lg:p-12 xl:p-16">
+      <div className="relative p-4 sm:p-8 lg:p-12 xl:p-16">
         {/* Telemetry Bar Top */}
         <div className="hidden sm:flex justify-between items-center mb-4 sm:mb-8 lg:mb-12 px-4">
           <div className="flex items-center gap-4 text-[13px] font-black text-white/70 uppercase tracking-[0.4em]">
@@ -138,27 +138,30 @@ function ScoreboardHeader({ game, standings }) {
         </div>
 
         {/* Mobile-only status pill */}
-        <div className="flex sm:hidden justify-center mb-4">
+        <div className="flex sm:hidden justify-center mb-5">
           {isLive ? (
-            <div className="deboss px-5 py-2 rounded-2xl flex flex-col items-center border-white/10 relative overflow-hidden">
-              <Badge variant="success" size="sm" dot className="mb-1 animate-pulse border-none bg-transparent text-[var(--green)] font-black tracking-[0.3em]">
-                {game.status === "halftime" ? "HALFTIME" : `Q${game.quarter}`}
-              </Badge>
-              <span className="text-2xl font-black tabular-nums text-white tracking-[0.2em]">{game.clock || "12:00"}</span>
+            <div className="deboss px-6 py-3 rounded-2xl flex flex-col items-center border-white/10 relative overflow-hidden">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-2 w-2 rounded-full bg-[var(--green)] animate-pulse shadow-[0_0_8px_var(--green)]" />
+                <span className="text-[11px] font-black text-[var(--green)] uppercase tracking-[0.3em]">
+                  {game.status === "halftime" ? "HALFTIME" : `Q${game.quarter}`}
+                </span>
+              </div>
+              <span className="text-3xl font-black tabular-nums text-white tracking-[0.15em]">{game.clock || "12:00"}</span>
             </div>
           ) : isFinal ? (
-            <div className="deboss px-5 py-2 rounded-full border-white/10 bg-black/20">
-              <span className="text-[13px] font-black text-white/60 tracking-[0.5em] uppercase italic">Final</span>
+            <div className="deboss px-6 py-3 rounded-full border-white/10 bg-black/20">
+              <span className="text-sm font-black text-white/60 tracking-[0.5em] uppercase italic">Final</span>
             </div>
           ) : (
-            <div className="deboss px-5 py-2 rounded-2xl border-white/10 flex flex-col items-center bg-black/20">
-              <span className="text-[10px] font-black text-white/40 tracking-[0.4em] uppercase mb-0.5">Commencing</span>
-              <span className="text-xl font-black text-white tracking-widest tabular-nums">{fmt(game.start_time)}</span>
+            <div className="deboss px-6 py-3 rounded-2xl border-white/10 flex flex-col items-center bg-black/20">
+              <span className="text-[10px] font-black text-white/40 tracking-[0.4em] uppercase mb-0.5">Tip-off</span>
+              <span className="text-2xl font-black text-white tracking-widest tabular-nums">{fmt(game.start_time)}</span>
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-10 lg:gap-16 items-center max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 gap-4 sm:gap-10 lg:gap-16 items-center max-w-6xl mx-auto">
           <TeamHeader
             name={game.away_team_full || game.away_team}
             abbrev={game.away_team}
