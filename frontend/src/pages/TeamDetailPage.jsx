@@ -391,7 +391,7 @@ export default function TeamDetailPage() {
             />
           </div>
 
-          <div className="relative p-10 md:p-14 flex flex-col md:flex-row items-center gap-10">
+          <div className="relative p-6 sm:p-10 md:p-14 flex flex-col md:flex-row items-center gap-6 sm:gap-10">
             {/* Logo */}
             <div className="relative shrink-0">
               <div className="h-32 w-32 md:h-36 md:w-36 rounded-[2rem] bg-[#050a18] flex items-center justify-center border-t-2 border-white/20 border-x border-white/5 border-b-2 border-black/80 shadow-2xl p-6 overflow-hidden relative z-10">
@@ -406,7 +406,7 @@ export default function TeamDetailPage() {
 
             {/* Team Info */}
             <div className="flex-1 text-center md:text-left min-w-0">
-              <h1 className="text-5xl md:text-7xl text-jumbotron tracking-tighter leading-none mb-4">
+              <h1 className="text-4xl sm:text-5xl md:text-7xl text-jumbotron tracking-tighter leading-none mb-3 sm:mb-4">
                 {team.name}
               </h1>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-8 gap-y-3">
@@ -429,25 +429,25 @@ export default function TeamDetailPage() {
             </div>
 
             {/* Stats Cluster */}
-            <div className="flex gap-4 shrink-0">
+            <div className="flex gap-2 sm:gap-4 shrink-0">
               {st?.rank && (
-                <div className="deboss px-5 py-4 rounded-2xl flex flex-col items-center min-w-[70px]">
-                  <span className="text-[13px] font-black text-white/50 uppercase tracking-widest mb-1">{st.conf || 'Conf'}</span>
-                  <span className={`text-2xl font-black tabular-nums ${st.rank <= 6 ? 'text-[var(--green)]' : st.rank <= 10 ? 'text-yellow-500' : 'text-white/40'}`}>
+                <div className="deboss px-3 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl flex flex-col items-center min-w-[58px] sm:min-w-[70px]">
+                  <span className="text-[10px] sm:text-[13px] font-black text-white/50 uppercase tracking-widest mb-1">{st.conf || 'Conf'}</span>
+                  <span className={`text-xl sm:text-2xl font-black tabular-nums ${st.rank <= 6 ? 'text-[var(--green)]' : st.rank <= 10 ? 'text-yellow-500' : 'text-white/40'}`}>
                     #{st.rank}
                   </span>
                 </div>
               )}
               {st?.pct && (
-                <div className="deboss px-5 py-4 rounded-2xl flex flex-col items-center min-w-[70px]">
-                  <span className="text-[13px] font-black text-white/50 uppercase tracking-widest mb-1">PCT</span>
-                  <span className="text-2xl font-black tabular-nums text-white">{st.pct}</span>
+                <div className="deboss px-3 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl flex flex-col items-center min-w-[58px] sm:min-w-[70px]">
+                  <span className="text-[10px] sm:text-[13px] font-black text-white/50 uppercase tracking-widest mb-1">PCT</span>
+                  <span className="text-xl sm:text-2xl font-black tabular-nums text-white">{st.pct}</span>
                 </div>
               )}
               {st?.streak && (
-                <div className="deboss px-5 py-4 rounded-2xl flex flex-col items-center min-w-[70px]">
-                  <span className="text-[13px] font-black text-white/50 uppercase tracking-widest mb-1">Strk</span>
-                  <span className={`text-2xl font-black tabular-nums ${st.streak.startsWith('W') ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                <div className="deboss px-3 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl flex flex-col items-center min-w-[58px] sm:min-w-[70px]">
+                  <span className="text-[10px] sm:text-[13px] font-black text-white/50 uppercase tracking-widest mb-1">Strk</span>
+                  <span className={`text-xl sm:text-2xl font-black tabular-nums ${st.streak.startsWith('W') ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
                     {st.streak}
                   </span>
                 </div>
@@ -456,25 +456,25 @@ export default function TeamDetailPage() {
           </div>
 
           {/* Conference / Division badges */}
-          <div className="px-10 md:px-14 pb-6 flex items-center gap-3">
+          <div className="px-6 md:px-14 pb-6 flex flex-wrap items-center gap-2">
             {team.conference && (
-              <span className="px-4 py-2 text-[13px] font-black tracking-widest uppercase bg-[var(--accent)]/10 text-[var(--accent)] rounded-xl border border-[var(--accent)]/20">
-                {team.conference} Conference
+              <span className="px-3 py-1.5 text-[11px] sm:text-[13px] font-black tracking-widest uppercase bg-[var(--accent)]/10 text-[var(--accent)] rounded-xl border border-[var(--accent)]/20">
+                {team.conference} Conf
               </span>
             )}
             {team.division && (
-              <span className="px-4 py-2 text-[13px] font-black tracking-widest uppercase bg-white/5 text-white/40 rounded-xl border border-white/5">
-                {team.division} Division
+              <span className="px-3 py-1.5 text-[11px] sm:text-[13px] font-black tracking-widest uppercase bg-white/5 text-white/40 rounded-xl border border-white/5">
+                {team.division} Div
               </span>
             )}
             {st?.l10 && (
-              <span className="px-4 py-2 text-[13px] font-black tracking-widest uppercase bg-white/5 text-white/50 rounded-xl border border-white/5">
+              <span className="px-3 py-1.5 text-[11px] sm:text-[13px] font-black tracking-widest uppercase bg-white/5 text-white/50 rounded-xl border border-white/5">
                 L10: {st.l10}
               </span>
             )}
             {st?.gb && (
-              <span className="px-4 py-2 text-[13px] font-black tracking-widest uppercase bg-white/5 text-white/50 rounded-xl border border-white/5">
-                {st.gb === '—' || st.gb === '0' ? `${st.conf || 'Conf'} Leader` : `${st.gb} GB in ${st.conf || 'Conf'}`}
+              <span className="px-3 py-1.5 text-[11px] sm:text-[13px] font-black tracking-widest uppercase bg-white/5 text-white/50 rounded-xl border border-white/5">
+                {st.gb === '—' || st.gb === '0' ? `${st.conf || 'Conf'} Leader` : `${st.gb} GB`}
               </span>
             )}
           </div>
@@ -482,7 +482,7 @@ export default function TeamDetailPage() {
 
         {/* ═══ Tab Navigation ═══ */}
         <div
-          className="animate-intel flex items-center gap-2 bg-[#050a18]/60 p-2 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-md rim-light"
+          className="animate-intel flex items-center gap-1.5 bg-[#050a18]/60 p-2 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-md rim-light"
           style={{ animationDelay: '0.25s' }}
         >
           {tabs.map((tab) => {
@@ -492,14 +492,14 @@ export default function TeamDetailPage() {
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2.5 px-8 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-500 ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all duration-500 ${
                   isActive
-                    ? 'bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] scale-105'
+                    ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]'
                     : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                {tab.label}
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{tab.label}</span>
               </button>
             );
           })}
