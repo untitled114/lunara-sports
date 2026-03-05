@@ -23,7 +23,7 @@ function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var
       <a
         href={link}
         onClick={handleClick}
-        className="block liquid-mirror rounded-[3rem] p-12 gloss-sweep transition-all duration-1000 hover:-translate-y-6 animate-float relative z-10 luxury-edge shadow-[25px_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden h-full"
+        className="block liquid-mirror rounded-[2rem] sm:rounded-[3rem] p-7 sm:p-12 gloss-sweep transition-all duration-1000 hover:-translate-y-6 animate-float relative z-10 luxury-edge shadow-[25px_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden h-full"
         style={{ animationDelay: delay }}
       >
         {image && (
@@ -34,12 +34,12 @@ function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var
         )}
 
         <div className="relative z-10">
-          <div className="h-16 w-16 rounded-2xl bg-[#050a18] border-t-2 border-white/20 border-x border-white/5 border-b-2 border-black/80 flex items-center justify-center mb-10 shadow-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
+          <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl sm:rounded-2xl bg-[#050a18] border-t-2 border-white/20 border-x border-white/5 border-b-2 border-black/80 flex items-center justify-center mb-6 sm:mb-10 shadow-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 blur-xl" style={{ backgroundColor: color }} />
-            <Icon className="h-8 w-8 relative z-10" style={{ color: color }} />
+            <Icon className="h-6 w-6 sm:h-8 sm:w-8 relative z-10" style={{ color: color }} />
           </div>
-          <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-5 leading-tight">{title}</h2>
-          <p className="text-[13px] font-bold text-white/80 uppercase tracking-[0.3em] leading-relaxed mb-10">{desc}</p>
+          <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white mb-3 sm:mb-5 leading-tight">{title}</h2>
+          <p className="text-[12px] sm:text-[13px] font-bold text-white/80 uppercase tracking-[0.3em] leading-relaxed mb-6 sm:mb-10">{desc}</p>
           <div className="flex items-center gap-3 text-sm font-black uppercase tracking-[0.4em] text-white/30 group-hover:text-white transition-all">
             Explore <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
@@ -72,10 +72,10 @@ export default function LandingPage() {
           </div>
 
           <div className="drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
-            <h1 className="text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic">
+            <h1 className="text-5xl sm:text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic">
               Lunara
             </h1>
-            <p className="text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic opacity-90" aria-hidden="true">
+            <p className="text-5xl sm:text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic opacity-90" aria-hidden="true">
               Sports
             </p>
           </div>
@@ -84,17 +84,17 @@ export default function LandingPage() {
             Live scores, real-time stats, and ML-powered picks<br className="hidden md:block" /> across every league that matters.
           </p>
 
-          <div className="pt-6 flex justify-center gap-8">
+          <div className="pt-6 flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 px-4 sm:px-0">
             <button
               onClick={handleEnterArena}
-              className="group relative px-16 py-7 rounded-2xl bg-white text-black font-black uppercase tracking-[0.4em] text-[14px] transition-all duration-500 shadow-[0_20px_50px_rgba(255,255,255,0.15)] hover:shadow-[0_0_60px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 z-20 overflow-hidden text-center"
+              className="group relative w-full sm:w-auto px-10 sm:px-16 py-5 sm:py-7 rounded-2xl bg-white text-black font-black uppercase tracking-[0.4em] text-[13px] sm:text-[14px] transition-all duration-500 shadow-[0_20px_50px_rgba(255,255,255,0.15)] hover:shadow-[0_0_60px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 z-20 overflow-hidden text-center"
             >
               <div className="absolute inset-0 border-t-4 border-white/40 border-l-2 border-white/20 border-r-2 border-black/10 border-b-4 border-black/20 rounded-2xl pointer-events-none" />
               <span className="relative z-10">Enter Arena</span>
             </button>
             <Link
               to="/standings"
-              className="group relative px-16 py-7 rounded-2xl liquid-mirror text-white font-black uppercase tracking-[0.4em] text-[14px] hover:border-white/30 transition-all z-20 rim-light shadow-2xl gloss-sweep flex items-center justify-center"
+              className="group relative w-full sm:w-auto px-10 sm:px-16 py-5 sm:py-7 rounded-2xl liquid-mirror text-white font-black uppercase tracking-[0.4em] text-[13px] sm:text-[14px] hover:border-white/30 transition-all z-20 rim-light shadow-2xl gloss-sweep flex items-center justify-center"
             >
               <span className="relative z-10">Standings</span>
             </Link>
@@ -103,10 +103,10 @@ export default function LandingPage() {
       </div>
 
       {/* Below hero — contained width */}
-      <div className="space-y-32 pb-40 max-w-[1400px] mx-auto px-4">
+      <div className="space-y-16 sm:space-y-32 pb-24 sm:pb-40 max-w-[1400px] mx-auto px-4">
 
       {/* League Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-12">
         <FeatureCard
           icon={Trophy}
           title="NBA"
@@ -141,7 +141,7 @@ export default function LandingPage() {
 
       {/* What We Offer */}
       <div className="pb-40">
-        <div className="liquid-mirror rounded-[5rem] p-16 md:p-24 relative overflow-hidden group shadow-[inset_0_0_150px_rgba(0,0,0,0.8)] border-white/5 luxury-edge deep-occlusion">
+        <div className="liquid-mirror rounded-[2rem] sm:rounded-[5rem] p-8 sm:p-16 md:p-24 relative overflow-hidden group shadow-[inset_0_0_150px_rgba(0,0,0,0.8)] border-white/5 luxury-edge deep-occlusion">
            <img src={BRANDING_IMAGES.transitions.main1} alt="" width={1200} height={800} loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-30 transition-opacity duration-[2s]" />
            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent" />
 
@@ -151,7 +151,7 @@ export default function LandingPage() {
                     <Shield className="h-3 w-3" /> What We Do
                  </div>
 
-                 <h2 className="text-5xl md:text-7xl text-jumbotron leading-[0.85] uppercase">
+                 <h2 className="text-4xl sm:text-5xl md:text-7xl text-jumbotron leading-[0.85] uppercase">
                     Sports<br />Intelligence
                  </h2>
 
