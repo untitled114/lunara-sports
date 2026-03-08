@@ -32,6 +32,7 @@ class TestRun:
         mock_settings.espn_poll_interval_seconds = 0.1
         mock_settings.kafka_bootstrap_servers = "localhost:9092"
         mock_settings.schema_registry_url = "http://localhost:8081"
+        mock_settings.pubsub_project = ""  # use Kafka path
 
         mock_producer = MagicMock()
         mock_producer.produce = MagicMock()
@@ -68,6 +69,7 @@ class TestRun:
         """Test that run() creates and removes PBP collectors for live games."""
         mock_settings = MagicMock()
         mock_settings.espn_poll_interval_seconds = 0.1
+        mock_settings.pubsub_project = ""  # use Kafka path
 
         mock_producer = MagicMock()
         mock_scoreboard = AsyncMock()
