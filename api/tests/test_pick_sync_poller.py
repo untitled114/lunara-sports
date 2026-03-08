@@ -22,12 +22,15 @@ class TestRunPickSyncPoller:
     async def test_disabled_without_predictions_dir(self):
         settings = MagicMock()
         settings.sport_suite_predictions_dir = ""
+        settings.sport_suite_api_url = ""
         # Should return immediately
         await run_pick_sync_poller(settings)
 
     async def test_syncs_and_sets_last_date(self):
         settings = MagicMock()
         settings.sport_suite_predictions_dir = "/tmp/predictions"
+        settings.sport_suite_api_url = ""
+        settings.sport_suite_api_key = ""
 
         mock_session = AsyncMock()
         mock_factory = MagicMock(
@@ -58,6 +61,8 @@ class TestRunPickSyncPoller:
     async def test_continues_on_error(self):
         settings = MagicMock()
         settings.sport_suite_predictions_dir = "/tmp/predictions"
+        settings.sport_suite_api_url = ""
+        settings.sport_suite_api_key = ""
 
         call_count = 0
 

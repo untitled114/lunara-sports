@@ -177,6 +177,7 @@ class ModelPick(Base):
     confidence: Mapped[str | None] = mapped_column(String(10))
     line_spread: Mapped[float | None] = mapped_column(Numeric(5, 1))
     game_date: Mapped[date | None] = mapped_column(Date)
+    sport_suite_id: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
