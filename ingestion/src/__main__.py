@@ -29,7 +29,13 @@ SCOREBOARD_INTERVAL = 10  # seconds — slower loop for game discovery
 
 async def run() -> None:
     settings = Settings()
-    producer = KafkaProducer(settings)
+    # Use Pub/Sub on GCP (pubsub_project set), Kafka on Hetzner (lazy import)
+    if settings.pubsub_project:
+        from src.producers.pubsub_producer import PubSubProducer
+
+        producer = PubSubProducer()
+    else:
+        producer = KafkaProducer(settings)
     scoreboard = ScoreboardCollector(settings, producer)
 
     # game_id → PlayByPlayCollector for active games

@@ -16,4 +16,9 @@ class Settings(BaseSettings):
     espn_poll_interval_seconds: int = 5
     espn_date: str | None = None  # Override date: YYYYMMDD format, None = today/next
 
+    # GCP Pub/Sub (set to enable — disables Kafka producer when present)
+    pubsub_project: str = ""
+    pubsub_topic_plays: str = "raw-plays"
+    pubsub_topic_scoreboard: str = "raw-scoreboard"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
