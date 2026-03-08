@@ -17,10 +17,12 @@ import structlog
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import Settings
 from ..db.models import Game, ModelPick
 from ..db.session import get_session_factory
 from ..ws.live_feed import manager
 from .boxscore_service import get_boxscore
+from .sport_suite_client import post_pick_result
 
 logger = structlog.get_logger(__name__)
 
@@ -82,6 +84,8 @@ async def _update_picks_for_game(
     game_id: str,
     game_status: str,
     picks: list[ModelPick],
+    api_url: str = "",
+    api_key: str = "",
 ) -> list[dict]:
     """Fetch box score and update picks for a single game.
 
@@ -134,6 +138,13 @@ async def _update_picks_for_game(
         stmt = update(ModelPick).where(ModelPick.id == pick.id).values(**updates)
         await session.execute(stmt)
 
+        # Fire-and-forget result feedback to Sport-Suite when game is final
+        sport_suite_id = getattr(pick, "sport_suite_id", None)
+        if is_final and "is_hit" in updates and api_url and sport_suite_id:
+            asyncio.create_task(
+                post_pick_result(api_url, api_key, sport_suite_id, stat_val, updates["is_hit"])
+            )
+
         updated.append(
             {
                 "id": pick.id,
@@ -152,7 +163,7 @@ async def _update_picks_for_game(
     return updated
 
 
-async def _poll_pick_tracker() -> None:
+async def _poll_pick_tracker(api_url: str = "", api_key: str = "") -> None:
     """Single poll iteration: update all pending picks for today."""
     today = _eastern_today()
     factory = get_session_factory()
@@ -191,7 +202,9 @@ async def _poll_pick_tracker() -> None:
             if game.status not in ("live", "halftime", "final"):
                 continue
 
-            updates = await _update_picks_for_game(session, game_id, game.status, game_picks)
+            updates = await _update_picks_for_game(
+                session, game_id, game.status, game_picks, api_url=api_url, api_key=api_key
+            )
             all_updates.extend(updates)
 
         if all_updates:
@@ -214,13 +227,15 @@ async def _poll_pick_tracker() -> None:
             logger.info("pick_tracker.updated", picks=len(all_updates))
 
 
-async def run_pick_tracker_poller() -> None:
+async def run_pick_tracker_poller(settings: Settings | None = None) -> None:
     """Run the pick tracker poller loop indefinitely."""
-    logger.info("pick_tracker_poller.started", interval=POLL_INTERVAL)
+    api_url = settings.sport_suite_api_url if settings else ""
+    api_key = settings.sport_suite_api_key if settings else ""
+    logger.info("pick_tracker_poller.started", interval=POLL_INTERVAL, feedback=bool(api_url))
 
     while True:
         try:
-            await _poll_pick_tracker()
+            await _poll_pick_tracker(api_url=api_url, api_key=api_key)
         except Exception:
             logger.exception("pick_tracker_poller.error")
 
