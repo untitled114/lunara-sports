@@ -81,7 +81,7 @@ async def lifespan(app: FastAPI):
     pick_sync_task = asyncio.create_task(run_pick_sync_poller(settings))
 
     # Start pick tracker poller (updates live stats for pending picks)
-    pick_tracker_task = asyncio.create_task(run_pick_tracker_poller())
+    pick_tracker_task = asyncio.create_task(run_pick_tracker_poller(settings))
 
     yield
 

@@ -8,9 +8,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.models.schemas import BoxScorePlayer, BoxScoreResponse, BoxScoreTeam
-from src.services.pick_tracker_poller import (
-    _update_picks_for_game,
-)
+from src.services.pick_tracker_poller import _update_picks_for_game
 
 
 def _make_boxscore_player(
@@ -38,7 +36,14 @@ def _make_boxscore_player(
 
 
 def _make_pick(
-    player_name, market, line, prediction="OVER", actual_value=None, is_hit=None, pick_id=1
+    player_name,
+    market,
+    line,
+    prediction="OVER",
+    actual_value=None,
+    is_hit=None,
+    pick_id=1,
+    sport_suite_id=None,
 ):
     return SimpleNamespace(
         id=pick_id,
@@ -51,6 +56,7 @@ def _make_pick(
         tier="X",
         model_version="xl",
         game_id="g1",
+        sport_suite_id=sport_suite_id,
     )
 
 
@@ -274,3 +280,100 @@ class TestUpdatePicksForGame:
             updates = await _update_picks_for_game(mock_session, "g1", "final", [pick])
             assert updates[0]["actual_value"] == 4.0
             assert updates[0]["is_hit"] is True
+
+    async def test_feedback_posted_on_final_with_sport_suite_id(self):
+        boxscore = BoxScoreResponse(
+            game_id="g1",
+            home=BoxScoreTeam(
+                team="BOS",
+                abbrev="BOS",
+                players=[_make_boxscore_player("LeBron James", points=30)],
+                totals={},
+            ),
+            away=BoxScoreTeam(team="LAL", abbrev="LAL", players=[], totals={}),
+        )
+        pick = _make_pick("LeBron James", "POINTS", 24.5, sport_suite_id="uuid-abc")
+        mock_session = AsyncMock()
+
+        with (
+            patch(
+                "src.services.pick_tracker_poller.get_boxscore",
+                new_callable=AsyncMock,
+                return_value=boxscore,
+            ),
+            patch("src.services.pick_tracker_poller.asyncio.create_task") as mock_task,
+            patch(
+                "src.services.pick_tracker_poller.post_pick_result",
+                new_callable=AsyncMock,
+            ) as mock_post,
+        ):
+            await _update_picks_for_game(
+                mock_session,
+                "g1",
+                "final",
+                [pick],
+                api_url="https://api.sport-suite.internal",
+                api_key="key-123",
+            )
+            mock_task.assert_called_once()
+            mock_post.assert_called_once_with(
+                "https://api.sport-suite.internal", "key-123", "uuid-abc", 30.0, True
+            )
+
+    async def test_feedback_not_posted_without_api_url(self):
+        boxscore = BoxScoreResponse(
+            game_id="g1",
+            home=BoxScoreTeam(
+                team="BOS",
+                abbrev="BOS",
+                players=[_make_boxscore_player("LeBron James", points=30)],
+                totals={},
+            ),
+            away=BoxScoreTeam(team="LAL", abbrev="LAL", players=[], totals={}),
+        )
+        pick = _make_pick("LeBron James", "POINTS", 24.5, sport_suite_id="uuid-abc")
+        mock_session = AsyncMock()
+
+        with (
+            patch(
+                "src.services.pick_tracker_poller.get_boxscore",
+                new_callable=AsyncMock,
+                return_value=boxscore,
+            ),
+            patch("src.services.pick_tracker_poller.asyncio.create_task") as mock_task,
+        ):
+            await _update_picks_for_game(mock_session, "g1", "final", [pick])
+            mock_task.assert_not_called()
+
+    async def test_feedback_not_posted_without_sport_suite_id(self):
+        boxscore = BoxScoreResponse(
+            game_id="g1",
+            home=BoxScoreTeam(
+                team="BOS",
+                abbrev="BOS",
+                players=[_make_boxscore_player("LeBron James", points=30)],
+                totals={},
+            ),
+            away=BoxScoreTeam(team="LAL", abbrev="LAL", players=[], totals={}),
+        )
+        # sport_suite_id=None (file-based sync, no ID available)
+        pick = _make_pick("LeBron James", "POINTS", 24.5, sport_suite_id=None)
+        mock_session = AsyncMock()
+
+        with (
+            patch(
+                "src.services.pick_tracker_poller.get_boxscore",
+                new_callable=AsyncMock,
+                return_value=boxscore,
+            ),
+            patch("src.services.pick_tracker_poller.asyncio.create_task") as mock_task,
+        ):
+            await _update_picks_for_game(
+                mock_session,
+                "g1",
+                "final",
+                [pick],
+                api_url="https://api.sport-suite.internal",
+                api_key="key-123",
+            )
+            mock_task.assert_not_called()
