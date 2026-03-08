@@ -23,8 +23,12 @@ class Settings(BaseSettings):
     sport_suite_db_password: str = ""
     sport_suite_db_host: str = "localhost"
 
-    # Sport-suite predictions directory (empty = disabled)
+    # Sport-suite predictions directory (empty = disabled, Hetzner only)
     sport_suite_predictions_dir: str = ""
+
+    # Sport-suite API (cloud-safe pick sync — takes precedence over predictions dir)
+    sport_suite_api_url: str = ""
+    sport_suite_api_key: str = ""
 
     # JWT auth
     jwt_secret: str = "change-me-in-production"

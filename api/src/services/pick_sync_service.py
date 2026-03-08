@@ -10,6 +10,7 @@ import json
 from datetime import date
 from pathlib import Path
 
+import httpx
 import structlog
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -36,6 +37,26 @@ _FIELD_MAP = {
     "confidence": "confidence",
     "line_spread": "line_spread",
 }
+
+
+async def fetch_picks_from_api(api_url: str, api_key: str, pick_date: date) -> list[dict]:
+    """Fetch picks from Sport-Suite API. Returns raw pick list or [] on failure."""
+    url = f"{api_url.rstrip('/')}/picks/{pick_date.isoformat()}"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                url,
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=10.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            picks = data.get("picks", [])
+            logger.info("pick_sync.api_fetch", date=pick_date.isoformat(), count=len(picks))
+            return picks
+    except Exception:
+        logger.exception("pick_sync.api_fetch_error", url=url, date=pick_date.isoformat())
+        return []
 
 
 def find_picks_file(directory: str, pick_date: date) -> Path | None:
@@ -65,6 +86,9 @@ def _parse_picks(raw: list[dict], pick_date: date) -> list[dict]:
         for src, dst in _FIELD_MAP.items():
             if src in pick:
                 row[dst] = pick[src]
+
+        # Stable Sport-Suite pick ID (present in API responses, absent in file sync)
+        row["sport_suite_id"] = pick.get("id")
 
         # Player name
         row["player_name"] = pick.get("player_name", pick.get("player", ""))
@@ -163,27 +187,35 @@ async def sync_picks(
     session: AsyncSession,
     predictions_dir: str,
     pick_date: date | None = None,
+    api_url: str = "",
+    api_key: str = "",
 ) -> int:
-    """Sync picks from Sport-suite JSON file into model_picks table.
+    """Sync picks from Sport-Suite into model_picks table.
+
+    Source priority:
+      1. API (api_url set) — cloud-safe, used on GCP
+      2. File (predictions_dir set) — Hetzner shared-disk fallback
 
     Returns the number of picks upserted.
     """
-    if not predictions_dir:
-        return 0
-
     if pick_date is None:
         pick_date = date.today()
 
-    path = find_picks_file(predictions_dir, pick_date)
-    if not path:
-        logger.info("pick_sync.no_file", dir=predictions_dir, date=pick_date.isoformat())
-        return 0
-
-    with open(path) as f:
-        raw = json.load(f)
-
-    if not isinstance(raw, list):
-        logger.error("pick_sync.invalid_format", path=str(path))
+    if api_url:
+        # Cloud path: HTTP API
+        raw = await fetch_picks_from_api(api_url, api_key, pick_date)
+    elif predictions_dir:
+        # Local fallback: shared disk (Hetzner)
+        path = find_picks_file(predictions_dir, pick_date)
+        if not path:
+            logger.info("pick_sync.no_file", dir=predictions_dir, date=pick_date.isoformat())
+            return 0
+        with open(path) as f:
+            raw = json.load(f)
+        if not isinstance(raw, list):
+            logger.error("pick_sync.invalid_format", path=str(path))
+            return 0
+    else:
         return 0
 
     picks = _parse_picks(raw, pick_date)
@@ -217,6 +249,7 @@ async def sync_picks(
             "confidence": pick.get("confidence"),
             "line_spread": pick.get("line_spread"),
             "game_date": pick.get("game_date"),
+            "sport_suite_id": pick.get("sport_suite_id"),
         }
 
         stmt = (
@@ -236,6 +269,7 @@ async def sync_picks(
                     "reasoning": values["reasoning"],
                     "confidence": values["confidence"],
                     "line_spread": values["line_spread"],
+                    "sport_suite_id": values["sport_suite_id"],
                 },
             )
         )

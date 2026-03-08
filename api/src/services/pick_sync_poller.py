@@ -29,12 +29,15 @@ def _eastern_today() -> date:
 
 async def run_pick_sync_poller(settings: Settings) -> None:
     """Run the pick sync poller loop indefinitely."""
+    api_url = settings.sport_suite_api_url
     predictions_dir = settings.sport_suite_predictions_dir
-    if not predictions_dir:
-        logger.info("pick_sync_poller.disabled", reason="sport_suite_predictions_dir not set")
+
+    if not api_url and not predictions_dir:
+        logger.info("pick_sync_poller.disabled", reason="no sport_suite_api_url or predictions_dir")
         return
 
-    logger.info("pick_sync_poller.started", interval=POLL_INTERVAL, dir=predictions_dir)
+    source = f"api:{api_url}" if api_url else f"file:{predictions_dir}"
+    logger.info("pick_sync_poller.started", interval=POLL_INTERVAL, source=source)
     last_synced_date: date | None = None
 
     while True:
@@ -50,7 +53,13 @@ async def run_pick_sync_poller(settings: Settings) -> None:
                 continue
 
             async with factory() as session:
-                count = await sync_picks(session, predictions_dir, today)
+                count = await sync_picks(
+                    session,
+                    predictions_dir,
+                    today,
+                    api_url=api_url,
+                    api_key=settings.sport_suite_api_key,
+                )
 
             if count > 0:
                 last_synced_date = today

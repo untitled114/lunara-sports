@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from datetime import date
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.services.pick_sync_service import _parse_picks, find_picks_file
+import pytest
+
+from src.services.pick_sync_service import _parse_picks, fetch_picks_from_api, find_picks_file
 
 
 class TestFindPicksFile:
@@ -137,3 +140,48 @@ class TestParsePicks:
         picks = _parse_picks(raw, date(2026, 2, 20))
         assert len(picks) == 3
         assert picks[2]["team"] == "NY"  # NYK → NY mapping
+
+    def test_sport_suite_id_captured(self):
+        raw = [{"player_name": "Test", "id": "uuid-abc-123"}]
+        picks = _parse_picks(raw, date(2026, 2, 20))
+        assert picks[0]["sport_suite_id"] == "uuid-abc-123"
+
+    def test_sport_suite_id_none_when_absent(self):
+        raw = [{"player_name": "Test"}]
+        picks = _parse_picks(raw, date(2026, 2, 20))
+        assert picks[0]["sport_suite_id"] is None
+
+
+@pytest.mark.asyncio
+class TestFetchPicksFromApi:
+    async def test_returns_picks_on_success(self):
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "picks": [{"player_name": "LeBron James", "id": "uuid-1"}]
+        }
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(return_value=mock_response)
+
+        with patch("src.services.pick_sync_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+            result = await fetch_picks_from_api(
+                "https://api.sport-suite.internal", "key-123", date(2026, 3, 8)
+            )
+
+        assert len(result) == 1
+        assert result[0]["player_name"] == "LeBron James"
+
+    async def test_returns_empty_on_http_error(self):
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=Exception("connection refused"))
+
+        with patch("src.services.pick_sync_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+            result = await fetch_picks_from_api(
+                "https://api.sport-suite.internal", "key-123", date(2026, 3, 8)
+            )
+
+        assert result == []
