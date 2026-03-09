@@ -227,7 +227,29 @@ class StreamProcessor:
                 plays_future.cancel()
 
 
+def _start_health_server() -> None:
+    """Start a minimal HTTP health server in a background thread for Cloud Run."""
+    import http.server
+    import threading
+
+    port = int(os.environ.get("PORT", "8080"))
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+
+        def log_message(self, format: str, *args: object) -> None:  # noqa: ARG002
+            pass  # suppress access logs
+
+    server = http.server.HTTPServer(("0.0.0.0", port), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+
 def main() -> None:
+    _start_health_server()
     processor = StreamProcessor()
     processor.run()
 
