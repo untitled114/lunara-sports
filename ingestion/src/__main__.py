@@ -10,6 +10,7 @@ Decoupling these ensures play polling is never blocked by scoreboard HTTP calls.
 from __future__ import annotations
 
 import asyncio
+import os
 import signal
 
 import structlog
@@ -138,5 +139,24 @@ async def run() -> None:
         await scoreboard.close()
 
 
+async def health_server() -> None:
+    """Minimal HTTP health server — required by Cloud Run to confirm container is up."""
+    port = int(os.environ.get("PORT", "8080"))
+
+    async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        await reader.read(1024)
+        writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK")
+        await writer.drain()
+        writer.close()
+
+    server = await asyncio.start_server(handle, "0.0.0.0", port)
+    async with server:
+        await server.serve_forever()
+
+
 if __name__ == "__main__":
-    asyncio.run(run())
+
+    async def main() -> None:
+        await asyncio.gather(health_server(), run())
+
+    asyncio.run(main())

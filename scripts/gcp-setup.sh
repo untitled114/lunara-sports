@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # ─── Config ───────────────────────────────────────────────────────────────────
-PROJECT_ID="${GCP_PROJECT:-lunara-sports}"
+PROJECT_ID="${GCP_PROJECT:-professional-portafolio}"
 REGION="${GCP_REGION:-us-central1}"
 IMAGE_REGISTRY="gcr.io/${PROJECT_ID}"
 
@@ -61,6 +61,7 @@ setup_sql() {
     else
         gcloud sql instances create "${SQL_INSTANCE}" \
             --database-version=POSTGRES_16 \
+            --edition=ENTERPRISE \
             --tier=db-g1-small \
             --region="${REGION}" \
             --storage-type=SSD \
