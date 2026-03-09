@@ -36,6 +36,7 @@ from .routers import (
     teams,
 )
 from .services.espn_client import close_espn_client, init_espn_client
+from .services.olap_poller import run_olap_poller
 from .services.pick_sync_poller import run_pick_sync_poller
 from .services.pick_tracker_poller import run_pick_tracker_poller
 from .services.scoreboard_poller import run_scoreboard_poller
@@ -83,6 +84,9 @@ async def lifespan(app: FastAPI):
     # Start pick tracker poller (updates live stats for pending picks)
     pick_tracker_task = asyncio.create_task(run_pick_tracker_poller(settings))
 
+    # Start nightly OLAP exporter (Parquet → GCS for V4 retraining)
+    olap_task = asyncio.create_task(run_olap_poller(settings))
+
     yield
 
     # Shutdown
@@ -92,6 +96,7 @@ async def lifespan(app: FastAPI):
     scoreboard_task.cancel()
     pick_sync_task.cancel()
     pick_tracker_task.cancel()
+    olap_task.cancel()
     if consumer_task:
         try:
             await consumer_task
