@@ -90,6 +90,10 @@ def _parse_picks(raw: list[dict], pick_date: date) -> list[dict]:
         # Stable Sport-Suite pick ID (present in API responses, absent in file sync)
         row["sport_suite_id"] = pick.get("id")
 
+        # Enrichment fields from Phase 3
+        row["rolling_stats"] = pick.get("rolling_stats")
+        row["injury_status"] = pick.get("injury_status")
+
         # Player name
         row["player_name"] = pick.get("player_name", pick.get("player", ""))
 
@@ -250,6 +254,8 @@ async def sync_picks(
             "line_spread": pick.get("line_spread"),
             "game_date": pick.get("game_date"),
             "sport_suite_id": pick.get("sport_suite_id"),
+            "rolling_stats": pick.get("rolling_stats"),
+            "injury_status": pick.get("injury_status"),
         }
 
         stmt = (
@@ -270,6 +276,8 @@ async def sync_picks(
                     "confidence": values["confidence"],
                     "line_spread": values["line_spread"],
                     "sport_suite_id": values["sport_suite_id"],
+                    "rolling_stats": values["rolling_stats"],
+                    "injury_status": values["injury_status"],
                 },
             )
         )

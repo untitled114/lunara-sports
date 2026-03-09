@@ -7,6 +7,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     ARRAY,
+    JSON,
     BigInteger,
     Boolean,
     Date,
@@ -178,6 +179,8 @@ class ModelPick(Base):
     line_spread: Mapped[float | None] = mapped_column(Numeric(5, 1))
     game_date: Mapped[date | None] = mapped_column(Date)
     sport_suite_id: Mapped[str | None] = mapped_column(String(64))
+    rolling_stats: Mapped[dict | None] = mapped_column(JSON)
+    injury_status: Mapped[str | None] = mapped_column(String(30))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

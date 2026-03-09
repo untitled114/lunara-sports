@@ -50,6 +50,8 @@ def _gate_pick(pick: ModelPick, is_premium: bool) -> dict:
         "is_home": pick.is_home,
         "created_at": pick.created_at,
         "is_gated": False,
+        "rolling_stats": pick.rolling_stats,
+        "injury_status": pick.injury_status,
     }
 
     if is_premium:

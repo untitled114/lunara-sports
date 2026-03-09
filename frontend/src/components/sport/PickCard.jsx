@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui";
-import { Lock, TrendingUp, TrendingDown } from "lucide-react";
+import { Lock, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 
 const TIER_VARIANT = {
   X: "warning",
@@ -96,9 +96,19 @@ export function PickCard({ pick, delay = 0 }) {
 
       {/* Player info */}
       <div className="px-7 pb-4">
-        <p className="text-lg font-black text-white uppercase tracking-tight truncate group-hover/card:text-indigo-400 transition-colors">
-          {pick.player_name}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-lg font-black text-white uppercase tracking-tight truncate group-hover/card:text-indigo-400 transition-colors">
+            {pick.player_name}
+          </p>
+          {pick.injury_status && (
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-900/30 border border-amber-500/30 shrink-0">
+              <AlertTriangle className="h-3 w-3 text-amber-400" />
+              <span className="text-[9px] font-black text-amber-400 uppercase tracking-wider">
+                {pick.injury_status}
+              </span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2 mt-1 text-[11px] font-bold text-white/40 uppercase tracking-widest">
           {pick.team && <span>{pick.team}</span>}
           {pick.opponent_team && (
@@ -111,6 +121,28 @@ export function PickCard({ pick, delay = 0 }) {
             <span className="text-white/15">{pick.is_home ? "(H)" : "(A)"}</span>
           )}
         </div>
+        {pick.rolling_stats && (
+          <div className="flex items-center gap-3 mt-2">
+            {pick.rolling_stats.avg_l5 != null && (
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">L5 Avg</span>
+                <span className="text-xs font-black text-white/50 tabular-nums">{Number(pick.rolling_stats.avg_l5).toFixed(1)}</span>
+              </div>
+            )}
+            {pick.rolling_stats.avg_l10 != null && (
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">L10 Avg</span>
+                <span className="text-xs font-black text-white/50 tabular-nums">{Number(pick.rolling_stats.avg_l10).toFixed(1)}</span>
+              </div>
+            )}
+            {pick.rolling_stats.avg_l20 != null && (
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">L20 Avg</span>
+                <span className="text-xs font-black text-white/50 tabular-nums">{Number(pick.rolling_stats.avg_l20).toFixed(1)}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Prediction + line */}
