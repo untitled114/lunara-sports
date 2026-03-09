@@ -9,17 +9,17 @@
 
 | Layer | Status | Notes |
 |-------|--------|-------|
-| Ingestion (ESPN → Kafka) | ✅ Deployed | Running on Hetzner |
-| Stream processor (Java Kafka Streams) | ✅ Deployed | |
-| API (FastAPI + WebSocket) | ✅ Deployed | 13 routers live |
-| Pick sync (file-based) | ✅ Working | Breaks on cloud migration |
+| Ingestion (ESPN → Kafka) | ✅ Deployed | Running on GCP |
+| Stream processor | ✅ Deployed | |
+| API (FastAPI + WebSocket) | ✅ Deployed | GCP Cloud Run |
+| Frontend (React + Vite) | ✅ Deployed | Vercel |
+| Pick sync (dual-path) | ✅ Done | File → API, cloud-safe |
 | Pick tracking (ESPN box scores) | ✅ Working | 30s polling |
-| Frontend (React + Vite) | ⚠️ Needs validation | Vite in place, not fully tested |
-| OLAP store | ❌ Not started | Schema exists in storage/olap/ |
-| API-based pick sync | ❌ Not started | Needs Sport-Suite API endpoint |
-| Pick result feedback | ❌ Not started | Lunara → Sport-Suite PATCH |
-| GCP migration | ❌ Not started | Target cloud for Lunara |
-| Lumen live tracker | ❌ Not started | Replaces Palworld bot |
+| Pick result feedback | ✅ Done | Lunara → Sport-Suite PATCH |
+| GCP migration | ✅ Done | AWS (Sport-Suite) + GCP (Lunara) |
+| OLAP store | 🔜 Next | Schema in storage/olap/ |
+| Lumen live tracker | 🔜 Next | Replaces Palworld bot |
+| Hetzner decommission | 🔒 Blocked | Wait 48h GCP stability |
 
 ---
 

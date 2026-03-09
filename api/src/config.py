@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     sport_suite_api_url: str = ""
     sport_suite_api_key: str = ""
 
+    # GCS OLAP export (Parquet for V4 model retraining)
+    gcs_olap_bucket: str = ""
+
     # JWT auth
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
