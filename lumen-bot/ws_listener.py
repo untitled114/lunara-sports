@@ -78,14 +78,6 @@ class WSListener:
         if picks is None:
             return
 
-        # Detect new picks (first poll or new picks synced)
-        new_pick_ids = {p["id"] for p in picks} - set(self._pick_states.keys())
-        if new_pick_ids and self.alert_cfg.get("morning_summary", True):
-            new_picks = [p for p in picks if p["id"] in new_pick_ids]
-            embed = self.formatter.summary_embed(new_picks)
-            await self.send_dm(embed=embed)
-            log.info("Sent pick summary — %d new picks", len(new_picks))
-
         # Initialize state for new picks
         for pick in picks:
             if pick["id"] not in self._pick_states:
