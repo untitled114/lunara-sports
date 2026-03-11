@@ -1,0 +1,15 @@
+discord:
+  # Token loaded from DISCORD_TOKEN env var (never commit tokens)
+  owner_id: 759254862423916564
+
+lunara:
+  api_url: "https://lunara-api-889243758895.us-central1.run.app"
+  ws_url: "wss://lunara-api-889243758895.us-central1.run.app/ws"
+
+alerts:
+  # DM triggers
+  morning_summary: true       # Send pick summary when new picks sync
+  approaching_line: true      # Alert when actual_value is within threshold of line
+  approach_threshold: 2.0     # Points/rebounds within line to trigger approaching alert
+  hit_miss: true              # Alert on final is_hit determination
+  ping_on_x_tier: true        # Extra emphasis on X-tier picks
