@@ -67,6 +67,9 @@ class Lumen(discord.Client):
             )
         )
 
+        # Start health server for Cloud Run
+        asyncio.create_task(self._health_server())
+
         # Start WebSocket listener
         self._ws_listener = WSListener(
             api_url=self.api_url,
@@ -92,6 +95,21 @@ class Lumen(discord.Client):
             log.warning("Cannot DM owner — DMs may be disabled")
         except Exception:
             log.exception("Failed to send DM")
+
+    async def _health_server(self) -> None:
+        """Minimal HTTP server so Cloud Run knows we're alive."""
+        port = int(os.environ.get("PORT", "8080"))
+
+        async def handle(reader, writer):
+            await reader.read(1024)
+            writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK")
+            await writer.drain()
+            writer.close()
+
+        server = await asyncio.start_server(handle, "0.0.0.0", port)
+        log.info("Health server listening on :%d", port)
+        async with server:
+            await server.serve_forever()
 
     async def _atlas_heartbeat(self) -> None:
         """Send periodic heartbeat to Cephalon Atlas fleet monitor."""
