@@ -8,7 +8,7 @@ lunara:
 
 alerts:
   # DM triggers
-  morning_summary: true       # Send pick summary when new picks sync
+  morning_summary: false      # Axiom handles this
   approaching_line: true      # Alert when actual_value is within threshold of line
   approach_threshold: 2.0     # Points/rebounds within line to trigger approaching alert
   hit_miss: true              # Alert on final is_hit determination

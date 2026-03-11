@@ -63,7 +63,7 @@ class Lumen(discord.Client):
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name="Lunara Sports",
+                name="live picks",
             )
         )
 
