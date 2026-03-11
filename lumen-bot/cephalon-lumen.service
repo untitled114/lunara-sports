@@ -1,0 +1,16 @@
+[Unit]
+Description=Cephalon Lumen — Lunara Sports Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+User=sportsuite
+WorkingDirectory=/opt/play-by-play/lumen-bot
+ExecStart=/opt/play-by-play/lumen-bot/.venv/bin/python bot.py
+Restart=always
+RestartSec=10
+EnvironmentFile=/opt/play-by-play/lumen-bot/.env
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
