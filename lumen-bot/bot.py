@@ -115,7 +115,7 @@ class Lumen(discord.Client):
         """Send periodic heartbeat to Cephalon Atlas fleet monitor."""
         await self.wait_until_ready()
         secret = os.environ.get("ATLAS_HEARTBEAT_SECRET", "")
-        url = "http://localhost:8100/heartbeat"
+        url = os.environ.get("ATLAS_HEARTBEAT_URL", "http://localhost:8100/heartbeat")
         log.info("Atlas heartbeat sender started")
 
         while not self.is_closed():
