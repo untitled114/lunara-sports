@@ -28,13 +28,14 @@ WS_RETRY_DELAY = 10
 class PickState:
     """Tracks per-pick state to prevent duplicate alerts."""
 
-    __slots__ = ("pick_id", "last_actual", "is_hit", "approach_alerted")
+    __slots__ = ("pick_id", "last_actual", "is_hit", "approach_alerted", "mid_game_hit_alerted")
 
     def __init__(self, pick_id: int):
         self.pick_id = pick_id
         self.last_actual: float | None = None
         self.is_hit: bool | None = None
         self.approach_alerted: bool = False
+        self.mid_game_hit_alerted: bool = False
 
 
 class WSListener:
@@ -162,6 +163,32 @@ class WSListener:
                         "HIT" if is_hit else "MISS",
                     )
                 continue
+
+            # Mid-game hit detection (OVER cleared before game final)
+            if (
+                actual is not None
+                and line is not None
+                and is_hit is None
+                and not state.mid_game_hit_alerted
+            ):
+                prediction = pick.get("prediction", "").upper()
+                cleared = (prediction == "OVER" and actual > line) or (
+                    prediction == "UNDER" and actual < line
+                )
+                if cleared:
+                    state.mid_game_hit_alerted = True
+                    state.approach_alerted = True  # skip approaching alert
+                    embed = self.formatter.mid_game_hit_embed(pick)
+                    await self.send_dm(embed=embed)
+                    log.info(
+                        "Mid-game hit: %s %s %.1f (line: %.1f)",
+                        pick.get("player_name"),
+                        prediction,
+                        actual,
+                        line,
+                    )
+                    state.last_actual = actual
+                    continue
 
             # Approaching line alert (live game)
             if (
