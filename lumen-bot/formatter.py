@@ -88,6 +88,28 @@ class PickFormatter:
         embed.set_footer(text="Cephalon Lumen — Lunara Sports")
         return embed
 
+    def mid_game_hit_embed(self, pick: dict) -> discord.Embed:
+        """Alert when a pick clears its line during a live game."""
+        actual = pick.get("actual_value", 0)
+        line = pick.get("line", 0)
+        market = pick.get("market", "?")
+        prediction = pick.get("prediction", "?")
+        tier = pick.get("tier", "?")
+        model = pick.get("model_version", "?").upper()
+        color = TIER_COLORS.get(tier, DEFAULT_COLOR)
+
+        embed = discord.Embed(
+            title=f"🎯 {pick.get('player_name', '?')} — Line Cleared",
+            description=(
+                f"**{prediction} {line} {market}**\n"
+                f"Currently at **{actual:.1f}** — line cleared mid-game\n"
+                f"Tier: **{tier}** | {model} | {pick.get('book', '?')}"
+            ),
+            color=color,
+        )
+        embed.set_footer(text="Cephalon Lumen — Lunara Sports")
+        return embed
+
     def result_embed(self, pick: dict) -> discord.Embed:
         """Hit/miss result embed."""
         is_hit = pick.get("is_hit", False)
