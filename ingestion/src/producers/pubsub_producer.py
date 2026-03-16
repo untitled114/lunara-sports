@@ -64,9 +64,9 @@ class PubSubProducer:
         """Wait for all pending publishes to complete."""
         for future in self._futures:
             try:
-                future.result(timeout=5.0)
-            except Exception:
-                logger.exception("pubsub_producer.flush_error")
+                future.result(timeout=10.0)
+            except Exception as e:
+                logger.warning("pubsub_producer.flush_error", error=str(e))
         self._futures.clear()
 
     def close(self) -> None:

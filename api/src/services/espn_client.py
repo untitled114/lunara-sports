@@ -62,7 +62,7 @@ async def _cached_get(
         logger.info("espn.fetched", url=url, status=resp.status_code)
         return data
     except httpx.HTTPError as e:
-        logger.error("espn.fetch_error", url=url, error=str(e))
+        logger.warning("espn.fetch_error", url=url, error=str(e))
         return None
 
 

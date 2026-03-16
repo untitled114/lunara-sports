@@ -67,7 +67,7 @@ async def run_pick_sync_poller(settings: Settings) -> None:
             else:
                 logger.debug("pick_sync_poller.no_picks", date=today.isoformat())
 
-        except Exception:
-            logger.exception("pick_sync_poller.error")
+        except Exception as e:
+            logger.warning("pick_sync_poller.error", error=str(e))
 
         await asyncio.sleep(POLL_INTERVAL)

@@ -54,8 +54,10 @@ async def fetch_picks_from_api(api_url: str, api_key: str, pick_date: date) -> l
             picks = data.get("picks", [])
             logger.info("pick_sync.api_fetch", date=pick_date.isoformat(), count=len(picks))
             return picks
-    except Exception:
-        logger.exception("pick_sync.api_fetch_error", url=url, date=pick_date.isoformat())
+    except Exception as e:
+        logger.warning(
+            "pick_sync.api_fetch_error", url=url, date=pick_date.isoformat(), error=str(e)
+        )
         return []
 
 

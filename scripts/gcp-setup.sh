@@ -8,6 +8,7 @@
 #
 # Usage:
 #   ./scripts/gcp-setup.sh              # full setup
+#   ./scripts/gcp-setup.sh iam          # service account + IAM roles only
 #   ./scripts/gcp-setup.sh sql          # Cloud SQL only
 #   ./scripts/gcp-setup.sh redis        # Memorystore only
 #   ./scripts/gcp-setup.sh pubsub       # Pub/Sub topics only
@@ -34,6 +35,10 @@ INGESTION_SERVICE="lunara-ingestion"
 PROCESSOR_SERVICE="lunara-stream-processor"
 LUMEN_SERVICE="cephalon-lumen"
 
+# Service account
+SA_NAME="lunara-svc"
+SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 step() { echo; echo "▶ $*"; }
 ok()   { echo "  ✓ $*"; }
@@ -50,6 +55,45 @@ require_project() {
         containerregistry.googleapis.com \
         --quiet
     ok "APIs enabled for ${PROJECT_ID}"
+}
+
+# ─── Service Account & IAM ───────────────────────────────────────────────────
+setup_service_account() {
+    step "Service Account & IAM roles"
+
+    # Create SA (idempotent)
+    if gcloud iam service-accounts describe "${SA_EMAIL}" --quiet 2>/dev/null; then
+        ok "Service account ${SA_NAME} already exists"
+    else
+        gcloud iam service-accounts create "${SA_NAME}" \
+            --display-name="Lunara Play-by-Play Cloud Run services" \
+            --quiet
+        ok "Created service account ${SA_NAME}"
+    fi
+
+    # Roles required by Cloud Run services:
+    #   ingestion  → pubsub.publisher
+    #   processor  → pubsub.subscriber, pubsub.publisher, cloudsql.client
+    #   api        → cloudsql.client, storage.objectCreator, pubsub.subscriber
+    #   all        → secretmanager.secretAccessor (for --set-secrets)
+    ROLES=(
+        "roles/pubsub.publisher"
+        "roles/pubsub.subscriber"
+        "roles/cloudsql.client"
+        "roles/secretmanager.secretAccessor"
+        "roles/storage.objectCreator"
+    )
+
+    for role in "${ROLES[@]}"; do
+        gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+            --member="serviceAccount:${SA_EMAIL}" \
+            --role="${role}" \
+            --condition=None \
+            --quiet >/dev/null 2>&1
+        ok "Bound ${role}"
+    done
+
+    ok "Service account ready: ${SA_EMAIL}"
 }
 
 # ─── Cloud SQL ────────────────────────────────────────────────────────────────
@@ -240,6 +284,7 @@ deploy_run() {
         --min-instances=1 \
         --max-instances=10 \
         --allow-unauthenticated \
+        --service-account="${SA_EMAIL}" \
         --add-cloudsql-instances="${SQL_CONN}" \
         --vpc-connector=lunara-connector \
         --set-secrets="DATABASE_URL=lunara-db-url:latest,JWT_SECRET=lunara-jwt-secret:latest,SPORT_SUITE_API_KEY=lunara-sport-suite-api-key:latest" \
@@ -257,6 +302,7 @@ deploy_run() {
         --min-instances=1 \
         --max-instances=1 \
         --no-allow-unauthenticated \
+        --service-account="${SA_EMAIL}" \
         --set-env-vars="PUBSUB_PROJECT=${PROJECT_ID},PUBSUB_TOPIC_PLAYS=raw-plays,PUBSUB_TOPIC_SCOREBOARD=raw-scoreboard" \
         --quiet
     ok "Deployed ${INGESTION_SERVICE}"
@@ -271,6 +317,7 @@ deploy_run() {
         --min-instances=1 \
         --max-instances=1 \
         --no-allow-unauthenticated \
+        --service-account="${SA_EMAIL}" \
         --vpc-connector=lunara-connector \
         --add-cloudsql-instances="${SQL_CONN}" \
         --set-secrets="DATABASE_URL=lunara-db-url:latest" \
@@ -302,6 +349,7 @@ CMD="${1:-all}"
 case "${CMD}" in
     all)
         require_project
+        setup_service_account
         setup_sql
         setup_redis
         setup_vpc_connector
@@ -319,11 +367,12 @@ case "${CMD}" in
     redis)  require_project; setup_redis; setup_vpc_connector ;;
     pubsub) require_project; setup_pubsub ;;
     secrets) require_project; setup_secrets ;;
+    iam)    require_project; setup_service_account ;;
     build)  build_images ;;
     run)    deploy_run; print_dns_steps ;;
     dns)    print_dns_steps ;;
     *)
-        echo "Usage: $0 [all|sql|import|redis|pubsub|secrets|build|run|dns]"
+        echo "Usage: $0 [all|sql|import|redis|pubsub|secrets|iam|build|run|dns]"
         exit 1
         ;;
 esac

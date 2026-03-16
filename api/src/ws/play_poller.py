@@ -108,8 +108,8 @@ async def run_play_poller() -> None:
     while True:
         try:
             await _poll_once()
-        except Exception:
-            logger.exception("ws.poller_error")
+        except Exception as e:
+            logger.warning("ws.poller_error", error=str(e))
         await asyncio.sleep(POLL_INTERVAL)
 
 

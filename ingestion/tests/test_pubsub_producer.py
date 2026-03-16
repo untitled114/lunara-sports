@@ -51,7 +51,7 @@ class TestPubSubProducer:
         producer, mock_client, mock_future = self._make_producer()
         producer._futures = [mock_future]
         producer.flush()
-        mock_future.result.assert_called_once_with(timeout=5.0)
+        mock_future.result.assert_called_once_with(timeout=10.0)
         assert producer._futures == []
 
     def test_flush_handles_future_error(self):

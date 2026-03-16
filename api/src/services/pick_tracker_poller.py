@@ -236,7 +236,7 @@ async def run_pick_tracker_poller(settings: Settings | None = None) -> None:
     while True:
         try:
             await _poll_pick_tracker(api_url=api_url, api_key=api_key)
-        except Exception:
-            logger.exception("pick_tracker_poller.error")
+        except Exception as e:
+            logger.warning("pick_tracker_poller.error", error=str(e))
 
         await asyncio.sleep(POLL_INTERVAL)

@@ -94,8 +94,8 @@ async def run() -> None:
                     live_games=len(new_active),
                     pbp_collectors=len(pbp_collectors),
                 )
-            except Exception:
-                logger.exception("ingestion.scoreboard_error")
+            except Exception as e:
+                logger.warning("ingestion.scoreboard_error", error=str(e))
 
             try:
                 await asyncio.wait_for(shutdown.wait(), timeout=SCOREBOARD_INTERVAL)
@@ -118,8 +118,8 @@ async def run() -> None:
                         "ingestion.pbp_cycle",
                         games_polled=len(active),
                     )
-            except Exception:
-                logger.exception("ingestion.pbp_error")
+            except Exception as e:
+                logger.warning("ingestion.pbp_error", error=str(e))
 
             try:
                 await asyncio.wait_for(shutdown.wait(), timeout=PBP_INTERVAL)

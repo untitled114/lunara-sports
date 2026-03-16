@@ -199,12 +199,12 @@ async def run_scoreboard_poller() -> None:
     # Initial fetch on startup
     try:
         await _poll_scoreboard()
-    except Exception:
-        logger.exception("scoreboard_poller.initial_error")
+    except Exception as e:
+        logger.warning("scoreboard_poller.initial_error", error=str(e))
 
     while True:
         await asyncio.sleep(POLL_INTERVAL)
         try:
             await _poll_scoreboard()
-        except Exception:
-            logger.exception("scoreboard_poller.error")
+        except Exception as e:
+            logger.warning("scoreboard_poller.error", error=str(e))
