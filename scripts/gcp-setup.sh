@@ -130,13 +130,12 @@ setup_sql() {
 
 import_sql() {
     step "Import Lunara DB from backup"
-    # Export from Hetzner first:
-    #   ssh palworld@5.161.239.229 "pg_dump -h localhost -U lunara_user lunara_db | gzip > /tmp/lunara_final.sql.gz"
-    #   rsync palworld@5.161.239.229:/tmp/lunara_final.sql.gz ./lunara_final.sql.gz
+    # Export from source DB first:
+    #   pg_dump -h <source_host> -U lunara_user lunara_db | gzip > lunara_final.sql.gz
     BACKUP="${1:-lunara_final.sql.gz}"
     if [[ ! -f "${BACKUP}" ]]; then
         echo "  ⚠ No backup file at ${BACKUP} — skipping import"
-        echo "    Export from Hetzner and re-run: ./scripts/gcp-setup.sh import"
+        echo "    Place backup file here and re-run: ./scripts/gcp-setup.sh import"
         return
     fi
     gsutil cp "${BACKUP}" "gs://${PROJECT_ID}-sql-imports/"
@@ -358,7 +357,7 @@ case "${CMD}" in
         echo
         echo "✅ Infrastructure ready. Next steps:"
         echo "   1. Set secret values (see above)"
-        echo "   2. Export Lunara DB from Hetzner and run: ./scripts/gcp-setup.sh import"
+        echo "   2. Place DB backup and run: ./scripts/gcp-setup.sh import"
         echo "   3. Build images: ./scripts/gcp-setup.sh build"
         echo "   4. Deploy: ./scripts/gcp-setup.sh run"
         ;;

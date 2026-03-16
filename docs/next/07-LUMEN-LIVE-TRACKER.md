@@ -5,7 +5,7 @@
 
 **Bot ID:** 1443013229633601547
 **Location (local dev):** `/home/untitled/Cephalons/lumen/bot.py`
-**Server location:** `/home/palworld/discord/bot.py` (Hetzner) → GCP Cloud Run (post-migration)
+**Server location:** GCP Cloud Run (`cephalon-lumen` service)
 
 ---
 

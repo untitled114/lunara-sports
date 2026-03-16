@@ -1,8 +1,8 @@
 # Phase 5: GCP Migration
 
 **Goal:** Move Lunara from Hetzner VPS to Google Cloud Platform.
-**Trigger:** After Sport-Suite API contract is built and tested (Phase 2) — no more shared disk dependency.
-**Current server:** Hetzner at `5.161.239.229`, user `palworld`
+**Status:** COMPLETE — all services running on GCP Cloud Run.
+**GCP Project:** `professional-portafolio` | **Region:** `us-central1`
 
 ---
 

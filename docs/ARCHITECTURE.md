@@ -11,7 +11,7 @@
 
 Lunara Sports is a real-time NBA sports data platform combining live play-by-play feeds,
 social interactions, and gamified prediction tracking. It is production-ready and deployed
-on Hetzner VPS (`5.161.239.229`, `/opt/play-by-play/`).
+on GCP Cloud Run (API + ingestion + stream processor). Frontend on Vercel.
 
 The platform integrates with Sport-Suite (separate repo) to display ML-generated picks and
 track their live outcomes during games.
@@ -295,15 +295,14 @@ PickTrackerPoller (30s)
 
 ## Deployment
 
-**Backend:** rsync to `sportsuite@5.161.239.229` at `/opt/play-by-play/`
+**Backend:** GCP Cloud Run via `scripts/gcp-setup.sh build && scripts/gcp-setup.sh run`
 **Frontend:** `npx vercel --prod --yes` from project root
 
-**Services on server:**
-- `uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 2` (palworld user)
-- nginx proxying `api.lunara-app.com` → 8000, `grafana.lunara-app.com` → 3001
-
-**Docker Compose:** 12 services (api, ingestion, stream-processor, kafka, zookeeper,
-schema-registry, redis, postgres, prometheus, grafana, kafka-exporter, pg-exporter)
+**GCP Services:**
+- `lunara-api` — FastAPI + WebSocket (Cloud Run, min 1 instance)
+- `lunara-ingestion` — ESPN poller + Pub/Sub producer (Cloud Run, 1 instance)
+- `lunara-stream-processor` — Pub/Sub consumer + enrichment (Cloud Run, 1 instance)
+- Cloud SQL (PostgreSQL 16), Memorystore (Redis 7), Pub/Sub topics
 
 ---
 
@@ -334,4 +333,4 @@ schema-registry, redis, postgres, prometheus, grafana, kafka-exporter, pg-export
 | Frontend | React, Vite, Tailwind v4 | 19 |
 | Monitoring | Prometheus + Grafana | latest |
 | CI/CD | GitHub Actions | 3 jobs |
-| Hosting | Hetzner VPS (→ GCP migration planned) | — |
+| Hosting | GCP Cloud Run + Vercel | — |

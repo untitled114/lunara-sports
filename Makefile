@@ -101,7 +101,7 @@ build: ## Build all Docker images
 
 # --- Deployment ---
 
-deploy: ## Deploy to Hetzner server
+deploy: ## Deploy to production server
 	@echo "Deploying to production server..."
 	rsync -avz --exclude='.git' --exclude='node_modules' --exclude='__pycache__' \
 		--exclude='.gradle' --exclude='build' --exclude='.next' \

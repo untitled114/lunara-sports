@@ -199,8 +199,8 @@ async def sync_picks(
     """Sync picks from Sport-Suite into model_picks table.
 
     Source priority:
-      1. API (api_url set) — cloud-safe, used on GCP
-      2. File (predictions_dir set) — Hetzner shared-disk fallback
+      1. API (api_url set) — production path
+      2. File (predictions_dir set) — local dev fallback (deprecated)
 
     Returns the number of picks upserted.
     """
@@ -211,7 +211,7 @@ async def sync_picks(
         # Cloud path: HTTP API
         raw = await fetch_picks_from_api(api_url, api_key, pick_date)
     elif predictions_dir:
-        # Local fallback: shared disk (Hetzner)
+        # Local fallback: file-based sync (deprecated)
         path = find_picks_file(predictions_dir, pick_date)
         if not path:
             logger.info("pick_sync.no_file", dir=predictions_dir, date=pick_date.isoformat())

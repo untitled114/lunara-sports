@@ -132,13 +132,22 @@ async def trigger_sync(
     pick_date: str = Query(default="", description="YYYY-MM-DD date to sync, defaults to today"),
     session: AsyncSession = Depends(get_session),
 ):
-    """Manually trigger a pick sync from Sport-suite predictions directory."""
+    """Manually trigger a pick sync from Sport-suite API or local file."""
     settings = _get_settings()
-    if not settings.sport_suite_predictions_dir:
-        raise HTTPException(status_code=400, detail="sport_suite_predictions_dir not configured")
+    if not settings.sport_suite_api_url and not settings.sport_suite_predictions_dir:
+        raise HTTPException(
+            status_code=400,
+            detail="No pick source configured (set SPORT_SUITE_API_URL or SPORT_SUITE_PREDICTIONS_DIR)",
+        )
 
     d = date.fromisoformat(pick_date) if pick_date else _eastern_today()
-    count = await sync_picks(session, settings.sport_suite_predictions_dir, d)
+    count = await sync_picks(
+        session,
+        settings.sport_suite_predictions_dir,
+        d,
+        api_url=settings.sport_suite_api_url,
+        api_key=settings.sport_suite_api_key,
+    )
     return {"synced": count, "date": d.isoformat()}
 
 

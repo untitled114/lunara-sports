@@ -30,7 +30,7 @@ SCOREBOARD_INTERVAL = 10  # seconds — slower loop for game discovery
 
 async def run() -> None:
     settings = Settings()
-    # Use Pub/Sub on GCP (pubsub_project set), Kafka on Hetzner (lazy import)
+    # Use Pub/Sub on GCP (pubsub_project set), Kafka locally for dev (lazy import)
     if settings.pubsub_project:
         from src.producers.pubsub_producer import PubSubProducer
 

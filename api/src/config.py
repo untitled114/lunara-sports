@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     sport_suite_db_password: str = ""
     sport_suite_db_host: str = "localhost"
 
-    # Sport-suite predictions directory (empty = disabled, Hetzner only)
+    # Sport-suite predictions directory (deprecated — use API instead)
     sport_suite_predictions_dir: str = ""
 
     # Sport-suite API (cloud-safe pick sync — takes precedence over predictions dir)

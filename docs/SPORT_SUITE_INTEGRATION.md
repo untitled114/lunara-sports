@@ -7,17 +7,15 @@ today, what changes during cloud migration, and the planned integration expansio
 
 ---
 
-## Current Integration (Hetzner, Shared Server)
+## Current Integration (GCP, API-based)
 
 ```
-Sport-Suite (nba/)                    Lunara (play-by-play/)
-──────────────────                    ──────────────────────
+Sport-Suite                           Lunara (play-by-play/)
+──────────                            ──────────────────────
 Airflow generates picks
-  → xl_picks_YYYY-MM-DD.json
-  → /home/sportsuite/sport-suite/
-    nba/betting_xl/predictions/
+  → serves via GET /picks/{date}
                                  ◄──  PickSyncPoller (5m)
-                                       reads JSON from shared disk
+                                       fetches picks via Sport-Suite API
                                        parses + team mapping
                                        UPSERT → model_picks
 
