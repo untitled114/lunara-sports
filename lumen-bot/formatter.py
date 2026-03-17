@@ -16,6 +16,12 @@ TIER_COLORS = {
 DEFAULT_COLOR = 0x3B82F6  # Blue
 
 
+def _v(pick: dict, key: str, default: str = "?") -> str:
+    """Get a pick value, treating None the same as missing."""
+    val = pick.get(key)
+    return val if val is not None else default
+
+
 class PickFormatter:
     """Builds Discord embeds for pick alerts."""
 
@@ -61,11 +67,12 @@ class PickFormatter:
 
     def approaching_embed(self, pick: dict) -> discord.Embed:
         """Alert when a player's stat is approaching their line."""
-        actual = pick.get("actual_value", 0)
-        line = pick.get("line", 0)
-        prediction = pick.get("prediction", "OVER")
-        market = pick.get("market", "?")
-        tier = pick.get("tier", "?")
+        actual = pick.get("actual_value") or 0
+        line = pick.get("line") or 0
+        prediction = _v(pick, "prediction", "OVER")
+        market = _v(pick, "market")
+        tier = _v(pick, "tier")
+        model = _v(pick, "model_version").upper()
 
         if prediction == "OVER":
             remaining = line - actual
@@ -76,12 +83,15 @@ class PickFormatter:
 
         color = TIER_COLORS.get(tier, DEFAULT_COLOR)
 
+        ctx_parts = [p for p in [tier, model] if p and p != "?"]
+        ctx_line = " | ".join(ctx_parts)
+
         embed = discord.Embed(
-            title=f"🔥 {pick.get('player_name', '?')} — Approaching",
+            title=f"🔥 {_v(pick, 'player_name')} — Approaching",
             description=(
                 f"**{prediction} {line} {market}**\n"
                 f"Currently at **{actual:.1f}** — {status}\n"
-                f"Tier: **{tier}** | {pick.get('model_version', '?').upper()}"
+                f"{ctx_line}"
             ),
             color=color,
         )
@@ -90,20 +100,24 @@ class PickFormatter:
 
     def mid_game_hit_embed(self, pick: dict) -> discord.Embed:
         """Alert when a pick clears its line during a live game."""
-        actual = pick.get("actual_value", 0)
-        line = pick.get("line", 0)
-        market = pick.get("market", "?")
-        prediction = pick.get("prediction", "?")
-        tier = pick.get("tier", "?")
-        model = pick.get("model_version", "?").upper()
+        actual = pick.get("actual_value") or 0
+        line = pick.get("line") or 0
+        market = _v(pick, "market")
+        prediction = _v(pick, "prediction")
+        tier = _v(pick, "tier")
+        model = _v(pick, "model_version").upper()
+        book = _v(pick, "book", "")
         color = TIER_COLORS.get(tier, DEFAULT_COLOR)
 
+        ctx_parts = [p for p in [tier, model, book] if p and p != "?"]
+        ctx_line = " | ".join(ctx_parts)
+
         embed = discord.Embed(
-            title=f"🎯 {pick.get('player_name', '?')} — Line Cleared",
+            title=f"🎯 {_v(pick, 'player_name')} — Line Cleared",
             description=(
                 f"**{prediction} {line} {market}**\n"
                 f"Currently at **{actual:.1f}** — line cleared mid-game\n"
-                f"Tier: **{tier}** | {model} | {pick.get('book', '?')}"
+                f"{ctx_line}"
             ),
             color=color,
         )
@@ -113,26 +127,27 @@ class PickFormatter:
     def result_embed(self, pick: dict) -> discord.Embed:
         """Hit/miss result embed."""
         is_hit = pick.get("is_hit", False)
-        actual = pick.get("actual_value", 0)
-        line = pick.get("line", 0)
-        market = pick.get("market", "?")
-        tier = pick.get("tier", "?")
-        model = pick.get("model_version", "?").upper()
+        actual = pick.get("actual_value") or 0
+        line = pick.get("line") or 0
+        market = _v(pick, "market")
+        tier = _v(pick, "tier")
+        model = _v(pick, "model_version").upper()
+        book = _v(pick, "book", "")
+        prediction = _v(pick, "prediction")
 
         if is_hit:
-            title = f"✅ HIT — {pick.get('player_name', '?')}"
+            title = f"✅ HIT — {_v(pick, 'player_name')}"
             color = 0x22C55E
         else:
-            title = f"❌ MISS — {pick.get('player_name', '?')}"
+            title = f"❌ MISS — {_v(pick, 'player_name')}"
             color = 0xEF4444
+
+        ctx_parts = [p for p in [tier, model, book] if p and p != "?"]
+        ctx_line = " | ".join(ctx_parts)
 
         embed = discord.Embed(
             title=title,
-            description=(
-                f"**{pick.get('prediction', '?')} {line} {market}**\n"
-                f"Final: **{actual:.1f}**\n"
-                f"Tier: **{tier}** | {model} | {pick.get('book', '?')}"
-            ),
+            description=(f"**{prediction} {line} {market}**\nFinal: **{actual:.1f}**\n{ctx_line}"),
             color=color,
         )
 

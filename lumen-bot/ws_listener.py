@@ -149,6 +149,10 @@ class WSListener:
             is_hit = pick.get("is_hit")
             line = pick.get("line")
 
+            # Skip picks with missing or zero line — bad data guard
+            if not line or line <= 0:
+                continue
+
             # Hit/miss alert (game final)
             if is_hit is not None and state.is_hit is None:
                 state.is_hit = is_hit
