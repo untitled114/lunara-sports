@@ -55,6 +55,7 @@ def _make_pick(
         is_hit=is_hit,
         tier="X",
         model_version="xl",
+        book="DraftKings",
         game_id="g1",
         sport_suite_id=sport_suite_id,
     )

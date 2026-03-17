@@ -172,7 +172,7 @@ export default function PicksPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-10 border-b border-white/5 pb-8 sm:pb-16">
         <div>
-          <h1 className="text-4xl sm:text-6xl md:text-9xl text-jumbotron tracking-tighter">AI Picks</h1>
+          <h1 className="text-4xl sm:text-6xl md:text-9xl text-jumbotron tracking-tighter">Player Prop Picks</h1>
           <p className="text-[11px] sm:text-[13px] font-black text-white/50 uppercase tracking-[0.5em] mt-3 sm:mt-6 ml-1">
             Sport-suite XL + V3 Predictions
             <span className="mx-4 text-white/10">|</span>

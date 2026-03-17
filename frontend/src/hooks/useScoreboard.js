@@ -10,6 +10,7 @@ const REST_FALLBACK_MS = 30000;
 
 /**
  * Subscribes to /ws/scoreboard for real-time game list updates.
+ * WS updates only apply when viewing today's date (ET).
  * Falls back to REST polling (30s) only when WS is disconnected.
  *
  * @param {string} dateStr - YYYY-MM-DD date for REST fallback
@@ -21,9 +22,26 @@ export function useScoreboard(dateStr) {
   const retryTimer = useRef(null);
   const mountedRef = useRef(true);
   const fallbackTimer = useRef(null);
+  const dateRef = useRef(dateStr);
 
   const [games, setGames] = useState([]);
   const [connected, setConnected] = useState(false);
+
+  // Keep dateRef in sync so the WS callback sees the current date
+  useEffect(() => {
+    dateRef.current = dateStr;
+  }, [dateStr]);
+
+  // Compute today's date in Eastern Time
+  const todayET = (() => {
+    const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const y = et.getFullYear();
+    const m = String(et.getMonth() + 1).padStart(2, "0");
+    const d = String(et.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
+  const isToday = dateStr === todayET;
 
   // One-shot initial REST fetch for immediate data
   useEffect(() => {
@@ -38,7 +56,14 @@ export function useScoreboard(dateStr) {
 
   // REST fallback: poll every 30s only when WS is disconnected
   useEffect(() => {
-    if (connected) {
+    if (connected && isToday) {
+      if (fallbackTimer.current) clearInterval(fallbackTimer.current);
+      fallbackTimer.current = null;
+      return;
+    }
+
+    // For past/future dates, no need to poll frequently
+    if (!isToday) {
       if (fallbackTimer.current) clearInterval(fallbackTimer.current);
       fallbackTimer.current = null;
       return;
@@ -56,7 +81,7 @@ export function useScoreboard(dateStr) {
     return () => {
       if (fallbackTimer.current) clearInterval(fallbackTimer.current);
     };
-  }, [connected, dateStr]);
+  }, [connected, dateStr, isToday]);
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
@@ -97,7 +122,15 @@ export function useScoreboard(dateStr) {
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === "scoreboard_update" && Array.isArray(msg.data)) {
-          setGames(msg.data);
+          // Only apply WS updates when viewing today's date
+          const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+          const y = et.getFullYear();
+          const m = String(et.getMonth() + 1).padStart(2, "0");
+          const d = String(et.getDate()).padStart(2, "0");
+          const nowET = `${y}-${m}-${d}`;
+          if (dateRef.current === nowET) {
+            setGames(msg.data);
+          }
         }
       } catch {
         // Ignore malformed messages

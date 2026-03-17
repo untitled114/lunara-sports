@@ -48,11 +48,11 @@ class TestParsePicks:
                 "team": "LAL",
                 "stat_type": "POINTS",
                 "side": "OVER",
-                "best_line": 24.5,
-                "best_book": "DraftKings",
-                "filter_tier": "X",
+                "softest_line": 24.5,
+                "softest_book": "DraftKings",
+                "tier": "X",
                 "edge_pct": 8.5,
-                "consensus_line": 25.0,
+                "line": 25.0,
                 "model_version": "xl",
                 "p_over": 0.85,
                 "edge": 4.5,
@@ -99,11 +99,11 @@ class TestParsePicks:
         raw = [
             {
                 "player_name": "Test",
-                "best_line": "22.5",
+                "softest_line": "22.5",
                 "edge_pct": "8.0",
                 "p_over": "0.85",
                 "edge": "4.5",
-                "consensus_line": "23.0",
+                "line": "23.0",
                 "line_spread": "2.0",
             }
         ]
@@ -117,7 +117,7 @@ class TestParsePicks:
         raw = [
             {
                 "player_name": "Test",
-                "best_line": "invalid",
+                "softest_line": "invalid",
             }
         ]
         picks = _parse_picks(raw, date(2026, 2, 20))

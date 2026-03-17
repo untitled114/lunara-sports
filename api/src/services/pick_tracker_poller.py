@@ -157,6 +157,7 @@ async def _update_picks_for_game(
                 "is_hit": updates.get("is_hit", pick.is_hit),
                 "tier": pick.tier,
                 "model_version": pick.model_version,
+                "book": pick.book,
             }
         )
 

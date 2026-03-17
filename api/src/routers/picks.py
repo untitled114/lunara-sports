@@ -104,8 +104,7 @@ async def list_picks(
     result = await session.execute(stmt)
     picks = result.scalars().all()
 
-    is_premium = user is not None and getattr(user, "membership_tier", "free") == "premium"
-    return [_gate_pick(p, is_premium) for p in picks]
+    return [_gate_pick(p, True) for p in picks]
 
 
 @router.get("/picks/today", response_model=list[ModelPickResponse])
@@ -123,8 +122,7 @@ async def today_picks(
     result = await session.execute(stmt)
     picks = result.scalars().all()
 
-    is_premium = user is not None and getattr(user, "membership_tier", "free") == "premium"
-    return [_gate_pick(p, is_premium) for p in picks]
+    return [_gate_pick(p, True) for p in picks]
 
 
 @router.post("/picks/sync")
