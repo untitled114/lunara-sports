@@ -7,9 +7,23 @@ lunara:
   ws_url: "wss://lunara-api-889243758895.us-central1.run.app/ws"
 
 alerts:
-  # DM triggers
-  morning_summary: false      # Axiom handles this
+  # Legacy DM triggers (still active alongside copilot)
+  morning_summary: true       # Send pick summary on first fetch
   approaching_line: true      # Alert when actual_value is within threshold of line
   approach_threshold: 2.0     # Points/rebounds within line to trigger approaching alert
   hit_miss: true              # Alert on final is_hit determination
   ping_on_x_tier: true        # Extra emphasis on X-tier picks
+
+copilot:
+  # Game-Time Copilot intelligence triggers
+  halftime_report: true       # Rich halftime report card with pace projections
+  quarter_summary: true       # Brief status at end of each quarter
+  blowout_warning: true       # Alert when score diff > 20 in Q3+
+  garbage_time: true          # Alert when starters likely done
+  pace_comfort: true          # "Your OVER is looking comfortable"
+  pace_concern: true          # "Player is behind pace, pick in trouble"
+  line_cleared_early: true    # Player cleared line with lots of game left
+
+  # Game context logging for Sport-Suite ML training
+  game_log: true              # Record timestamped game context snapshots
+  game_log_dir: "logs/game_context"

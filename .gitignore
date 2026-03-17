@@ -55,3 +55,6 @@ zookeeper-logs/
 PLAN.md
 GEMINI.md
 .vercel
+
+# Lumen game context logs (ML training data)
+lumen-bot/logs/
