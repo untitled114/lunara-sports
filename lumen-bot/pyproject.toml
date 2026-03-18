@@ -9,6 +9,7 @@ dependencies = [
     "websockets>=13.0",
     "structlog>=24.4",
     "pyyaml>=6.0",
+    "anthropic>=0.39",
 ]
 
 [project.optional-dependencies]
@@ -17,6 +18,9 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.8",
 ]
+
+[tool.setuptools]
+py-modules = []  # Not a package — just a script collection with deps
 
 [build-system]
 requires = ["setuptools>=68.0"]

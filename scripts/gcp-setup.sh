@@ -248,7 +248,7 @@ setup_secrets() {
 build_images() {
     step "Build and push Docker images"
 
-    SERVICES=("api" "ingestion" "stream-processor-pubsub")
+    SERVICES=("api" "ingestion" "stream-processor-pubsub" "lumen-bot")
 
     for svc in "${SERVICES[@]}"; do
         if [[ ! -d "${svc}" ]]; then
@@ -323,6 +323,23 @@ deploy_run() {
         --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},PUBSUB_SUB_PLAYS=raw-plays-sub,PUBSUB_SUB_SCOREBOARD=raw-scoreboard-sub,PUBSUB_TOPIC_ENRICHED=enriched-plays,PUBSUB_TOPIC_STATE=game-state" \
         --quiet
     ok "Deployed ${PROCESSOR_SERVICE}"
+
+    # Lumen bot
+    gcloud run deploy "${LUMEN_SERVICE}" \
+        --image="${IMAGE_REGISTRY}/lumen-bot:latest" \
+        --platform=managed \
+        --region="${REGION}" \
+        --port=8080 \
+        --memory=256Mi \
+        --cpu=1 \
+        --min-instances=1 \
+        --max-instances=1 \
+        --no-allow-unauthenticated \
+        --service-account="${SA_EMAIL}" \
+        --set-secrets="DISCORD_TOKEN=lumen-discord-token:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest" \
+        --set-env-vars="LUNARA_API_URL=${API_URL:-https://lunara-api-889243758895.us-central1.run.app},LUNARA_WS_URL=wss://lunara-api-889243758895.us-central1.run.app/ws" \
+        --quiet
+    ok "Deployed ${LUMEN_SERVICE}"
 
     API_URL=$(gcloud run services describe "${API_SERVICE}" \
         --region="${REGION}" --format="value(status.url)")

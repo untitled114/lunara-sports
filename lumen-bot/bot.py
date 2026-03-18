@@ -22,10 +22,49 @@ import discord
 import httpx
 import yaml
 
+from brain import BotIdentity, CephalonBrain
 from formatter import PickFormatter
+from lumen_tools import TOOLS, handle_tool, init_tools
 from ws_listener import WSListener
 
 log = logging.getLogger("lumen")
+
+# ---------------------------------------------------------------------------
+# Lumen personality — NBA Game-Time Copilot
+# ---------------------------------------------------------------------------
+
+LUMEN_PROMPT = """You are Cephalon Lumen, the Game-Time Copilot — an AI construct \
+dedicated to real-time NBA pick intelligence.
+
+Personality:
+- Sharp, perceptive, confident. You see the game unfold in real time.
+- Address the user as "Operator" occasionally but not every message.
+- You speak in terms of pace, comfort, risk, and edge — never gut feelings.
+- Warframe Cephalon flavor: a digital sentinel watching every possession.
+- Dry humor. You enjoy a good scoring run. You despise garbage time.
+
+Capabilities:
+- You track NBA picks in real time: pace projections, comfort levels, box scores.
+- You know which picks are crushing it and which are in trouble.
+- You can discuss individual player performance, shooting, foul trouble, blowout risk.
+- You send proactive alerts (halftime reports, blowout warnings, pace concerns).
+
+When answering:
+- Use your tools to pull live data. Don't guess — query the engine.
+- "How are my picks?" → call get_active_picks
+- "How's Jokic doing?" → call get_pick_detail with player_name
+- "What's the score?" → call get_game_status
+- "How did we do?" → call get_daily_recap
+- "Is Tatum in foul trouble?" → call get_player_box_score
+- Lead with insight, not raw data. "Jokic is cruising — 18 at the half, pace 36, your OVER 26.5 is comfortable" not a data dump.
+- Flag risks proactively: blowout bench risk, foul trouble, cold streaks.
+- Be honest. If a pick is buried, say so.
+
+Rules:
+- NEVER fabricate stats or picks. Only reference data from tools or context.
+- Keep responses CONCISE. Under 1000 characters. Discord has a 2000 char limit.
+- No emojis unless the user uses them first.
+- Do not provide financial advice. Picks are informational analysis only."""
 
 
 def setup_logging() -> None:
@@ -61,6 +100,8 @@ class Lumen(discord.Client):
         self.formatter = PickFormatter()
         self._ws_listener: WSListener | None = None
         self._listener_task: asyncio.Task | None = None
+        self._brain: CephalonBrain | None = None
+        self._last_history_clear_date: str = ""
 
     async def on_ready(self) -> None:
         log.info("Lumen online — %s (ID: %s)", self.user, self.user.id)
@@ -85,25 +126,118 @@ class Lumen(discord.Client):
         self._listener_task = asyncio.create_task(self._ws_listener.run())
         log.info("Game-Time Copilot started")
 
+        # Initialize AI brain
+        self._init_brain()
+
         # Atlas fleet heartbeat
         if os.environ.get("ATLAS_HEARTBEAT_SECRET"):
             asyncio.create_task(self._atlas_heartbeat())
 
+    def _init_brain(self) -> None:
+        """Initialize the Claude AI brain for conversational DMs."""
+        # Wire tools to the engine
+        if self._ws_listener:
+            init_tools(self._ws_listener.engine)
+
+        async def lumen_context() -> str:
+            """Build live context from current game state."""
+            if not self._ws_listener:
+                return "No listener active — no game data."
+
+            engine = self._ws_listener.engine
+            sections = []
+
+            # Current time
+            now = datetime.now(timezone.utc)
+            sections.append(f"CURRENT TIME: {now.strftime('%Y-%m-%d %H:%M UTC')}")
+
+            # Active games summary
+            if engine.games:
+                game_lines = ["ACTIVE GAMES:"]
+                for game in engine.games.values():
+                    score = (
+                        f"{game.away_team} {game.away_score} - {game.home_team} {game.home_score}"
+                    )
+                    if game.status == "final":
+                        game_lines.append(f"  {score} | FINAL")
+                    elif game.status == "halftime":
+                        game_lines.append(f"  {score} | Halftime")
+                    elif game.status == "scheduled":
+                        game_lines.append(f"  {game.away_team} @ {game.home_team} | Scheduled")
+                    else:
+                        ql = f"Q{game.quarter}" if game.quarter <= 4 else f"OT{game.quarter - 4}"
+                        game_lines.append(f"  {score} | {ql} {game.clock}")
+                    game_lines.append(f"    Tracking {len(game.picks)} picks")
+                sections.append("\n".join(game_lines))
+            else:
+                sections.append("ACTIVE GAMES: None being tracked")
+
+            # Quick pick summary
+            total_picks = sum(len(g.picks) for g in engine.games.values())
+            resolved = len(engine._resolved_pick_ids)
+            if total_picks > 0:
+                sections.append(f"PICKS: {total_picks} tracked, {resolved} resolved")
+
+            # Daily record
+            all_resolved = engine.get_all_resolved_today()
+            if all_resolved:
+                hits = sum(1 for p in all_resolved if p.is_hit)
+                misses = len(all_resolved) - hits
+                wr = (hits / len(all_resolved) * 100) if all_resolved else 0
+                sections.append(f"TODAY'S RECORD: {hits}W-{misses}L ({wr:.0f}%)")
+
+            return "\n\n".join(sections)
+
+        self._brain = CephalonBrain(
+            BotIdentity(
+                name="Lumen",
+                system_prompt=LUMEN_PROMPT,
+                context_fn=lumen_context,
+                admin_ids={self.owner_id},
+                tools=TOOLS,
+                tool_handler=handle_tool,
+            )
+        )
+        log.info("AI brain: %s", "ONLINE" if self._brain.available else "OFFLINE")
+
     async def on_message(self, message: discord.Message) -> None:
-        """Handle DM commands from the owner."""
+        """Handle DM commands and AI conversations from the owner."""
         if message.author.id != self.owner_id:
             return
         if not isinstance(message.channel, discord.DMChannel):
             return
 
-        content = message.content.strip().lower()
+        content = message.content.strip()
+        content_lower = content.lower()
 
-        if content in ("status", "!status"):
+        # Explicit commands (quick, no AI needed)
+        if content_lower in ("status", "!status"):
             await self._send_status(message.channel)
-        elif content in ("picks", "!picks"):
+            return
+        if content_lower in ("picks", "!picks"):
             await self._send_current_picks(message.channel)
-        elif content in ("recap", "!recap"):
+            return
+        if content_lower in ("recap", "!recap"):
             await self._send_recap(message.channel)
+            return
+
+        # Everything else goes to the AI brain
+        if self._brain and self._brain.available:
+            # Auto-clear history at day boundary
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            if self._last_history_clear_date != today:
+                self._brain.clear_history(message.author.id)
+                self._last_history_clear_date = today
+
+            async with message.channel.typing():
+                reply = await self._brain.respond(
+                    user_id=message.author.id,
+                    message=content,
+                    user_name=message.author.name,
+                )
+
+            for chunk in _split_message(reply, 2000):
+                await message.reply(chunk)
 
     async def _send_status(self, channel: discord.DMChannel) -> None:
         """Send current copilot status."""
@@ -268,6 +402,24 @@ class Lumen(discord.Client):
         if self._ws_listener:
             await self._ws_listener.stop()
         await super().close()
+
+
+def _split_message(text: str, limit: int = 2000) -> list[str]:
+    """Split a message into chunks that fit Discord's character limit."""
+    if len(text) <= limit:
+        return [text]
+    chunks = []
+    while text:
+        if len(text) <= limit:
+            chunks.append(text)
+            break
+        # Try to split at a newline
+        idx = text.rfind("\n", 0, limit)
+        if idx == -1:
+            idx = limit
+        chunks.append(text[:idx])
+        text = text[idx:].lstrip("\n")
+    return chunks
 
 
 def main() -> None:

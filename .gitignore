@@ -58,3 +58,4 @@ GEMINI.md
 
 # Lumen game context logs (ML training data)
 lumen-bot/logs/
+claude-to-claude.txt

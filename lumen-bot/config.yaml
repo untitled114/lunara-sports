@@ -14,6 +14,14 @@ alerts:
   hit_miss: true              # Alert on final is_hit determination
   ping_on_x_tier: true        # Extra emphasis on X-tier picks
 
+ai:
+  # Claude API powers natural language DM conversations
+  # API key loaded from ANTHROPIC_API_KEY env var (never commit keys)
+  enabled: true
+  model: "claude-sonnet-4-5-20250929"
+  cooldown_seconds: 5
+  daily_limit: 50
+
 copilot:
   # Game-Time Copilot intelligence triggers
   halftime_report: true       # Rich halftime report card with pace projections
