@@ -38,6 +38,13 @@ _FIELD_MAP = {
     "line_spread": "line_spread",
 }
 
+# Goldmine picks use different field names — fall back to these
+_FALLBACK_MAP = {
+    "filter_tier": "tier",  # Goldmine uses filter_tier instead of tier
+    "best_line": "line",  # Goldmine uses best_line instead of softest_line
+    "best_book": "book",  # Goldmine uses best_book instead of softest_book
+}
+
 
 async def fetch_picks_from_api(api_url: str, api_key: str, pick_date: date) -> list[dict]:
     """Fetch picks from Sport-Suite API. Returns raw pick list or [] on failure."""
@@ -89,6 +96,11 @@ def _parse_picks(raw: list[dict], pick_date: date) -> list[dict]:
             if src in pick:
                 row[dst] = pick[src]
 
+        # Apply fallbacks for Goldmine picks (filter_tier, best_line, best_book)
+        for src, dst in _FALLBACK_MAP.items():
+            if (dst not in row or row[dst] is None) and src in pick and pick[src] is not None:
+                row[dst] = pick[src]
+
         # Stable Sport-Suite pick ID (present in API responses, absent in file sync)
         row["sport_suite_id"] = pick.get("id")
 
@@ -104,8 +116,12 @@ def _parse_picks(raw: list[dict], pick_date: date) -> list[dict]:
         row["opponent_team"] = from_sport_suite_abbrev(opp)
         row["is_home"] = pick.get("is_home")
 
-        # Determine player's team from opponent + is_home
+        # Determine player's team from opponent + is_home or game_key
         team = pick.get("team", "")
+        if not team:
+            # Goldmine picks have game_key which is the opponent; infer team from game match
+            # For now, leave empty — match_picks_to_games will use opponent fallback
+            team = ""
         if team:
             row["team"] = from_sport_suite_abbrev(team)
         else:
@@ -181,6 +197,14 @@ async def match_picks_to_games(
 
         if game_id:
             pick["game_id"] = game_id
+            # Back-fill team if missing (Goldmine picks only have opponent_team)
+            if not team and opp:
+                for (t1, t2), gid in game_lookup.items():
+                    if gid == game_id:
+                        inferred = t1 if t2 == opp else t2
+                        if inferred != opp:
+                            pick["team"] = inferred
+                            break
             matched.append(pick)
         else:
             logger.debug("pick_sync.no_match", player=pick.get("player_name"), team=team, opp=opp)
