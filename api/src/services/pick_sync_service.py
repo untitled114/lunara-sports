@@ -149,12 +149,18 @@ async def match_picks_to_games(
     Builds a lookup from today's games, then assigns game_id to each pick.
     Returns only picks that matched a game.
     """
-    # Get today's games — convert timezone.utc start_time to Eastern date for matching
-    # ESPN stores timezone.utc; a 7 PM ET game on Feb 20 = 2026-02-21 00:00:00+00
-    from sqlalchemy import func
+    # Get today's games using a UTC window that covers the full Eastern day.
+    # NBA games on a given ET date have start_times roughly 16:00 UTC to 07:00 UTC+1.
+    # Use a generous window: ET midnight (04:00/05:00 UTC) to next day 10:00 UTC.
+    from datetime import datetime as dt
+    from datetime import timedelta
+    from datetime import timezone as tz
 
-    eastern_date = func.date(Game.start_time.op("AT TIME ZONE")("America/New_York"))
-    stmt = select(Game).where(eastern_date == pick_date)
+    # ET is UTC-5 (EST) or UTC-4 (EDT). Use UTC-4 start / UTC-5 end for max coverage.
+    day_start_utc = dt(pick_date.year, pick_date.month, pick_date.day, 4, 0, tzinfo=tz.utc)
+    day_end_utc = day_start_utc + timedelta(hours=30)  # covers through next morning
+
+    stmt = select(Game).where(Game.start_time >= day_start_utc, Game.start_time < day_end_utc)
     result = await session.execute(stmt)
     games = result.scalars().all()
 
