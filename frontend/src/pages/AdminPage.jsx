@@ -9,7 +9,7 @@ const TABS = [
     key: "analytics",
     label: "Analytics",
     icon: BarChart3,
-    src: `${ADMIN_BASE}/metabase/public/dashboard/1221cba6-59e7-48f7-afa2-04865e5f3c4b`,
+    src: `${ADMIN_BASE}/metabase/public/dashboard/eb478443-9dd6-4cb5-a6de-305fccfa62aa`,
   },
   {
     key: "pipeline",
