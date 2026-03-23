@@ -142,13 +142,6 @@ jobs:
           docker push ${{ env.IMAGE_REGISTRY }}/lumen-bot --all-tags
 
       # ── Deploy to Cloud Run ──
-      - name: Get Redis IP
-        id: redis
-        run: |
-          IP=$(gcloud redis instances describe lunara-cache \
-            --region=${{ env.GCP_REGION }} --format="value(host)" 2>/dev/null || echo "")
-          echo "ip=$IP" >> "$GITHUB_OUTPUT"
-
       - name: Deploy API
         run: |
           gcloud run deploy lunara-api \
@@ -164,8 +157,8 @@ jobs:
             --service-account=${{ env.SA_EMAIL }} \
             --add-cloudsql-instances=${{ env.GCP_PROJECT }}:${{ env.GCP_REGION }}:lunara-postgres \
             --vpc-connector=lunara-connector \
-            --set-secrets="DATABASE_URL=lunara-db-url:latest,JWT_SECRET=lunara-jwt-secret:latest,SPORT_SUITE_API_KEY=lunara-sport-suite-api-key:latest" \
-            --set-env-vars="REDIS_URL=redis://${{ steps.redis.outputs.ip }}:6379/0,SPORT_SUITE_API_URL=http://16.58.146.197:8000,GOOGLE_CLOUD_PROJECT=${{ env.GCP_PROJECT }}" \
+            --set-secrets="DATABASE_URL=lunara-db-url:latest,JWT_SECRET=lunara-jwt-secret:latest,SPORT_SUITE_API_KEY=lunara-sport-suite-api-key:latest,REDIS_URL=lunara-redis-url:latest" \
+            --set-env-vars="SPORT_SUITE_API_URL=http://16.58.146.197:8000,GOOGLE_CLOUD_PROJECT=${{ env.GCP_PROJECT }}" \
             --quiet
 
       - name: Deploy Ingestion
@@ -351,14 +344,6 @@ jobs:
           docker build -t ${{ env.IMAGE_REGISTRY }}/lumen-bot:${{ github.sha }} ./lumen-bot
           docker push ${{ env.IMAGE_REGISTRY }}/lumen-bot:${{ github.sha }}
 
-      - name: Get Redis IP
-        if: steps.svc.outputs.api == 'true'
-        id: redis
-        run: |
-          IP=$(gcloud redis instances describe lunara-cache \
-            --region=${{ env.GCP_REGION }} --format="value(host)" 2>/dev/null || echo "")
-          echo "ip=$IP" >> "$GITHUB_OUTPUT"
-
       - name: Deploy API
         if: steps.svc.outputs.api == 'true'
         run: |
@@ -375,8 +360,8 @@ jobs:
             --service-account=${{ env.SA_EMAIL }} \
             --add-cloudsql-instances=${{ env.GCP_PROJECT }}:${{ env.GCP_REGION }}:lunara-postgres \
             --vpc-connector=lunara-connector \
-            --set-secrets="DATABASE_URL=lunara-db-url:latest,JWT_SECRET=lunara-jwt-secret:latest,SPORT_SUITE_API_KEY=lunara-sport-suite-api-key:latest" \
-            --set-env-vars="REDIS_URL=redis://${{ steps.redis.outputs.ip }}:6379/0,SPORT_SUITE_API_URL=http://16.58.146.197:8000,GOOGLE_CLOUD_PROJECT=${{ env.GCP_PROJECT }}" \
+            --set-secrets="DATABASE_URL=lunara-db-url:latest,JWT_SECRET=lunara-jwt-secret:latest,SPORT_SUITE_API_KEY=lunara-sport-suite-api-key:latest,REDIS_URL=lunara-redis-url:latest" \
+            --set-env-vars="SPORT_SUITE_API_URL=http://16.58.146.197:8000,GOOGLE_CLOUD_PROJECT=${{ env.GCP_PROJECT }}" \
             --quiet
 
       - name: Deploy Ingestion

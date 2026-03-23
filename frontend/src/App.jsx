@@ -15,6 +15,7 @@ const StatsPage = lazy(() => import('./pages/StatsPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const PicksPage = lazy(() => import('./pages/PicksPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
+const AdminPage = lazy(() => import('./pages/AdminPage'))
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/picks" element={<PicksPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/admin" element={<AdminPage />} />
           </Route>
         </Routes>
       </Suspense>

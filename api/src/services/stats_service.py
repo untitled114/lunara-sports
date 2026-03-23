@@ -306,16 +306,19 @@ async def _resolve_athlete(aid: str, athlete_map: dict) -> dict:
 
 # Stat categories to query from player_game_logs
 _LEADER_CATEGORIES = {
-    "pts": {"col": "points", "label": "Points Per Game", "espn_id": "points"},
-    "reb": {"col": "rebounds", "label": "Rebounds Per Game", "espn_id": "rebounds"},
-    "ast": {"col": "assists", "label": "Assists Per Game", "espn_id": "assists"},
-    "stl": {"col": "steals", "label": "Steals Per Game", "espn_id": "steals"},
-    "blk": {"col": "blocks", "label": "Blocks Per Game", "espn_id": "blocks"},
-    "threes": {
-        "col": "three_pointers_made",
-        "label": "3PM Per Game",
-        "espn_id": "threePointFieldGoalsMade",
-    },
+    "pts": {"col": "points", "label": "Points Per Game"},
+    "reb": {"col": "rebounds", "label": "Rebounds Per Game"},
+    "ast": {"col": "assists", "label": "Assists Per Game"},
+    "stl": {"col": "steals", "label": "Steals Per Game"},
+    "blk": {"col": "blocks", "label": "Blocks Per Game"},
+    "threes": {"col": "three_pointers_made", "label": "3PM Per Game"},
+}
+
+# Percentage categories — require SUM(made)/SUM(attempted) with minimum attempts
+_PCT_CATEGORIES = {
+    "fg_pct": {"made": "fg_made", "att": "fg_attempted", "min_att": 200},
+    "three_pct": {"made": "three_pointers_made", "att": "three_pt_attempted", "min_att": 75},
+    "ft_pct": {"made": "ft_made", "att": "ft_attempted", "min_att": 75},
 }
 
 
@@ -327,6 +330,7 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
     if pool:
         try:
             async with pool.acquire() as conn:
+                # Average-based categories (PPG, RPG, APG, etc.)
                 for key, cfg in _LEADER_CATEGORIES.items():
                     col = cfg["col"]
                     try:
@@ -370,6 +374,56 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
                         logger.warning(
                             "stat_leaders.category_failed", category=key, error=str(cat_e)
                         )
+
+                # Percentage-based categories (FG%, 3P%, FT%)
+                for key, cfg in _PCT_CATEGORIES.items():
+                    made, att, min_att = cfg["made"], cfg["att"], cfg["min_att"]
+                    try:
+                        rows = await conn.fetch(
+                            f"""
+                            SELECT
+                                pp.full_name,
+                                pp.player_id,
+                                pp.headshot_url,
+                                pgl.team_abbrev,
+                                COUNT(*) as gp,
+                                ROUND(
+                                    SUM(pgl.{made})::numeric
+                                    / NULLIF(SUM(pgl.{att}), 0) * 100, 1
+                                ) as avg_val
+                            FROM player_game_logs pgl
+                            JOIN player_profile pp ON pp.player_id = pgl.player_id
+                            WHERE pgl.game_date >= '2025-01-01'
+                            GROUP BY pp.full_name, pp.player_id, pp.headshot_url, pgl.team_abbrev
+                            HAVING SUM(pgl.{att}) >= {min_att}
+                            ORDER BY SUM(pgl.{made})::numeric
+                                     / NULLIF(SUM(pgl.{att}), 0) DESC
+                            LIMIT $1
+                        """,
+                            limit,
+                        )
+
+                        leaders = []
+                        for i, r in enumerate(rows):
+                            abbrev = from_sport_suite_abbrev(r["team_abbrev"])
+                            val = r["avg_val"]
+                            leaders.append(
+                                StatLeader(
+                                    rank=i + 1,
+                                    player=r["full_name"],
+                                    player_id=str(r["player_id"]),
+                                    team=abbrev,
+                                    value=f"{val}%" if val is not None else "0.0%",
+                                    headshot_url=r["headshot_url"] or "",
+                                )
+                            )
+
+                        if leaders:
+                            categories[key] = leaders
+                    except Exception as cat_e:
+                        logger.warning(
+                            "stat_leaders.pct_category_failed", category=key, error=str(cat_e)
+                        )
         except Exception as e:
             logger.warning("stat_leaders.query_failed", error=str(e))
 
@@ -388,6 +442,9 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
                     "stealsPerGame": "stl",
                     "blocksPerGame": "blk",
                     "3PointsMadePerGame": "threes",
+                    "fieldGoalPct": "fg_pct",
+                    "freeThrowPct": "ft_pct",
+                    "threePointPct": "three_pct",
                 }
                 for cat in espn_data.get("categories", []):
                     cat_name = cat.get("name")
