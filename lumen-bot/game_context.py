@@ -570,19 +570,21 @@ class GameContextEngine:
         # Blowout detection
         if game.is_blowout:
             for ctx in game.picks.values():
-                if ctx.is_hit is None and not ctx.blowout_alerted:
-                    # Only alert for picks on the LEADING team (star might sit)
-                    if ctx.team == game.leading_team:
-                        ctx.blowout_alerted = True
-                        alerts.append((AlertType.BLOWOUT_WARNING, game, ctx))
+                # Only alert for picks on the LEADING team (star might sit)
+                if ctx.is_hit is None and not ctx.blowout_alerted and ctx.team == game.leading_team:
+                    ctx.blowout_alerted = True
+                    alerts.append((AlertType.BLOWOUT_WARNING, game, ctx))
 
         # Garbage time
         if game.is_garbage_time:
             for ctx in game.picks.values():
-                if ctx.is_hit is None and not ctx.garbage_time_alerted:
-                    if ctx.team == game.leading_team:
-                        ctx.garbage_time_alerted = True
-                        alerts.append((AlertType.GARBAGE_TIME, game, ctx))
+                if (
+                    ctx.is_hit is None
+                    and not ctx.garbage_time_alerted
+                    and ctx.team == game.leading_team
+                ):
+                    ctx.garbage_time_alerted = True
+                    alerts.append((AlertType.GARBAGE_TIME, game, ctx))
 
         return alerts
 
@@ -740,14 +742,17 @@ class GameContextEngine:
                 event = (play.get("event_type") or "").lower()
                 desc = (play.get("description") or "").lower()
 
-                # Match player name (exact or last name)
-                if play_player == pname or (
+                # Match player name (exact or last name) and a scoring event
+                is_player = play_player == pname or (
                     pname.split()[-1] in play_player and len(pname.split()[-1]) > 2
-                ):
-                    if any(kw in event for kw in ("shot", "dunk", "layup", "3pt", "free throw")):
-                        scoring_plays += 1
-                    elif "makes" in desc or "made" in desc:
-                        scoring_plays += 1
+                )
+                is_score = (
+                    any(kw in event for kw in ("shot", "dunk", "layup", "3pt", "free throw"))
+                    or "makes" in desc
+                    or "made" in desc
+                )
+                if is_player and is_score:
+                    scoring_plays += 1
 
             # Scoring run: 4+ scoring plays in last 10
             if scoring_plays >= 4 and not ctx.scoring_run_alerted:

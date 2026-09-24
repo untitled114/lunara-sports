@@ -47,7 +47,8 @@ class GameLogRecorder:
             self._close()
             self._current_date = today
             path = self.log_dir / f"game_context_{today.isoformat()}.jsonl"
-            self._file_handle = open(path, "a")
+            # Long-lived handle for the day's append-only log; rotated and closed by _close().
+            self._file_handle = open(path, "a")  # noqa: SIM115
             log.info("Game log opened: %s", path)
         return self._file_handle
 

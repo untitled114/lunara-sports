@@ -12,10 +12,10 @@ from game_context import (
     GamePhase,
     GameState,
     PickContext,
+    _clock_to_seconds,
     calculate_pace_projection,
     parse_minutes_str,
     parse_shot_str,
-    _clock_to_seconds,
 )
 
 

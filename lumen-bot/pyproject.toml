@@ -16,7 +16,7 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
-    "ruff>=0.8",
+    "ruff>=0.8,<0.17",  # capped: new ruff releases change rule defaults
 ]
 
 [tool.setuptools]
@@ -29,3 +29,25 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 target-version = "py310"
 line-length = 100
+
+# Explicit rule set (same as api/ and ingestion/) so a new ruff release can't
+# silently change what CI enforces — 0.16 expanded the defaults and broke CI.
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long — handled by ruff-format
+    "SIM105", # contextlib.suppress — try/except/pass is fine
+    "SIM108", # ternary — if/else is clearer with comments
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]  # tests put the bot dir on sys.path before importing
