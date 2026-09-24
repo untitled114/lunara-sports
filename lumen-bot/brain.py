@@ -10,8 +10,9 @@ from __future__ import annotations
 import logging
 import os
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any
 
 log = logging.getLogger("lumen.brain")
 
@@ -108,8 +109,8 @@ class BotIdentity:
     admin_ids: set[int] = field(default_factory=set)
     cooldown_seconds: int = 5
     daily_limit: int = 50
-    tools: Optional[list[dict]] = None
-    tool_handler: Optional[Callable[[str, dict[str, Any], int], str]] = None
+    tools: list[dict] | None = None
+    tool_handler: Callable[[str, dict[str, Any], int], str] | None = None
     max_response_tokens: int = 1200
 
 
@@ -159,8 +160,8 @@ class CephalonBrain:
         self,
         user_id: int,
         message: str,
-        user_name: Optional[str] = None,
-        extra_context: Optional[str] = None,
+        user_name: str | None = None,
+        extra_context: str | None = None,
     ) -> str:
         """Generate a conversational response with history and live context."""
         if not self._available:
@@ -252,8 +253,8 @@ class CephalonBrain:
 
     async def _build_system(
         self,
-        extra_context: Optional[str] = None,
-        user_name: Optional[str] = None,
+        extra_context: str | None = None,
+        user_name: str | None = None,
     ) -> str:
         """Build system prompt: personality + live context."""
         parts = [self.identity.system_prompt]
