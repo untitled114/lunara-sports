@@ -7,14 +7,10 @@ from datetime import datetime, timezone
 import asyncpg
 import pytest
 
-try:
-    from src.sinks.postgres import INSERT_PLAY_SQL, UPSERT_GAME_SQL, PostgresSink
-except ImportError:  # pragma: no cover - src.sinks.postgres lands in Task 8
-    INSERT_PLAY_SQL = None
-    UPSERT_GAME_SQL = None
-    PostgresSink = None
+from src.sinks.base import EventSink
+from src.sinks.postgres import INSERT_PLAY_SQL, UPSERT_GAME_SQL, PostgresSink
 
-pytestmark = [pytest.mark.xfail(strict=True, reason="pending Task 8"), pytest.mark.asyncio]
+pytestmark = pytest.mark.asyncio
 
 
 class FakeConn:
@@ -211,3 +207,24 @@ async def test_flush_before_connect_raises():
     sink.produce("raw.plays", "401", PLAY)
     with pytest.raises(RuntimeError, match="not connected"):
         await sink.flush()
+
+
+async def test_postgres_sink_satisfies_the_event_sink_protocol_shape():
+    # EventSink (sinks/base.py) is the structural contract collectors code
+    # against; PostgresSink must provide the same member shape.
+    assert {"produce", "flush", "close"} <= set(dir(EventSink))
+    sink = PostgresSink("postgresql://x", pool=FakePool(FakeConn()))
+    assert all(hasattr(sink, m) for m in ("produce", "flush", "close"))
+
+
+async def test_start_time_unparseable_string_falls_back_to_now():
+    conn = FakeConn()
+    sink = PostgresSink("postgresql://x", pool=FakePool(conn))
+    sink.produce("raw.scoreboard", "401", {**GAME, "start_time": "not-a-timestamp"})
+    await sink.flush()
+    assert conn.calls[0][1][0][8].tzinfo is not None
+
+
+async def test_close_without_connect_is_a_noop():
+    sink = PostgresSink("postgresql://x")
+    await sink.close()  # nothing pending, no pool — must not raise
