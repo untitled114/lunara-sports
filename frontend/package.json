@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "design:check": "node scripts/check-design.mjs"
+    "design:check": "node scripts/check-design.mjs --strict"
   },
   "dependencies": {
     "clsx": "^2.1.1",

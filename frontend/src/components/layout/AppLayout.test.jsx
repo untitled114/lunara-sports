@@ -107,9 +107,8 @@ describe('AppLayout', () => {
   })
 
   it('has a bottom tab bar rendered as a distinct, labeled navigation landmark', () => {
-    // BottomNav (frontend/src/components/sport/BottomNav.jsx) is a separate file with its own
-    // design-check-baseline.json entry — out of this task's file ownership (AppLayout.jsx only),
-    // so it isn't edited here. The brief's exact wording (aria-label="Primary") is asserted on
+    // BottomNav (frontend/src/components/sport/BottomNav.jsx) is a separate file, so it isn't
+    // asserted in detail here. The brief's exact wording (aria-label="Primary") is asserted on
     // this task's own top-bar nav above; this only guards that BottomNav still renders as an
     // accessibly-labeled nav landmark distinct from the top bar's "Primary" nav.
     renderLayout()
