@@ -69,6 +69,20 @@
     "url": "https://api.lunara-app.com/games/next?after=2026-10-03",
     "capturedAtET": "Sep 25, 2026, 1:44:25 PM EDT"
   },
+  "/games/next?after=2026-09-24": {
+    "file": "games_next_after_2026-09-24.json",
+    "status": 200,
+    "contentType": "application/json",
+    "url": "https://api.lunara-app.com/games/next?after=2026-09-24",
+    "capturedAtET": "Sep 25, 2026, 2:08:02 PM EDT"
+  },
+  "/games/next?after=2026-09-28": {
+    "file": "games_next_after_2026-09-28.json",
+    "status": 200,
+    "contentType": "application/json",
+    "url": "https://api.lunara-app.com/games/next?after=2026-09-28",
+    "capturedAtET": "Sep 25, 2026, 2:08:02 PM EDT"
+  },
   "/standings": {
     "file": "standings.json",
     "status": 200,

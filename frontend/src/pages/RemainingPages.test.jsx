@@ -6,6 +6,8 @@ import picksToday from '@/test/fixtures/picksToday.json'
 import statsLeaders from '@/test/fixtures/statsLeaders.json'
 import statsTeams from '@/test/fixtures/statsTeams.json'
 import gamesOct03 from '@/test/fixtures/gamesOct03.json'
+import gamesNext from '@/test/fixtures/gamesNext.json'
+import { todayET, addDaysISO } from '@/lib/et'
 
 vi.mock('@/context/ThemeContext', () => ({
   useTheme: () => ({
@@ -26,8 +28,13 @@ const api = vi.hoisted(() => ({
   fetchStatLeaders: vi.fn(),
   fetchTeamStatsList: vi.fn(),
   fetchPlayers: vi.fn(),
+  fetchNextGameDate: vi.fn(),
 }))
 vi.mock('@/services/api', () => api)
+
+// The landing page's "Live now" badge reads the same scoreboard feed as the ticker.
+const scoreboard = vi.hoisted(() => ({ useScoreboard: vi.fn() }))
+vi.mock('@/hooks/useScoreboard', () => scoreboard)
 
 import PrivacyPage from './PrivacyPage'
 import TermsPage from './TermsPage'
@@ -71,6 +78,9 @@ const wrap = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>)
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Real GET /games/next?after=2026-09-25 response (see the fixture's _source).
+  api.fetchNextGameDate.mockResolvedValue(gamesNext.data.date)
+  scoreboard.useScoreboard.mockReturnValue({ games: [], connected: false, loading: false })
 })
 
 describe('PrivacyPage', () => {
@@ -102,8 +112,36 @@ describe('LandingPage', () => {
     wrap(<LandingPage />)
     assertNoBannedWords(document.body.textContent)
     expect(screen.getByRole('heading', { name: 'Lunara Sports' })).toBeInTheDocument()
-    expect(screen.getByText('Live now')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'NBA' })).toBeInTheDocument()
+  })
+
+  it('shows no "Live now" badge when no game is live (the real Oct 3 slate is scheduled)', () => {
+    scoreboard.useScoreboard.mockReturnValue({ games: gamesOct03.data, connected: true, loading: false })
+    wrap(<LandingPage />)
+    expect(screen.queryByText('Live now')).toBeNull()
+    expect(scoreboard.useScoreboard).toHaveBeenCalledWith(todayET())
+  })
+
+  it('shows "Live now" with its ping only while a game is live or at halftime', () => {
+    // Rendering-state override, as in GameDetailPage.test: the real Oct 3 game with only
+    // its status changed (no game is live in the API right now).
+    for (const status of ['live', 'halftime']) {
+      scoreboard.useScoreboard.mockReturnValue({
+        games: [{ ...gamesOct03.data[0], status }],
+        connected: true,
+        loading: false,
+      })
+      const { unmount } = wrap(<LandingPage />)
+      const badge = screen.getByText('Live now')
+      expect(badge.parentElement.querySelector('.animate-ping')).toBeInTheDocument()
+      unmount()
+    }
+  })
+
+  it('says "Coming soon" for MLB and NFL, not a past season date', () => {
+    wrap(<LandingPage />)
+    expect(screen.getAllByText(/Coming soon\./)).toHaveLength(2)
+    expect(document.body.textContent).not.toMatch(/Coming (spring|fall)/)
   })
 })
 
@@ -117,11 +155,28 @@ describe('LandingPage', () => {
 describe('PicksPage', () => {
   afterEach(() => vi.clearAllMocks())
 
-  it('renders the real (empty) picks response as a plain empty state with no banned words', async () => {
+  it('renders the real (empty) picks response as an empty state that names the next game day', async () => {
     api.fetchTodayPicks.mockResolvedValue(picksToday.data)
     wrap(<PicksPage />)
-    expect(await screen.findByText('No picks match these filters.')).toBeInTheDocument()
+    expect(await screen.findByText('No picks yet.')).toBeInTheDocument()
+    expect(screen.getByText('Picks appear here on game days.')).toBeInTheDocument()
+    expect(screen.queryByText('No picks match these filters.')).toBeNull()
+    const link = await screen.findByRole('link', { name: 'Next game: Sat, Oct 3 →' })
+    expect(link).toHaveAttribute('href', '/scoreboard?date=2026-10-03')
+    // On or after today: the lookup starts from yesterday (ET).
+    expect(api.fetchNextGameDate).toHaveBeenCalledWith(addDaysISO(todayET(), -1))
     assertNoBannedWords(document.body.textContent)
+  })
+
+  it('keeps every Tier option in the filter row (the groups wrap instead of overflowing)', async () => {
+    api.fetchTodayPicks.mockResolvedValue(picksToday.data)
+    wrap(<PicksPage />)
+    await screen.findByText('No picks yet.')
+    for (const name of ['X', 'Z', 'META', 'Goldmine', 'Star']) {
+      expect(screen.getByRole('tab', { name })).toBeInTheDocument()
+    }
+    const row = screen.getByRole('tab', { name: 'Goldmine' }).closest('.flex-wrap')
+    expect(row).not.toBeNull()
   })
 
   it('error path shows PageState with Try again and retries', async () => {
@@ -131,7 +186,7 @@ describe('PicksPage', () => {
     const retry = screen.getByRole('button', { name: 'Try again' })
     await userEvent.click(retry)
     await waitFor(() => expect(api.fetchTodayPicks).toHaveBeenCalledTimes(2))
-    expect(await screen.findByText('No picks match these filters.')).toBeInTheDocument()
+    expect(await screen.findByText('No picks yet.')).toBeInTheDocument()
   })
 })
 
@@ -148,10 +203,21 @@ describe('SchedulePage', () => {
     assertNoBannedWords(document.body.textContent)
   })
 
-  it('empty range shows a plain empty state', async () => {
+  it('empty range names the range and links the next game day after it', async () => {
     api.fetchGames.mockResolvedValue([])
     wrap(<SchedulePage />)
-    expect(await screen.findByText('No games found for this date range.')).toBeInTheDocument()
+    expect(await screen.findByText(/^No games from \w{3}, \w{3} \d{1,2} to \w{3}, \w{3} \d{1,2}\.$/)).toBeInTheDocument()
+    const link = await screen.findByRole('link', { name: 'Next game: Sat, Oct 3 →' })
+    expect(link).toHaveAttribute('href', '/scoreboard?date=2026-10-03')
+    expect(api.fetchNextGameDate).toHaveBeenCalledWith(addDaysISO(todayET(), 3))
+  })
+
+  it('names the week buttons for assistive tech', async () => {
+    api.fetchGames.mockResolvedValue([])
+    wrap(<SchedulePage />)
+    expect(screen.getByRole('button', { name: 'Previous week' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next week' })).toBeInTheDocument()
+    await screen.findByText(/^No games from/)
   })
 
   it('error path shows PageState with Try again and retries', async () => {
@@ -181,6 +247,16 @@ describe('StatsPage', () => {
     expect(screen.getByRole('heading', { name: 'Defense' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Advanced stats' })).toBeInTheDocument()
     assertNoBannedWords(document.body.textContent)
+  })
+
+  it('loads leader headshots through the combiner at 2x the 48px avatar', async () => {
+    api.fetchStatLeaders.mockResolvedValue(statsLeaders.data)
+    api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
+    wrap(<StatsPage />)
+    const [topScorer] = statsLeaders.data.categories.pts
+    const [img] = await screen.findAllByAltText(topScorer.player)
+    expect(img.getAttribute('src')).toMatch(/^https:\/\/a\.espncdn\.com\/combiner\/i\?img=\/i\/headshots\/nba\/players\/full\/\d+\.png&w=96&h=96$/)
+    expect(document.querySelectorAll('img[src*="/i/headshots/"]:not([src*="/combiner/"])')).toHaveLength(0)
   })
 
   it('shows a plain empty state for team stats not yet available (real, unpopulated response)', async () => {

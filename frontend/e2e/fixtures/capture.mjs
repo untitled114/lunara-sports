@@ -1,12 +1,14 @@
 // Captures the e2e fixtures from the real production API. Nothing here is invented:
 // every body is exactly what api.lunara-app.com returned at capture time, byte for byte.
 //
-//   node e2e/fixtures/capture.mjs
+//   node e2e/fixtures/capture.mjs            (re-captures everything)
+//   node e2e/fixtures/capture.mjs --missing  (captures only endpoints not yet in the
+//                                             manifest; existing captures stay untouched)
 //
 // Writes one file per request into e2e/fixtures/api/, plus manifest.json (request key ->
 // file, HTTP status, source URL, capture time in ET) and README.md. mockApi.js serves
 // the app's requests from the manifest; a request with no manifest entry fails the test.
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs'
+import { writeFileSync, mkdirSync, rmSync, readFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -21,6 +23,10 @@ export const ENDPOINTS = [
   ),
   '/games/next?after=2026-09-25',
   '/games/next?after=2026-10-03',
+  // Picks empty state: next game day on or after today (lookup starts from yesterday)
+  '/games/next?after=2026-09-24',
+  // Schedule empty state: next game day after the 09-22..09-28 window
+  '/games/next?after=2026-09-28',
   '/standings',
   '/teams',
   '/teams/MIA',
@@ -53,10 +59,17 @@ const etStamp = (d) =>
 
 async function main() {
   const out = join(HERE, 'api')
-  rmSync(out, { recursive: true, force: true })
+  const missingOnly = process.argv.includes('--missing')
+  const manifestPath = join(HERE, 'manifest.json')
+  const existing = missingOnly && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {}
+  if (!missingOnly) rmSync(out, { recursive: true, force: true })
   mkdirSync(out, { recursive: true })
   const manifest = {}
   for (const key of ENDPOINTS) {
+    if (existing[key]) {
+      manifest[key] = existing[key]
+      continue
+    }
     const url = `${SOURCE}${key}`
     const res = await fetch(url)
     const body = await res.text()

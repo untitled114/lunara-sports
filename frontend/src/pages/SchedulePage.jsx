@@ -4,7 +4,8 @@ import { ChevronRight, Clock, ChevronLeft } from 'lucide-react';
 import { Skeleton, Badge, PageState, SectionHeader, DataTable } from '@/components/ui';
 import { fetchGames } from '@/services/api';
 import { useFormatTime } from '@/utils/formatTime';
-import { todayET, addDaysISO } from '@/lib/et';
+import { todayET, addDaysISO, formatLongDay } from '@/lib/et';
+import { NextGameLink } from '@/components/sport/NextGameLink';
 
 // UTC-noon anchored, like lib/et.js's own formatters, so the weekday/month
 // never get reinterpreted by the machine's local timezone.
@@ -130,17 +131,21 @@ export default function SchedulePage() {
       {/* Date navigation */}
       <div className="flex items-center justify-center gap-6">
         <button
+          type="button"
+          aria-label="Previous week"
           onClick={() => shiftDate(-7)}
           className="h-10 w-10 flex items-center justify-center rounded-md bg-surface-2 border border-border text-text-3 hover:text-text-1 hover:bg-surface-1 transition-colors"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </button>
         <span className="t-label text-text-1">{formatDate(centerDate)}</span>
         <button
+          type="button"
+          aria-label="Next week"
           onClick={() => shiftDate(7)}
           className="h-10 w-10 flex items-center justify-center rounded-md bg-surface-2 border border-border text-text-3 hover:text-text-1 hover:bg-surface-1 transition-colors"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 
@@ -153,7 +158,11 @@ export default function SchedulePage() {
           ))}
         </div>
       ) : sortedDates.length === 0 ? (
-        <PageState kind="empty" title="No games found for this date range." />
+        <PageState
+          kind="empty"
+          title={`No games from ${formatLongDay(addDaysISO(centerDate, -3))} to ${formatLongDay(addDaysISO(centerDate, 3))}.`}
+          action={<NextGameLink after={addDaysISO(centerDate, 3)} />}
+        />
       ) : (
         <div className="space-y-10">
           {sortedDates.map((date) => (

@@ -5,6 +5,8 @@ import clsx from 'clsx';
 import { useTheme } from '@/context/ThemeContext';
 import { BRANDING_IMAGES } from '@/constants/branding';
 import { Badge, SectionHeader } from '@/components/ui';
+import { useScoreboard } from '@/hooks/useScoreboard';
+import { todayET } from '@/lib/et';
 
 function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var(--accent)', image, transitionImage }) {
   const { playGlassClick, triggerArenaEntry } = useTheme();
@@ -46,6 +48,23 @@ function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var
   );
 }
 
+// "Live now" only while a game today (ET) is actually live or at halftime, from the same
+// scoreboard feed the ticker uses. With nothing live it renders nothing.
+export function LiveNowBadge() {
+  const { games } = useScoreboard(todayET());
+  const anyLive = games.some((g) => g.status === 'live' || g.status === 'halftime');
+  if (!anyLive) return null;
+  return (
+    <div className="inline-flex items-center gap-2 rounded-sm bg-live/10 border border-live/20 px-3 py-1.5">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full rounded-sm bg-live opacity-75 animate-ping" />
+        <span className="relative inline-flex h-2 w-2 rounded-sm bg-live" />
+      </span>
+      <span className="t-label text-live">Live now</span>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const { triggerArenaEntry } = useTheme();
   const navigate = useNavigate();
@@ -61,13 +80,7 @@ export default function LandingPage() {
       {/* Hero */}
       <div className="relative text-center flex flex-col items-center justify-center min-h-[70vh]">
         <div className="relative z-10 flex flex-col items-center gap-8">
-          <div className="inline-flex items-center gap-2 rounded-sm bg-live/10 border border-live/20 px-3 py-1.5">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-sm bg-live opacity-75 animate-ping" />
-              <span className="relative inline-flex h-2 w-2 rounded-sm bg-live" />
-            </span>
-            <span className="t-label text-live">Live now</span>
-          </div>
+          <LiveNowBadge />
 
           <h1 className="t-title text-text-1">Lunara Sports</h1>
 
@@ -110,7 +123,7 @@ export default function LandingPage() {
           <FeatureCard
             icon={Target}
             title="MLB"
-            desc="Pitch tracking, batting splits, and diamond analytics. Coming spring 2026."
+            desc="Pitch tracking, batting splits, and diamond analytics. Coming soon."
             link="/scoreboard"
             delay="0.2s"
             color="var(--live)"
@@ -120,7 +133,7 @@ export default function LandingPage() {
           <FeatureCard
             icon={Activity}
             title="NFL"
-            desc="Drive charts, snap counts, and matchup breakdowns. Coming fall 2026."
+            desc="Drive charts, snap counts, and matchup breakdowns. Coming soon."
             link="/scoreboard"
             delay="0.4s"
             color="var(--accent)"

@@ -4,7 +4,8 @@ import { Skeleton, Card, Stat, Segmented, SectionHeader, PageState } from '@/com
 import { PickCard } from '@/components/sport/PickCard';
 import { useAuth } from '@/context/AuthContext';
 import { TrendingUp } from 'lucide-react';
-import { todayET } from '@/lib/et';
+import { todayET, addDaysISO } from '@/lib/et';
+import { NextGameLink } from '@/components/sport/NextGameLink';
 
 // UTC-noon anchored, like lib/et.js's own formatters, so this never gets
 // reinterpreted by the machine's local timezone — todayET() is already the
@@ -34,9 +35,11 @@ const FILTER_SECTIONS = [
 
 function FilterBar({ filters, onChange }) {
   return (
-    <div className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-1 animate-fadeIn" style={{ animationDelay: '0.2s' }}>
+    // The filter groups wrap onto new lines when the row is narrow (every option stays
+    // visible at 390); a group wider than the screen scrolls inside its Segmented.
+    <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-4 pb-1 animate-fadeIn" style={{ animationDelay: '0.2s' }}>
       {FILTER_SECTIONS.map((section) => (
-        <div key={section.key} className="flex flex-col gap-2 shrink-0">
+        <div key={section.key} className="flex flex-col gap-2 min-w-0 max-w-full">
           <span className="t-label text-text-3">{section.label}</span>
           <Segmented
             options={section.options.map((opt) => ({ id: opt, label: opt === 'star_tier' ? 'Star' : opt }))}
@@ -188,7 +191,16 @@ export default function PicksPage() {
       </div>
 
       {/* Picks grid */}
-      {filtered.length === 0 ? (
+      {picks.length === 0 ? (
+        // No picks at all (an off day, or before the slate posts): the next step is the
+        // next game day on or after today, so the lookup starts from yesterday.
+        <PageState
+          kind="empty"
+          title="No picks yet."
+          message="Picks appear here on game days."
+          action={<NextGameLink after={addDaysISO(todayET(), -1)} />}
+        />
+      ) : filtered.length === 0 ? (
         <PageState kind="empty" title="No picks match these filters." message="Try adjusting a filter above." />
       ) : (
         <div className="space-y-8">

@@ -55,6 +55,17 @@ describe('ScoreTicker', () => {
     expect(link).toHaveAttribute('href', `/scoreboard?date=${gamesNext.data.date}`)
   })
 
+  it('empty: the next-game link centres its text on the "No games today" line', async () => {
+    useScoreboardMock.mockReturnValue({ games: [], connected: false, loading: false })
+    global.fetch.mockResolvedValue({ ok: true, json: async () => gamesNext.data })
+    wrap(<ScoreTicker />)
+    const link = await screen.findByRole('link', { name: /Next game/ })
+    // Mobile links get a 36px min-height; inline-flex + items-center keeps the text on
+    // the same line as the plain "No games today" text instead of 9px above it.
+    expect(link).toHaveClass('inline-flex', 'items-center')
+    expect(link.parentElement).toHaveClass('flex', 'items-center')
+  })
+
   it('empty: a failed next-game lookup keeps "No games today" and shows no link', async () => {
     useScoreboardMock.mockReturnValue({ games: [], connected: false, loading: false })
     global.fetch.mockResolvedValue({ ok: false, json: async () => ({}) })

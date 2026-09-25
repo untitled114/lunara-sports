@@ -91,10 +91,11 @@ body {
   }
 }
 
-/* Long headings wrap on small screens */
+/* Long headings wrap between words on small screens. A word is only ever split when it
+   alone is wider than the line (overflow-wrap: break-word does not lower an element's
+   min-content width, so flex siblings can no longer squeeze a heading mid-word). */
 @media (max-width: 640px) {
   h1, h2 {
     overflow-wrap: break-word;
-    word-break: break-word;
   }
 }

@@ -140,7 +140,12 @@ function EmptyTicker() {
     <div className="h-[120px] flex items-center justify-center gap-3 border-b border-border bg-surface-1 px-8">
       <span className="t-small text-text-2">No games today</span>
       {next && (
-        <Link to={`/scoreboard?date=${next}`} className="t-small text-accent hover:text-accent-hover transition-colors">
+        // inline-flex + items-center: on mobile every link gets a 36px tap-target
+        // min-height, and this keeps its text centred on the "No games today" line.
+        <Link
+          to={`/scoreboard?date=${next}`}
+          className="inline-flex items-center t-small text-accent hover:text-accent-hover transition-colors"
+        >
           Next game: {formatLongDay(next)} →
         </Link>
       )}
