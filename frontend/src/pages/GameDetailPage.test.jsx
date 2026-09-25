@@ -125,6 +125,20 @@ describe('GameDetailPage', () => {
     expect(numericCell).toHaveClass('tnum')
   })
 
+  it('renders a positive plus-minus with a single sign, not double', async () => {
+    renderPage()
+    const tables = await screen.findAllByRole('table')
+    // Jonas Valanciunas' real plus-minus for this game is the API string "+16" — the cell
+    // must render "+16", not "++16" (a double sign was a pre-existing bug: the render
+    // prefixed "+" onto the already-signed raw string instead of the parsed number).
+    let found = false
+    for (const table of tables) {
+      if (within(table).queryAllByText('+16').length) found = true
+      expect(within(table).queryAllByText('++16')).toHaveLength(0)
+    }
+    expect(found).toBe(true)
+  })
+
   it('shows real player headshots on the on-court and full box score cards', async () => {
     renderPage()
     await screen.findByTestId('scoreboard-header')

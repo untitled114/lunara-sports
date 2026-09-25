@@ -264,12 +264,16 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
 
       {/* Main content */}
       <div className="flex items-start gap-3">
-        <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-md overflow-hidden bg-surface-2 border border-border shrink-0">
-          {headshot ? (
-            <img src={headshot} alt="" width={48} height={48} loading="lazy" className="w-full h-full object-cover" />
-          ) : tl ? (
-            <img src={tl} alt="" width={48} height={48} loading="lazy" className="w-full h-full object-contain p-2" />
-          ) : null}
+        {/* Outer wrapper stays un-clipped so the corner badge (negative-offset) isn't cut
+            off by the avatar's own overflow-hidden — the base structured it the same way. */}
+        <div className="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+          <div className="h-full w-full rounded-md overflow-hidden bg-surface-2 border border-border">
+            {headshot ? (
+              <img src={headshot} alt="" width={48} height={48} loading="lazy" className="w-full h-full object-cover" />
+            ) : tl ? (
+              <img src={tl} alt="" width={48} height={48} loading="lazy" className="w-full h-full object-contain p-2" />
+            ) : null}
+          </div>
           {/* Team logo corner badge — only needed when the headshot is already occupying the avatar */}
           {headshot && tl && (
             <img

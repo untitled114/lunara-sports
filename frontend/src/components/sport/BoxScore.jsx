@@ -58,15 +58,20 @@ function StatBlock({ label, value, isPrimary = false }) {
   );
 }
 
-function PlayerRow({ player }) {
+function PlayerRow({ player, teamAbbrev }) {
   const { playGlassClick } = useTheme();
   const headshot = player.headshot_url ? getHeadshotUrl(player.headshot_url) : null;
+  const teamLogo = teamAbbrev ? getLogoUrl(teamAbbrev) : null;
 
   return (
     <div className="flex items-center gap-3 py-3">
-      <div className="h-10 w-10 rounded-md overflow-hidden bg-surface-2 border border-border shrink-0">
-        {headshot && (
+      <div className="h-10 w-10 rounded-md overflow-hidden bg-surface-2 border border-border shrink-0 flex items-center justify-center">
+        {headshot ? (
           <img src={headshot} alt="" width={40} height={40} loading="lazy" className="w-full h-full object-cover" />
+        ) : teamLogo ? (
+          <img src={teamLogo} alt="" width={40} height={40} loading="lazy" className="w-full h-full object-contain p-2" />
+        ) : (
+          <span className="t-small font-semibold text-text-3">{player.name?.[0]}</span>
         )}
       </div>
 
@@ -113,7 +118,7 @@ function TeamSection({ teamAbbrev, players }) {
       ) : (
         <div className="divide-y divide-border">
           {players.map((p, i) => (
-            <PlayerRow key={p.name || i} player={p} />
+            <PlayerRow key={p.name || i} player={p} teamAbbrev={teamAbbrev} />
           ))}
         </div>
       )}
@@ -146,9 +151,12 @@ function statCellValue(row, key, isPlusMinus) {
   if (row.__kind === 'label') return '';
   const raw = row[key];
   if (isPlusMinus && row.__kind === 'player') {
+    // The API already sends a signed string (e.g. "+16"); parse to a number and re-sign
+    // from that, rather than prefixing "+" onto the already-signed raw string (which
+    // produced "++16").
     const n = parseInt(raw, 10);
     if (!Number.isNaN(n)) {
-      return <span className={n > 0 ? 'text-live' : n < 0 ? 'text-loss' : ''}>{n > 0 ? `+${raw}` : raw}</span>;
+      return <span className={n > 0 ? 'text-live' : n < 0 ? 'text-loss' : ''}>{n > 0 ? `+${n}` : String(n)}</span>;
     }
   }
   return raw ?? 0;
