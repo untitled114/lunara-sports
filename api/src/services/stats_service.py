@@ -226,6 +226,19 @@ def _leaders_season_label(ref: str) -> str:
     return f"{years} {kind}" if kind else years
 
 
+_PCT_KEYS = {"fg_pct", "ft_pct", "three_pct"}
+
+
+def _leader_value(key: str, leader: dict) -> str:
+    """The leader's display value. ESPN gives FG% and FT% as percentages ("68.2") but 3P%
+    as a fraction (value 0.4776, displayValue "0.5"), so percentages are formatted from the
+    raw value on one scale."""
+    if key in _PCT_KEYS and isinstance(leader.get("value"), int | float):
+        v = float(leader["value"])
+        return f"{v * 100 if v <= 1 else v:.1f}"
+    return str(leader.get("displayValue", "0.0"))
+
+
 async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
     """League stat leaders for the regular season the standings show: last season's
     until this season's first regular-season game, then this season's."""
@@ -253,9 +266,10 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
                 "stealsPerGame": "stl",
                 "blocksPerGame": "blk",
                 "3PointsMadePerGame": "threes",
-                "fieldGoalPct": "fg_pct",
-                "freeThrowPct": "ft_pct",
-                "threePointPct": "three_pct",
+                # ESPN's real names for these three (verified against the 2026 capture).
+                "fieldGoalPercentage": "fg_pct",
+                "FreeThrowPct": "ft_pct",
+                "3PointPct": "three_pct",
             }
             for cat in espn_data.get("categories", []):
                 cat_name = cat.get("name")
@@ -275,7 +289,7 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
                             player=info.get("name", f"Player {aid}"),
                             player_id=aid,
                             team=info.get("abbrev", ""),
-                            value=str(leader.get("displayValue", "0.0")),
+                            value=_leader_value(key, leader),
                             headshot_url=f"https://a.espncdn.com/i/headshots/nba/players/full/{aid}.png"
                             if aid
                             else "",

@@ -201,6 +201,13 @@ export default function StatsPage() {
             <LeaderboardCard title="Steals" icon={Zap} data={leaders.stl || []} unit="SPG" delay={0.5} />
           </StatSection>
 
+          {/* Shooting */}
+          <StatSection title="Shooting" subtitle="Field goal, three-point and free throw percentage">
+            <LeaderboardCard title="Field goal %" icon={Target} data={leaders.fg_pct || []} unit="FG%" delay={0.6} />
+            <LeaderboardCard title="Three-point %" icon={Target} data={leaders.three_pct || []} unit="3P%" delay={0.7} />
+            <LeaderboardCard title="Free throw %" icon={Target} data={leaders.ft_pct || []} unit="FT%" delay={0.8} />
+          </StatSection>
+
           {/* Advanced stats banner */}
           <Card className="p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
             <div className="flex items-center gap-6 relative z-10">

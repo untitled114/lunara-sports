@@ -149,3 +149,30 @@ def test_label_rules():
     assert _leaders_season_label(".../seasons/2010/types/9/leaders") == "2009–10"
     assert _leaders_season_label("") == ""
     assert _leaders_season_label(None) == ""
+
+
+@pytest.mark.asyncio
+async def test_shooting_leaders_come_through_on_one_percent_scale(no_name_lookups):
+    """ESPN names these fieldGoalPercentage / FreeThrowPct / 3PointPct, and sends 3P% as a
+    fraction (displayValue "0.5"); all three come out as percentages with one decimal."""
+    with (
+        patch.object(
+            standings_service.espn_client, "get_standings", AsyncMock(side_effect=_standings)
+        ),
+        patch.object(
+            stats_service.espn_client, "get_stat_leaders", AsyncMock(return_value=LEADERS_2026)
+        ),
+    ):
+        r = await get_stat_leaders(limit=1)
+    cats = {c["name"]: c["leaders"][0] for c in LEADERS_2026["categories"]}
+    for espn_name, key in (
+        ("fieldGoalPercentage", "fg_pct"),
+        ("FreeThrowPct", "ft_pct"),
+        ("3PointPct", "three_pct"),
+    ):
+        raw = cats[espn_name]["value"]
+        expected = f"{raw * 100 if raw <= 1 else raw:.1f}"
+        assert r.categories[key][0].value == expected
+    assert r.categories["fg_pct"][0].value == cats["fieldGoalPercentage"]["displayValue"]
+    three = float(r.categories["three_pct"][0].value)
+    assert 1 < three < 100  # a percentage, not ESPN's fraction
