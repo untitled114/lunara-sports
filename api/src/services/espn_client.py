@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+from datetime import date, datetime
 
 import httpx
 import structlog
 
 from ..db.redis import get_redis
+from ..eastern import ET
 
 logger = structlog.get_logger(__name__)
 
@@ -19,6 +21,7 @@ ROSTER_TTL = 86400  # 24 hr
 LEADERS_TTL = 3600  # 1 hr
 SUMMARY_TTL = 300  # 5 min
 SCOREBOARD_TTL = 8  # 8s — sub-poller interval for fast live updates
+CALENDAR_TTL = 21600  # 6 hr — the season schedule barely changes intra-day
 
 _client: httpx.AsyncClient | None = None
 
@@ -66,16 +69,14 @@ async def _cached_get(
         return None
 
 
-async def get_standings() -> dict | None:
-    """Fetch NBA standings from ESPN.
-
-    Note: The standings endpoint uses /apis/v2/ (not /apis/site/v2/).
-    """
-    return await _cached_get(
-        "espn:standings",
-        "https://site.api.espn.com/apis/v2/sports/basketball/nba/standings",
-        STANDINGS_TTL,
-    )
+async def get_standings(season: int | None = None) -> dict | None:
+    """Fetch NBA standings from ESPN (/apis/v2/). `season` is ESPN's end-year (2026 = 2025-26)."""
+    url = "https://site.api.espn.com/apis/v2/sports/basketball/nba/standings"
+    key = "espn:standings"
+    if season is not None:
+        url += f"?season={season}"
+        key += f":{season}"
+    return await _cached_get(key, url, STANDINGS_TTL)
 
 
 async def get_team_roster(espn_id: int) -> dict | None:
@@ -166,3 +167,20 @@ async def get_scoreboard(date_str: str | None = None) -> dict | None:
         SCOREBOARD_TTL,
         params=params or None,
     )
+
+
+async def get_scoreboard_calendar() -> list[date]:
+    """Dates (ET) that have NBA games in the current ESPN season calendar.
+
+    Uses its own cache key/TTL (not `get_scoreboard`'s 8s live-score TTL) — the
+    season calendar barely changes intra-day, so a long TTL avoids re-hitting ESPN
+    on essentially every call to the `/games/next` fallback path.
+    """
+    data = await _cached_get("espn:scoreboard:calendar", f"{BASE_URL}/scoreboard", CALENDAR_TTL)
+    raw = ((data or {}).get("leagues") or [{}])[0].get("calendar") or []
+    out = set()
+    for item in raw:
+        s = item if isinstance(item, str) else item.get("startDate", "")
+        if s:
+            out.add(datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(ET).date())
+    return sorted(out)

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -17,7 +17,7 @@ from ..db.redis import (
     get_cached_game_list,
     get_cached_game_state,
 )
-from ..eastern import eastern_day_window, eastern_today
+from ..eastern import ET, eastern_day_window, eastern_today
 from . import espn_client
 from .team_mapping import from_espn_abbrev
 
@@ -88,6 +88,23 @@ async def get_game(session: AsyncSession, game_id: str) -> dict | None:
         await cache_game_state(game_id, row)
 
     return row
+
+
+async def next_game_date(session: AsyncSession, after: date) -> date | None:
+    """First date strictly after `after` (ET) with games: local games table, else ESPN calendar."""
+    start = datetime.combine(after + timedelta(days=1), time.min, tzinfo=ET)
+    row = await session.execute(select(func.min(Game.start_time)).where(Game.start_time >= start))
+    first = row.scalar()
+    if first is not None:
+        # SQLite drops the UTC offset on read (Postgres, our real DB, does not),
+        # so a naive value here is UTC, not host-local — pin it before converting.
+        if first.tzinfo is None:
+            first = first.replace(tzinfo=timezone.utc)
+        return first.astimezone(ET).date()
+    for d in await espn_client.get_scoreboard_calendar():
+        if d > after:
+            return d
+    return None
 
 
 async def _query_pg(session: AsyncSession, target: date) -> list[dict]:
