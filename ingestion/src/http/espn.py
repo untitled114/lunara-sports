@@ -30,6 +30,7 @@ class EspnHttp:
         self._clock = clock
         self._blocks = 0
         self._proxy_until = 0.0
+        self._was_engaged = False
 
     @property
     def via_proxy(self) -> bool:
@@ -50,14 +51,20 @@ class EspnHttp:
             return await self._proxied.get(url, params=params)
         if resp.status_code not in BLOCK_STATUSES:
             self._blocks = 0
+            self._was_engaged = False
         return resp
 
     def _note_block(self, reason: str) -> None:
         self._blocks += 1
         logger.warning("espn.direct_blocked", reason=reason, consecutive=self._blocks)
-        if self._blocks >= self._trigger:
+        # R28: once the proxy has been engaged, a single blocked probe after a
+        # cooldown expires re-engages it immediately (a fresh cooldown) rather
+        # than requiring `trigger_failures` new consecutive blocks — fewer
+        # wasted direct round-trips against a host that's still blocking us.
+        if self._was_engaged or self._blocks >= self._trigger:
             self._proxy_until = self._clock() + self._cooldown
             self._blocks = 0
+            self._was_engaged = True
             logger.warning("espn.proxy_engaged", cooldown_s=self._cooldown)
 
     async def aclose(self) -> None:

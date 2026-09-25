@@ -76,6 +76,43 @@ async def test_direct_success_after_probe_resets_state():
     assert r.json() == {"via": "direct"} and not http.via_proxy
 
 
+async def test_post_cooldown_failed_probe_reengages_proxy_immediately():
+    # R28: a single blocked probe after cooldown re-engages without needing
+    # trigger_failures fresh consecutive blocks.
+    clock = Clock()
+    http = EspnHttp("http://p", trigger_failures=3, cooldown_seconds=300, clock=clock)
+    d, _ = _route_both(http, 403)
+    for _ in range(3):
+        await http.get(URL)
+    assert http.via_proxy
+    clock.t += 301
+    r = await http.get(URL)  # post-cooldown probe, still blocked
+    assert r.json() == {"via": "proxy"}
+    assert http.via_proxy  # re-engaged immediately on one failed probe
+    calls_before = d.calls.call_count
+    await http.get(URL)
+    assert d.calls.call_count == calls_before  # next request doesn't touch direct
+
+
+async def test_post_cooldown_successful_probe_requires_fresh_trigger():
+    # R28: a successful post-cooldown probe forgets the prior engagement, so a
+    # later single block does not re-engage the proxy on its own.
+    clock = Clock()
+    http = EspnHttp("http://p", trigger_failures=3, cooldown_seconds=300, clock=clock)
+    _route_both(http, 403)
+    for _ in range(3):
+        await http.get(URL)
+    assert http.via_proxy
+    clock.t += 301
+    _route_both(http, 200)
+    r = await http.get(URL)  # post-cooldown probe succeeds
+    assert r.json() == {"via": "direct"} and not http.via_proxy
+
+    _route_both(http, 403)
+    await http.get(URL)  # single block only — trigger_failures is 3
+    assert not http.via_proxy
+
+
 async def test_transport_error_falls_back_to_proxy():
     http = EspnHttp("http://p")
     _route_both(http, 200)
