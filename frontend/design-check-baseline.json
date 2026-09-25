@@ -71,13 +71,6 @@
     "palette": 49,
     "radius": 2
   },
-  "src/pages/AdminPage.jsx": {
-    "palette": 9,
-    "tracking": 1,
-    "radius": 1,
-    "effect": 1,
-    "hex": 1
-  },
   "src/pages/GameDetailPage.jsx": {
     "radius": 20,
     "hex": 1,
@@ -97,23 +90,6 @@
     "tracking": 6,
     "banned": 3
   },
-  "src/pages/LandingPage.jsx": {
-    "radius": 12,
-    "palette": 44,
-    "effect": 8,
-    "hex": 4,
-    "heavy": 10,
-    "tracking": 10,
-    "italic": 2
-  },
-  "src/pages/PicksPage.jsx": {
-    "radius": 5,
-    "effect": 1,
-    "palette": 25,
-    "heavy": 10,
-    "tracking": 6,
-    "italic": 1
-  },
   "src/pages/PlayerProfilePage.jsx": {
     "radius": 14,
     "heavy": 36,
@@ -132,22 +108,6 @@
     "banned": 1,
     "hex": 2
   },
-  "src/pages/PrivacyPage.jsx": {
-    "banned": 1,
-    "radius": 3,
-    "effect": 2,
-    "palette": 7,
-    "heavy": 2,
-    "tracking": 1
-  },
-  "src/pages/SchedulePage.jsx": {
-    "palette": 24,
-    "heavy": 7,
-    "tracking": 6,
-    "radius": 1,
-    "effect": 1,
-    "italic": 1
-  },
   "src/pages/StandingsPage.jsx": {
     "banned": 20,
     "radius": 19,
@@ -157,15 +117,6 @@
     "heavy": 24,
     "tracking": 24,
     "italic": 3
-  },
-  "src/pages/StatsPage.jsx": {
-    "radius": 10,
-    "effect": 5,
-    "palette": 75,
-    "hex": 3,
-    "heavy": 24,
-    "tracking": 14,
-    "banned": 7
   },
   "src/pages/TeamDetailPage.jsx": {
     "radius": 22,
@@ -184,13 +135,6 @@
     "radius": 7,
     "italic": 3,
     "banned": 2
-  },
-  "src/pages/TermsPage.jsx": {
-    "radius": 3,
-    "effect": 2,
-    "palette": 7,
-    "heavy": 2,
-    "tracking": 1
   },
   "src/styles.css": {
     "banned": 5,
