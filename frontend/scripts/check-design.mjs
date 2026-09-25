@@ -10,13 +10,24 @@ import { fileURLToPath } from 'node:url'
 // on a plain string is unaffected since it doesn't go through globalThis.URL.
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 const HEX_OK = ['src/styles/tokens.css', 'src/utils/teamColors.js']
-// glass on top bar/bottom tabs; grain on page background; live glow in GameCard
+// glass on top bar/bottom tabs; the arena backdrop (photo, darkening, glow washes;
+// ruling D31) in AppLayout; live glow in GameCard
 const EFFECT_OK = [
   'src/components/layout/AppLayout.jsx',
-  'src/styles/tokens.css',
   'src/components/sport/GameCard.jsx',
   'src/components/sport/BottomNav.jsx',
 ]
+// Ruling D31: heavy weight, italic and gradients are allowed only inside these CSS rule
+// blocks of these files, never in the rest of the file or anywhere else. `.display-wordmark`
+// is the LUNARA SPORTS wordmark (landing hero + top bar); `.team-wash` is the game header's
+// per-side team-color wash, whose colors arrive as --wash-away/--wash-home from
+// utils/teamColors.js. A block runs from its `selector {` line to the next `}` line.
+export const SCOPED_OK = {
+  'src/styles/tokens.css': {
+    '.display-wordmark': ['heavy', 'italic', 'effect'],
+    '.team-wash': ['effect'],
+  },
+}
 // rgb()/rgba()/hsl()/hsla() literals: only the token file gets to define raw
 // color functions; everywhere else should reference a --token instead.
 const COLORFN_OK = ['src/styles/tokens.css']
@@ -52,7 +63,8 @@ const RULES = {
   // without it, the 6-digit alt would match "#123abc" and stop at the `-`,
   // which is a real `\b` transition but not a color literal.
   hex: /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b(?!-)/g,
-  heavy: /\bfont-(black|extrabold)\b|\bfont-\[(?:800|900)\]/g,
+  // Tailwind classes, plus the same weights written as CSS or an inline style (D31).
+  heavy: /\bfont-(black|extrabold)\b|\bfont-\[(?:800|900)\]|\bfont-?[wW]eight\s*:\s*['"]?(?:800|900|bolder)\b/g,
   italic: /\bitalic\b/g,
   tracking: /tracking-(\[(0\.(0[9]|[1-9]\d*)|[1-9]\d*(\.\d+)?)em\]|widest|wider)/g,
   radius: /rounded-(\[(1[7-9]|[2-9]\d|\d{3,})px\]|\[\d+(\.\d+)?rem\]|2xl|3xl|full)/g,
@@ -93,9 +105,14 @@ const RULES = {
 export function scan(text, path) {
   const out = {}
   const add = (k, n) => { if (n) out[k] = (out[k] || 0) + n }
+  const scoped = SCOPED_OK[path] || {}
+  let blockRules = null // rules allowed in the scoped block we're inside, if any
   for (const line of text.split('\n')) {
     if (line.includes('design-check-allow')) continue
+    const opened = Object.keys(scoped).find((sel) => line.trim().startsWith(`${sel} {`))
+    if (opened) blockRules = scoped[opened]
     for (const [k, re] of Object.entries(RULES)) {
+      if (blockRules && blockRules.includes(k)) continue
       if (k === 'hex' && HEX_OK.includes(path)) continue
       if (k === 'effect' && EFFECT_OK.includes(path)) continue
       if (k === 'colorFn' && COLORFN_OK.includes(path)) continue
@@ -113,6 +130,7 @@ export function scan(text, path) {
     // (see comment above), so this scrub only still matters for `console`.
     const scrubbed = line.replace(/\bconsole\.\w+\b/g, '').replace(/PropTypes\.node/g, '')
     add('banned', (scrubbed.match(BANNED) || []).length + (scrubbed.match(BANNED_NODE) || []).length)
+    if (blockRules && line.includes('}')) blockRules = null
   }
   return out
 }

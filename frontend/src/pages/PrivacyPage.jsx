@@ -40,7 +40,7 @@ export default function PrivacyPage() {
   return (
     <div className="animate-intel">
       {/* Hero */}
-      <div className="relative mb-8 rounded-lg border border-border bg-surface-1 p-8 sm:p-12">
+      <div className="relative mb-8 rounded-lg border border-border bg-surface-card p-8 sm:p-12">
         <div className="relative z-10 flex items-center gap-6">
           <div className="h-16 w-16 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
             <Shield className="h-8 w-8 text-accent" />
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
       </div>
 
       {/* Content */}
-      <div className="rounded-lg border border-border bg-surface-1 p-6 sm:p-10 space-y-10">
+      <div className="rounded-lg border border-border bg-surface-card p-6 sm:p-10 space-y-10">
         {sections.map((section, i) => (
           <div key={i} className="animate-intel" style={{ animationDelay: `${i * 0.05}s` }}>
             <h2 className="t-section text-text-1 mb-3">{section.title}</h2>

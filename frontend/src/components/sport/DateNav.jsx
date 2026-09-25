@@ -39,7 +39,7 @@ export function DateNav({ current }) {
         </Link>
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-2 rounded-lg border border-border bg-surface-1 p-1 sm:p-2">
+      <div className="flex items-center gap-1 sm:gap-2 rounded-lg border border-border bg-surface-card p-1 sm:p-2">
         <Link
           to={`/scoreboard?date=${addDaysISO(start, -7)}`}
           onClick={() => playGlassClick()}

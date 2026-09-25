@@ -88,22 +88,24 @@ describe('AppLayout', () => {
     // required copy-table renames, still present with their new plain wording
     expect(screen.getByText('Favorite team')).toBeInTheDocument()
     expect(screen.getByText('Data')).toBeInTheDocument()
-    expect(screen.getByText('Background texture')).toBeInTheDocument()
+    // ruling D31: the slider drives the arena glow again, under its plain name
+    expect(screen.getByText('Background glow')).toBeInTheDocument()
     expect(screen.getAllByText('Settings').length).toBeGreaterThan(0)
     // removed/renamed old copy must not be present
     expect(screen.queryByText('Node Affinity')).toBeNull()
     expect(screen.queryByText('Data Uplink')).toBeNull()
     expect(screen.queryByText('System Protocols')).toBeNull()
     expect(screen.queryByText('Intelligence Station')).toBeNull()
-    expect(screen.queryByText('Background glow')).toBeNull()
+    expect(screen.queryByText('Background texture')).toBeNull()
   })
 
-  it('wordmark is a plain t-section span, not the tracked/italic wordmark', () => {
+  it('wordmark is the one display-wordmark class, with no subtitle (ruling D31)', () => {
     renderLayout()
     const wordmark = screen.getByText('Lunara Sports')
-    expect(wordmark).toHaveClass('t-section')
-    expect(wordmark.className).not.toMatch(/italic/)
-    expect(wordmark.className).not.toMatch(/tracking-/)
+    expect(wordmark).toHaveClass('display-wordmark')
+    // heavy/italic/tracking live in the tokens.css class, never as utilities here
+    expect(wordmark.className).not.toMatch(/italic|font-black|font-extrabold|tracking-/)
+    expect(screen.queryByText(/intelligence station/i)).toBeNull()
   })
 
   it('has a bottom tab bar rendered as a distinct, labeled navigation landmark', () => {
@@ -140,13 +142,14 @@ describe('AppLayout', () => {
     expect(icon).toHaveClass('group-hover/settings:rotate-180', 'duration-[1.5s]')
   })
 
-  it('"Background texture" drives the page grain layer opacity (ruling D15)', () => {
+  it('"Background glow" drives the arena glow washes; the grain stays faint (ruling D31)', () => {
     mockUseTheme.mockReturnValue({ ...BASE_THEME, arenaIntensity: 0 })
-    const { rerender, container } = render(
+    const { rerender } = render(
       <MemoryRouter initialEntries={['/']}>
         <AppLayout />
       </MemoryRouter>
     )
+    const glowAt0 = screen.getByTestId('arena-glow').style.opacity
     const grainAt0 = screen.getByTestId('page-grain').style.opacity
 
     mockUseTheme.mockReturnValue({ ...BASE_THEME, arenaIntensity: 1 })
@@ -155,12 +158,37 @@ describe('AppLayout', () => {
         <AppLayout />
       </MemoryRouter>
     )
-    const grainAt1 = screen.getByTestId('page-grain').style.opacity
+    const glow = screen.getByTestId('arena-glow')
 
-    expect(Number(grainAt0)).toBe(0)
-    expect(Number(grainAt1)).toBeGreaterThan(Number(grainAt0))
-    // it's a real ceiling, not "always visible" — well under fully opaque
-    expect(Number(grainAt1)).toBeLessThanOrEqual(0.12)
-    expect(container).toBeTruthy()
+    expect(Number(glowAt0)).toBe(0)
+    // capped (GLOW_SCALE) so the default setting keeps text on the backdrop at AA
+    expect(Number(glow.style.opacity)).toBeCloseTo(0.7)
+    // base's 1s fade, unchanged
+    expect(glow.style.transition).toBe('opacity 1s')
+    // the three washes: primary top-left, --glow-2 top-right, --glow-3 bottom-center
+    expect(glow.style.backgroundImage).toContain('var(--glow-1)')
+    expect(glow.style.backgroundImage).toContain('var(--glow-2)')
+    expect(glow.style.backgroundImage).toContain('var(--glow-3)')
+    // the grain no longer follows the slider, and stays well under opaque
+    expect(screen.getByTestId('page-grain').style.opacity).toBe(grainAt0)
+    expect(Number(grainAt0)).toBeGreaterThan(0)
+    expect(Number(grainAt0)).toBeLessThanOrEqual(0.12)
+  })
+
+  it('the top-left glow follows the theme primary (favorite or home team)', () => {
+    mockUseTheme.mockReturnValue({ ...BASE_THEME, accentColors: { primary: '#CE1141' } })
+    renderLayout()
+    const bg = screen.getByTestId('arena-glow').style.backgroundImage
+    expect(bg).toMatch(/radial-gradient\(circle at 0% 0%, (#CE1141|rgb\(206, 17, 65\))/i)
+  })
+
+  it('the backdrop is the arena photo from public/branding, hidden from assistive tech', () => {
+    renderLayout()
+    const backdrop = screen.getByTestId('arena-backdrop')
+    expect(backdrop).toHaveAttribute('aria-hidden', 'true')
+    const img = backdrop.querySelector('img')
+    expect(img).toHaveAttribute('src', '/branding/background-1-alt.webp')
+    expect(img).toHaveAttribute('alt', '')
+    expect(img).toHaveClass('opacity-40')
   })
 })

@@ -45,16 +45,22 @@ const TIMEZONE_OPTIONS = [
   { id: 'PT', label: 'PT' }
 ];
 
-// The page grain (the one allowed ambient effect) tops out well under full opacity —
-// arenaIntensity (0..1) is scaled into this ceiling rather than driving a decorative
-// glow that no longer exists.
-const GRAIN_MAX_OPACITY = 0.12;
+// The page grain sits on top of the arena backdrop at a fixed, faint opacity. The
+// "Background glow" setting (arenaIntensity, 0..1) drives the glow washes instead, as it
+// did before the redesign (ruling D31).
+const GRAIN_OPACITY = 0.05;
+// The glow washes' opacity is the setting times this cap: base drew them at the raw setting
+// (0.4 by default), which put the brightest backdrop spots near luminance 0.058, too bright
+// for --text-2 at 4.5:1. At 0.7 the default (40%) peaks near 0.045 and holds AA; the
+// slider still reaches a brighter glow when a viewer asks for it.
+const GLOW_SCALE = 0.7;
 
 const AppLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const location = useLocation();
   const {
+    accentColors,
     playGlassClick,
     playThud,
     isTransitioning,
@@ -89,20 +95,36 @@ const AppLayout = () => {
   };
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="bg-surface-0">
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--backdrop)' }}>
 
       {/* Skip to Content */}
       <a href="#main-content" className="skip-to-content">Skip to content</a>
 
-      {/* Page background: flat surface + grain texture only. The "Background texture"
-          setting drives this layer's opacity directly (0 - GRAIN_MAX_OPACITY) — it's
-          the one allowed ambient effect, so the control now does something real. */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none' }} className="bg-surface-0">
+      {/* Arena backdrop (ruling D31), as base fb7b2d1 drew it: the leather arena photo at
+          40%, darkened toward the bottom, three glow washes (top-left follows the favorite
+          or home team) whose strength is the "Background glow" setting, a faint grain and
+          an edge vignette. Fixed behind the scroller; nothing here takes pointer events. */}
+      <div data-testid="arena-backdrop" aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', backgroundColor: 'var(--backdrop)' }}>
+        <img src="/branding/background-1-alt.webp" alt="" width={1920} height={1080} className="w-full h-full object-cover opacity-40" />
+        <div
+          className="absolute inset-0"
+          style={{ backgroundImage: 'linear-gradient(to bottom, color-mix(in srgb, var(--backdrop) 30%, transparent), color-mix(in srgb, var(--backdrop) 60%, transparent), var(--backdrop))' }}
+        />
+        <div
+          data-testid="arena-glow"
+          className="absolute inset-0"
+          style={{
+            opacity: arenaIntensity * GLOW_SCALE,
+            transition: 'opacity 1s',
+            backgroundImage: `radial-gradient(circle at 0% 0%, ${accentColors?.primary || 'var(--glow-1)'} 0px, transparent 60%), radial-gradient(circle at 100% 0%, var(--glow-2) 0px, transparent 60%), radial-gradient(at 50% 100%, var(--glow-3) 0px, transparent 50%)`
+          }}
+        />
         <div
           data-testid="page-grain"
           className="page-grain absolute inset-0 mix-blend-overlay"
-          style={{ opacity: arenaIntensity * GRAIN_MAX_OPACITY }}
+          style={{ opacity: GRAIN_OPACITY }}
         />
+        <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 150px color-mix(in srgb, var(--backdrop) 90%, transparent)' }} />
       </div>
 
       {/* Cinematic Transition Overlay */}
@@ -145,7 +167,7 @@ const AppLayout = () => {
                   <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md bg-surface-2 border border-border flex items-center justify-center overflow-hidden shrink-0">
                     <img src={BRANDING_IMAGES.logos.general} alt="" className="w-full h-full object-cover opacity-80" />
                   </div>
-                  <span className="t-section text-text-1">Lunara Sports</span>
+                  <span className="display-wordmark text-xl sm:text-2xl">Lunara Sports</span>
                 </Link>
 
                 <nav aria-label="Primary" className="hidden lg:flex items-center gap-1 bg-surface-0/40 p-1 rounded-md border border-border">
@@ -262,15 +284,16 @@ const AppLayout = () => {
                   </button>
                 </section>
 
-                {/* 3. Background texture — controls the page grain layer's opacity */}
+                {/* 3. Background glow — the arena backdrop's glow washes (ruling D31) */}
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="t-label text-text-3">Background texture</span>
+                    <span className="t-label text-text-3" id="bg-glow-label">Background glow</span>
                     <Sun className="h-3.5 w-3.5 text-text-3" />
                   </div>
                   <div className="p-4 rounded-md border border-border bg-surface-2">
                     <input
                       type="range" min="0" max="1" step="0.1"
+                      aria-labelledby="bg-glow-label"
                       value={arenaIntensity}
                       onChange={(e) => updateIntensity(parseFloat(e.target.value))}
                       className="w-full cursor-pointer accent-[var(--accent)]"

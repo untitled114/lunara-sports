@@ -96,6 +96,23 @@ describe('GameDetailPage', () => {
     expect(header.getByText('Final')).toBeInTheDocument()
   })
 
+  it('washes each team color in from its own side, with big display scores (ruling D31)', async () => {
+    renderPage()
+    const card = await screen.findByTestId('scoreboard-header')
+    const { TEAM_COLORS, teamWash } = await import('@/utils/teamColors')
+    expect(card).toHaveClass('team-wash')
+    // the away team (OKC) on the left, the home team (DEN) on the right, from teamColors.js
+    expect(card.style.getPropertyValue('--wash-away')).toBe(TEAM_COLORS.OKC.primary)
+    expect(card.style.getPropertyValue('--wash-home')).toBe(TEAM_COLORS.DEN.primary)
+    expect(card.style.getPropertyValue('--wash-away-strength')).toBe(teamWash('OKC').strength)
+    expect(card.style.getPropertyValue('--wash-home-strength')).toBe(teamWash('DEN').strength)
+    const header = within(card)
+    expect(header.getByText('107')).toHaveClass('t-score-display', 'tnum')
+    expect(header.getByText('127')).toHaveClass('t-score-display', 'tnum')
+    // none of the pre-redesign invented header strings
+    expect(card.textContent).not.toMatch(/SIGNAL|NODE|SECTOR|SYNC|REFEREES|VERIFIED|COMMENCING/i)
+  })
+
   it('shows a live badge for the current quarter of a live game', async () => {
     // Rendering-state fixture: the real fixture game is "final" (no live game exists in
     // the live API right now — verified), so this overrides only the status/quarter/clock

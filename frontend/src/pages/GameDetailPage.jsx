@@ -4,7 +4,7 @@ import { fetchGame, fetchStandings, buildStandingsLookup } from '@/services/api'
 import { LiveFeed } from '@/components/sport/LiveFeed';
 import { BoxScore, FullBoxScore } from '@/components/sport/BoxScore';
 import { Card, Badge, PageState, TeamMark, SectionHeader } from '@/components/ui';
-import { getLogoUrl } from '@/utils/teamColors';
+import { getLogoUrl, teamWash } from '@/utils/teamColors';
 import { useTheme } from '@/context/ThemeContext';
 import { usePolling } from '@/hooks/usePolling';
 import { useGameFeed } from '@/hooks/useGameFeed';
@@ -78,15 +78,16 @@ function TeamHeader({ name, abbrev, score, isWinner, isAway, standing, standings
 
   return (
     <div className={`flex flex-col gap-1.5 min-w-0 ${isAway ? '' : 'items-end text-right'}`}>
-      {/* Row 1: logo+abbrev and score — the two things that must never crowd each other */}
-      <div className={`flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0 ${isAway ? '' : 'flex-row-reverse'}`}>
+      {/* Row 1: logo+abbrev and score — the two things that must never crowd each other.
+          On a phone the display-size score sits under the mark; from sm up, beside it. */}
+      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 w-full min-w-0 ${isAway ? 'items-start' : 'items-end sm:flex-row-reverse'}`}>
         <Link to={`/team/${abbrev}`} onClick={() => playGlassClick()} className="shrink-0">
           <TeamMark abbrev={abbrev} logoUrl={logoUrl} size="lg" />
         </Link>
 
         {showScore && (
           <span className="relative shrink-0">
-            <span className={`t-score tnum ${isWinner ? 'text-text-1' : 'text-text-3'}`}>{score}</span>
+            <span className={`t-score t-score-display tnum ${isWinner ? 'text-text-1' : 'text-text-3'}`}>{score}</span>
             {isWinner && (
               <span className="absolute -right-2 -top-1 h-2 w-2 rounded-sm bg-live animate-ping" aria-hidden="true" />
             )}
@@ -107,7 +108,8 @@ function TeamHeader({ name, abbrev, score, isWinner, isAway, standing, standings
           </span>
         )}
         {nameLine && <p className="hidden sm:block t-small text-text-2 truncate max-w-[160px]">{nameLine}</p>}
-        {record && <p className="t-small tnum text-text-3 whitespace-nowrap">{record}</p>}
+        {/* text-2, not text-3: it sits on the team wash (teamWash keeps text-2 at AA). */}
+        {record && <p className="t-small tnum text-text-2 whitespace-nowrap">{record}</p>}
       </div>
     </div>
   );
@@ -132,30 +134,41 @@ function ScoreboardHeader({ game, standings, standingsMeta }) {
   const homeWin = isFinal && game.home_score > game.away_score;
 
 
-  return (
-    <Card className="mb-4 sm:mb-6" data-testid="scoreboard-header">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 sm:mb-6">
-        <span className="t-small text-text-2">{game.venue || 'NBA Arena'}</span>
+  // Each team's primary washes in from its own side (ruling D31), from utils/teamColors.js.
+  const awayWash = teamWash(game.away_team);
+  const homeWash = teamWash(game.home_team);
+  const washVars = {
+    ...(awayWash && { '--wash-away': awayWash.color, '--wash-away-strength': awayWash.strength }),
+    ...(homeWash && { '--wash-home': homeWash.color, '--wash-home-strength': homeWash.strength }),
+  };
 
+  // The status sits in a centered pill: tip-off day and time (ET) before the game, the
+  // period and clock while it's live, "Final" after.
+  const status = (
+    <div className="col-span-2 sm:col-span-1 order-first sm:order-none flex justify-center">
+      <div className="inline-flex items-center gap-2 rounded-md border border-border bg-surface-2 px-4 py-2">
         {isLive ? (
-          <div className="flex items-center gap-2">
+          <>
             <Badge variant="live" dot>
               {game.status === 'halftime' ? 'Halftime' : periodLabel(game.quarter) || 'Live'}
             </Badge>
             {/* Only the clock the API sent: no made-up 12:00 when it has none. */}
-            {game.clock && <span className="t-score tnum text-text-1">{game.clock}</span>}
-          </div>
+            {game.clock && <span className="t-section tnum text-text-1">{game.clock}</span>}
+          </>
         ) : isFinal ? (
-          <span className="t-label text-text-3">Final</span>
+          <span className="t-label text-text-2">Final</span>
         ) : (
-          <span className="t-small tnum text-text-1" data-testid="tip-off">
+          <span className="t-small tnum text-text-1 whitespace-nowrap" data-testid="tip-off">
             {tipOffLabel(game.start_time, fmt)}
           </span>
         )}
       </div>
+    </div>
+  );
 
-      <div className="grid grid-cols-2 gap-4 sm:gap-8 items-center">
+  return (
+    <Card className="team-wash mb-4 sm:mb-6 sm:p-8" style={washVars} data-testid="scoreboard-header">
+      <div className="grid grid-cols-2 sm:grid-cols-[1fr_auto_1fr] gap-4 sm:gap-8 items-center">
         <TeamHeader
           name={game.away_team_full}
           abbrev={game.away_team}
@@ -167,6 +180,7 @@ function ScoreboardHeader({ game, standings, standingsMeta }) {
           isAway
           showScore={!isScheduled}
         />
+        {status}
         <TeamHeader
           name={game.home_team_full}
           abbrev={game.home_team}
@@ -179,6 +193,8 @@ function ScoreboardHeader({ game, standings, standingsMeta }) {
           showScore={!isScheduled}
         />
       </div>
+
+      <p className="mt-4 sm:mt-6 text-center t-small text-text-2">{game.venue || 'NBA Arena'}</p>
     </Card>
   );
 }

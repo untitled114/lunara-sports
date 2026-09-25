@@ -66,7 +66,7 @@ class ErrorBoundary extends React.Component {
       // Default fallback UI
       return (
         <div className="min-h-screen bg-surface-0 flex items-center justify-center px-4">
-          <div className="max-w-md w-full bg-surface-1 border border-border rounded-lg p-8 text-center">
+          <div className="max-w-md w-full bg-surface-card border border-border rounded-lg p-8 text-center">
             {/* Error Icon */}
             <div className="flex justify-center mb-6">
               <div className="w-16 h-16 bg-loss/10 rounded-lg flex items-center justify-center">

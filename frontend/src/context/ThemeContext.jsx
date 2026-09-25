@@ -6,7 +6,9 @@ const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [favoriteTeam, setFavoriteTeam] = useState(localStorage.getItem('favTeam') || null);
-  const [accentColors, setAccentColors] = useState({ primary: 'var(--accent)', secondary: 'var(--surface-2)' });
+  // accentColors.primary tints the backdrop's top-left glow wash (ruling D31): --glow-1
+  // by default, the favorite team's primary, or the home team's on a game page.
+  const [accentColors, setAccentColors] = useState({ primary: 'var(--glow-1)', secondary: 'var(--surface-2)' });
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionImage, setTransitionImage] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(localStorage.getItem('soundEnabled') !== 'false');
@@ -20,8 +22,8 @@ export function ThemeProvider({ children }) {
   const setArenaTheme = useCallback((abbrev) => {
     const targetAbbrev = abbrev || favoriteTeam;
 
-    if (!targetAbbrev) {
-      setAccentColors({ primary: 'var(--accent)', secondary: 'var(--surface-2)' });
+    if (!targetAbbrev || !TEAM_COLORS[targetAbbrev]) {
+      setAccentColors({ primary: 'var(--glow-1)', secondary: 'var(--surface-2)' });
       return;
     }
     const colors = getTeamColor(targetAbbrev);

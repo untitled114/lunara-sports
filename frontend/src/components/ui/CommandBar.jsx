@@ -116,7 +116,7 @@ export function CommandBar() {
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4">
       <div className="absolute inset-0 bg-surface-0/80" onClick={() => setIsOpen(false)} />
 
-      <div className="relative w-full max-w-xl bg-surface-1 border border-border rounded-lg shadow-2xl animate-scaleIn overflow-hidden">
+      <div className="relative w-full max-w-xl bg-surface-card border border-border rounded-lg shadow-2xl animate-scaleIn overflow-hidden">
         <div className="flex items-center p-4 border-b border-border bg-surface-2">
           <Search className="h-5 w-5 text-text-3 mr-3" />
           <input

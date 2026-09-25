@@ -54,7 +54,7 @@ export default function AdminPage() {
       </div>
 
       {/* Embedded iframe */}
-      <div className="bg-surface-1 rounded-lg border border-border overflow-hidden" style={{ height: 'calc(100vh - 180px)' }}>
+      <div className="bg-surface-card rounded-lg border border-border overflow-hidden" style={{ height: 'calc(100vh - 180px)' }}>
         <iframe
           src={current.src}
           title={current.label}
