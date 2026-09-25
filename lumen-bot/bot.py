@@ -150,9 +150,9 @@ class Lumen(discord.Client):
             engine = self._ws_listener.engine
             sections = []
 
-            # Current time
-            now = datetime.now(timezone.utc)
-            sections.append(f"CURRENT TIME: {now.strftime('%Y-%m-%d %H:%M UTC')}")
+            # Current time — Eastern, never bare UTC (owner rule).
+            now = datetime.now(EASTERN)
+            sections.append(f"CURRENT TIME: {now.strftime('%Y-%m-%d %H:%M %Z')}")
 
             # Active games summary
             if engine.games:
@@ -349,6 +349,7 @@ class Lumen(discord.Client):
     async def _health_server(self) -> None:
         """Minimal HTTP server so Cloud Run knows we're alive."""
         port = int(os.environ.get("PORT", "8080"))
+        host = os.environ.get("HEALTH_HOST", "127.0.0.1")
 
         async def handle(reader, writer):
             await reader.read(1024)
@@ -363,8 +364,8 @@ class Lumen(discord.Client):
             await writer.drain()
             writer.close()
 
-        server = await asyncio.start_server(handle, "0.0.0.0", port)
-        log.info("Health server listening on :%d", port)
+        server = await asyncio.start_server(handle, host, port)
+        log.info("Health server listening on %s:%d", host, port)
         async with server:
             await server.serve_forever()
 

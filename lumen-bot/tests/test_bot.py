@@ -289,6 +289,71 @@ class TestHealthServer:
         assert b'"status": "ok"' in data
         assert b'"service": "cephalon-lumen"' in data
 
+    async def test_binds_localhost_by_default(self, monkeypatch):
+        """R21: default bind must be 127.0.0.1, not 0.0.0.0 (which collided
+        with Airflow on the box at the default PORT)."""
+        monkeypatch.setenv("PORT", "0")
+        monkeypatch.delenv("HEALTH_HOST", raising=False)
+        captured = {}
+        real_start_server = asyncio.start_server
+
+        async def spy_start_server(handler, host, port, *args, **kwargs):
+            captured["host"] = host
+            return await real_start_server(handler, host, port, *args, **kwargs)
+
+        monkeypatch.setattr(bot.asyncio, "start_server", spy_start_server)
+
+        b = Lumen(_cfg())
+        task = asyncio.create_task(b._health_server())
+        try:
+            for _ in range(200):
+                if "host" in captured:
+                    break
+                await asyncio.sleep(0.005)
+            assert captured.get("host") == "127.0.0.1"
+        finally:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+    async def test_binds_host_from_env_override(self, monkeypatch):
+        """A distinct, non-bindable-by-coincidence host: distinguishes this
+        from the pre-fix hardcoded "0.0.0.0" (which would have matched an
+        override of "0.0.0.0" for the wrong reason). Stubs out the actual
+        bind so an unroutable test address never touches a real socket."""
+        monkeypatch.setenv("PORT", "0")
+        monkeypatch.setenv("HEALTH_HOST", "192.0.2.1")  # TEST-NET-1, RFC 5737
+        captured = {}
+
+        class _FakeServer:
+            sockets = []
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *exc_info):
+                return False
+
+            async def serve_forever(self):
+                await asyncio.sleep(3600)
+
+        async def spy_start_server(handler, host, port, *args, **kwargs):
+            captured["host"] = host
+            return _FakeServer()
+
+        monkeypatch.setattr(bot.asyncio, "start_server", spy_start_server)
+
+        b = Lumen(_cfg())
+        task = asyncio.create_task(b._health_server())
+        try:
+            for _ in range(200):
+                if "host" in captured:
+                    break
+                await asyncio.sleep(0.005)
+            assert captured.get("host") == "192.0.2.1"
+        finally:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
 
 # ---------------------------------------------------------------------------
 # _atlas_heartbeat
@@ -683,6 +748,26 @@ class TestInitBrain:
         b._init_brain()
         ctx = await b._brain.identity.context_fn()
         assert "No listener active" in ctx
+
+    async def test_lumen_context_current_time_is_eastern_not_utc(self):
+        """The brain's CURRENT TIME line must be Eastern, never bare UTC
+        (owner rule: never display bare UTC)."""
+        b = Lumen(_cfg())
+        listener = Mock()
+        engine = Mock()
+        engine.games = {}
+        engine._resolved_pick_ids = set()
+        engine.get_all_resolved_today = Mock(return_value=[])
+        listener.engine = engine
+        b._ws_listener = listener
+        b._init_brain()
+
+        # 20:00 UTC on Jan 15 is 15:00 EST (winter, UTC-5) in real ET.
+        with time_machine.travel(datetime(2026, 1, 15, 20, 0, tzinfo=timezone.utc)):
+            ctx = await b._brain.identity.context_fn()
+
+        assert "CURRENT TIME: 2026-01-15 15:00 EST" in ctx
+        assert "UTC" not in ctx
 
     async def test_lumen_context_no_games_tracked(self):
         b = Lumen(_cfg())
