@@ -5,7 +5,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import get_session
-from ..kafka.producer import get_producer
 from ..models.schemas import ReactionCount, ReactionCreate, ReactionResponse
 from ..services.reaction_service import (
     create_reaction,
@@ -13,6 +12,7 @@ from ..services.reaction_service import (
     get_play_game_id,
     get_reaction_counts,
 )
+from ..ws.live_feed import manager
 
 router = APIRouter(prefix="/plays", tags=["reactions"])
 
@@ -30,19 +30,20 @@ async def add_reaction(
     except IntegrityError as exc:
         raise HTTPException(status_code=409, detail="Already reacted to this play") from exc
 
-    # Publish to Kafka for WS broadcast
-    producer = get_producer()
-    if producer is not None:
-        game_id = await get_play_game_id(session, play_id)
-        producer.produce(
-            "user.reactions",
-            f"{x_user_id}:{play_id}",
+    # Broadcast directly over the WebSocket manager (no message broker)
+    game_id = await get_play_game_id(session, play_id)
+    if game_id:
+        await manager.broadcast(
+            game_id,
             {
-                "play_id": play_id,
-                "game_id": game_id,
-                "user_id": x_user_id,
-                "emoji": body.emoji,
-                "action": "add",
+                "type": "reaction",
+                "data": {
+                    "play_id": play_id,
+                    "game_id": game_id,
+                    "user_id": x_user_id,
+                    "emoji": body.emoji,
+                    "action": "add",
+                },
             },
         )
 
@@ -60,17 +61,18 @@ async def remove_reaction(
     if not removed:
         raise HTTPException(status_code=404, detail="No reaction found")
 
-    producer = get_producer()
-    if producer is not None:
-        game_id = await get_play_game_id(session, play_id)
-        producer.produce(
-            "user.reactions",
-            f"{x_user_id}:{play_id}",
+    game_id = await get_play_game_id(session, play_id)
+    if game_id:
+        await manager.broadcast(
+            game_id,
             {
-                "play_id": play_id,
-                "game_id": game_id,
-                "user_id": x_user_id,
-                "action": "remove",
+                "type": "reaction",
+                "data": {
+                    "play_id": play_id,
+                    "game_id": game_id,
+                    "user_id": x_user_id,
+                    "action": "remove",
+                },
             },
         )
 

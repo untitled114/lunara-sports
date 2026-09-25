@@ -20,7 +20,11 @@ class TestAddReaction:
                 new_callable=AsyncMock,
                 return_value=mock_reaction,
             ),
-            patch("src.routers.reactions.get_producer", return_value=None),
+            patch(
+                "src.routers.reactions.get_play_game_id",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
             patch(
                 "src.models.schemas.ReactionResponse.from_orm_reaction",
                 return_value={
@@ -55,7 +59,7 @@ class TestAddReaction:
             )
             assert resp.status_code == 409
 
-    async def test_add_reaction_with_kafka(self, client):
+    async def test_add_reaction_broadcasts_over_websocket(self, client):
         mock_reaction = MagicMock()
         mock_reaction.id = 1
         mock_reaction.user_id = "user-1"
@@ -63,20 +67,18 @@ class TestAddReaction:
         mock_reaction.emoji = "🔥"
         mock_reaction.created_at = "2026-03-22T00:00:00Z"
 
-        mock_producer = MagicMock()
-
         with (
             patch(
                 "src.routers.reactions.create_reaction",
                 new_callable=AsyncMock,
                 return_value=mock_reaction,
             ),
-            patch("src.routers.reactions.get_producer", return_value=mock_producer),
             patch(
                 "src.routers.reactions.get_play_game_id",
                 new_callable=AsyncMock,
                 return_value="game-1",
             ),
+            patch("src.routers.reactions.manager.broadcast", new_callable=AsyncMock) as bc,
             patch(
                 "src.models.schemas.ReactionResponse.from_orm_reaction",
                 return_value={
@@ -93,7 +95,10 @@ class TestAddReaction:
                 headers={"x-user-id": "user-1"},
             )
             assert resp.status_code == 201
-            mock_producer.produce.assert_called_once()
+            bc.assert_awaited_once()
+            room, msg = bc.await_args.args
+            assert room == "game-1"
+            assert msg["data"]["action"] == "add"
 
 
 class TestRemoveReaction:
@@ -102,7 +107,11 @@ class TestRemoveReaction:
             patch(
                 "src.routers.reactions.delete_reaction", new_callable=AsyncMock, return_value=True
             ),
-            patch("src.routers.reactions.get_producer", return_value=None),
+            patch(
+                "src.routers.reactions.get_play_game_id",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
         ):
             resp = await client.delete(
                 "/plays/1/reactions",
@@ -120,25 +129,25 @@ class TestRemoveReaction:
             )
             assert resp.status_code == 404
 
-    async def test_remove_reaction_with_kafka(self, client):
-        mock_producer = MagicMock()
+    async def test_remove_reaction_broadcasts_over_websocket(self, client):
         with (
             patch(
                 "src.routers.reactions.delete_reaction", new_callable=AsyncMock, return_value=True
             ),
-            patch("src.routers.reactions.get_producer", return_value=mock_producer),
             patch(
                 "src.routers.reactions.get_play_game_id",
                 new_callable=AsyncMock,
                 return_value="game-1",
             ),
+            patch("src.routers.reactions.manager.broadcast", new_callable=AsyncMock) as bc,
         ):
             resp = await client.delete(
                 "/plays/1/reactions",
                 headers={"x-user-id": "user-1"},
             )
             assert resp.status_code == 204
-            mock_producer.produce.assert_called_once()
+            bc.assert_awaited_once()
+            assert bc.await_args.args[1]["data"]["action"] == "remove"
 
 
 class TestListReactions:

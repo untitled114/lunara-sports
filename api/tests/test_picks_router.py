@@ -268,11 +268,6 @@ async def seeded_picks_session(picks_session):
 
 def _app_patches():
     """Context managers to mock infrastructure for ASGI testing."""
-    mock_consumer_instance = MagicMock()
-    mock_consumer_instance.run = AsyncMock()
-    mock_consumer_instance.stop = MagicMock()
-    mock_consumer_cls = MagicMock(return_value=mock_consumer_instance)
-
     return (
         patch(
             "src.services.game_service.get_cached_game_list",
@@ -301,7 +296,6 @@ def _app_patches():
         patch("src.main.init_db"),
         patch("src.main.close_db", new_callable=AsyncMock),
         patch("src.main.run_play_poller", new_callable=AsyncMock),
-        patch("src.main.KafkaConsumerLoop", mock_consumer_cls),
     )
 
 
@@ -327,7 +321,6 @@ async def picks_client(seeded_picks_session):
         patches[9],
         patches[10],
         patches[11],
-        patches[12],
     ):
         app.dependency_overrides[get_session] = _override_session
         transport = ASGITransport(app=app)
