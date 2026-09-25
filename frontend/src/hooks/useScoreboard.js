@@ -114,6 +114,10 @@ function openSocket() {
   socket.ws = ws;
 }
 
+// WebSocket readyState values (spelled out so they don't depend on the global's statics).
+const CONNECTING = 0;
+const OPEN = 1;
+
 function acquireSocket() {
   socket.refs++;
   if (socket.refs === 1) {
@@ -121,8 +125,17 @@ function acquireSocket() {
     openSocket();
     // Ping keep-alive every 20s
     socket.pingTimer = setInterval(() => {
-      if (socket.ws?.readyState === WebSocket.OPEN) socket.ws.send("ping");
+      if (socket.ws?.readyState === OPEN) socket.ws.send("ping");
     }, PING_MS);
+    return;
+  }
+  // The socket outlives any one page (the ticker is always mounted), so a new consumer
+  // is the moment to recover a socket whose retries ran out: nothing pending, and the
+  // socket is neither open nor connecting. The retry budget starts over.
+  const state = socket.ws?.readyState;
+  if (!socket.retryTimer && state !== OPEN && state !== CONNECTING) {
+    socket.retryCount = 0;
+    openSocket();
   }
 }
 
