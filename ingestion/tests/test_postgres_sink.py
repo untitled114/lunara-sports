@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 
 import asyncpg
@@ -14,22 +15,37 @@ pytestmark = pytest.mark.asyncio
 
 
 class FakeConn:
-    def __init__(self, fail_on: set[str] | None = None, fk_rows: set[str] | None = None):
+    def __init__(
+        self,
+        fail_on: set[str] | None = None,
+        fk_rows: set[str] | None = None,
+        data_error_rows: set[str] | None = None,
+        fail_exc: Exception | None = None,
+    ):
         self.calls: list[tuple[str, list]] = []
         self.single: list[tuple[str, tuple]] = []
         self.fail_on = fail_on or set()
         self.fk_rows = fk_rows or set()
+        self.data_error_rows = data_error_rows or set()
+        self.fail_exc = (
+            fail_exc if fail_exc is not None else asyncpg.PostgresConnectionError("db down")
+        )
+        self.tx_entries = 0
 
     async def executemany(self, sql, rows):
         if "games" in sql and "games" in self.fail_on:
-            raise asyncpg.PostgresConnectionError("db down")
+            raise self.fail_exc
         if self.fk_rows and any(r[0] in self.fk_rows for r in rows):
             raise asyncpg.ForeignKeyViolationError("fk")
+        if self.data_error_rows and any(r[0] in self.data_error_rows for r in rows):
+            raise asyncpg.DataError("bad data")
         self.calls.append((sql, list(rows)))
 
     async def execute(self, sql, *args):
         if args and args[0] in self.fk_rows:
             raise asyncpg.ForeignKeyViolationError("fk")
+        if args and args[0] in self.data_error_rows:
+            raise asyncpg.DataError("bad data")
         self.single.append((sql, args))
 
     def transaction(self):
@@ -37,6 +53,7 @@ class FakeConn:
 
         class _Tx:
             async def __aenter__(self):
+                conn.tx_entries += 1
                 return conn
 
             async def __aexit__(self, *exc):
@@ -217,6 +234,46 @@ async def test_postgres_sink_satisfies_the_event_sink_protocol_shape():
     assert all(hasattr(sink, m) for m in ("produce", "flush", "close"))
 
 
+# --- Ruling-required behaviors (R2/R3): transient-error classes and the
+# row-by-row fallback's per-row transaction semantics. ---------------------
+
+
+async def test_interface_error_keeps_buffer_for_next_flush():
+    # R2: InterfaceError (e.g. pool/connection torn down mid-flush) is transient
+    conn = FakeConn(fail_on={"games"}, fail_exc=asyncpg.InterfaceError("connection is closed"))
+    sink = PostgresSink("postgresql://x", pool=FakePool(conn))
+    sink.produce("raw.scoreboard", "401", GAME)
+    await sink.flush()
+    assert sink.pending == 1
+    conn.fail_on.clear()
+    await sink.flush()
+    assert sink.pending == 0 and len(conn.calls) == 1
+
+
+async def test_timeout_error_keeps_buffer_for_next_flush():
+    # R2: asyncio.TimeoutError (query/connection acquisition timeout) is transient
+    conn = FakeConn(fail_on={"games"}, fail_exc=asyncio.TimeoutError())
+    sink = PostgresSink("postgresql://x", pool=FakePool(conn))
+    sink.produce("raw.scoreboard", "401", GAME)
+    await sink.flush()
+    assert sink.pending == 1
+    conn.fail_on.clear()
+    await sink.flush()
+    assert sink.pending == 0 and len(conn.calls) == 1
+
+
+async def test_data_error_skips_only_the_bad_row_siblings_still_written():
+    # R3: DataError (e.g. value out of range) skips just that row; siblings land
+    conn = FakeConn(data_error_rows={"999"})
+    sink = PostgresSink("postgresql://x", pool=FakePool(conn))
+    sink.produce("raw.scoreboard", "401", GAME)
+    sink.produce("raw.scoreboard", "999", {**GAME, "game_id": "999"})
+    await sink.flush()
+    written = [args[0] for _sql, args in conn.single]
+    assert written == ["401"]
+    assert sink.pending == 0
+
+
 async def test_start_time_unparseable_string_falls_back_to_now():
     conn = FakeConn()
     sink = PostgresSink("postgresql://x", pool=FakePool(conn))
@@ -228,3 +285,16 @@ async def test_start_time_unparseable_string_falls_back_to_now():
 async def test_close_without_connect_is_a_noop():
     sink = PostgresSink("postgresql://x")
     await sink.close()  # nothing pending, no pool — must not raise
+
+
+async def test_row_fallback_uses_a_transaction_per_row():
+    # R1: the batch attempt and each per-row retry each get their own nested
+    # transaction (savepoint) — 1 outer flush tx + 1 failed batch tx + 2 row txs
+    conn = FakeConn(fk_rows={"999"})
+    sink = PostgresSink("postgresql://x", pool=FakePool(conn))
+    sink.produce("raw.scoreboard", "401", GAME)
+    sink.produce("raw.scoreboard", "999", {**GAME, "game_id": "999", "home_team": "ASW"})
+    await sink.flush()
+    assert conn.tx_entries == 4
+    written = [args[0] for _sql, args in conn.single]
+    assert written == ["401"]
