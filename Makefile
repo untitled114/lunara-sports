@@ -66,7 +66,7 @@ test-infra-down: ## Tear down test infrastructure
 
 test-integration: test-infra ## Run integration tests (starts infra, runs tests, tears down)
 	@echo "Running integration tests..."
-	cd tests && python3 -m pytest integration/ -v --timeout=60 || ($(MAKE) test-infra-down && exit 1)
+	python3 -m pytest tests/integration -q || ($(MAKE) test-infra-down && exit 1)
 	@$(MAKE) test-infra-down
 
 lint: ## Run linters
@@ -80,15 +80,11 @@ build: ## Build all Docker images
 
 # --- Deployment ---
 
-deploy: ## Deploy to production server
-	@echo "Deploying to production server..."
-	rsync -avz --exclude='.git' --exclude='node_modules' --exclude='__pycache__' \
-		--exclude='.gradle' --exclude='build' --exclude='.next' \
-		. $${DEPLOY_HOST}:$${DEPLOY_PATH:-/opt/play-by-play}/
-	ssh $${DEPLOY_HOST} "cd $${DEPLOY_PATH:-/opt/play-by-play} && docker-compose up -d --build"
+deploy: ## Deploy to OCI sport-suite-main (see deploy/oci/README.md)
+	bash deploy/oci/deploy.sh
 
-deploy-logs: ## Tail production logs
-	ssh $${DEPLOY_HOST} "cd $${DEPLOY_PATH:-/opt/play-by-play} && docker-compose logs -f --tail=100"
+deploy-logs: ## Tail production logs (OCI sport-suite-main, via the ss-admin SSH alias)
+	ssh ss-admin 'sudo journalctl -u lunara-api -u lunara-ingestion -u cephalon-lumen -n 100 -f'
 
 # --- Help ---
 

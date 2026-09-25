@@ -141,133 +141,6 @@
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
-      "id": 200,
-      "title": "Kafka",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 10 },
-      "id": 5,
-      "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "multi" }
-      },
-      "title": "Consumer Group Lag",
-      "type": "timeseries",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "kafka_consumergroup_lag",
-          "legendFormat": "{{consumergroup}} / {{topic}}"
-        }
-      ]
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "mps"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 10 },
-      "id": 6,
-      "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "multi" }
-      },
-      "title": "Messages In/s",
-      "type": "timeseries",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "rate(kafka_topic_partition_current_offset{job=\"kafka\"}[5m])",
-          "legendFormat": "{{topic}}"
-        }
-      ]
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "steps": [
-              { "color": "green", "value": null }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 4, "x": 16, "y": 10 },
-      "id": 7,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "reduceOptions": { "calcs": ["lastNotNull"] }
-      },
-      "title": "Topic Partitions",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "count(kafka_topic_partition_current_offset)",
-          "legendFormat": "partitions"
-        }
-      ]
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 4, "x": 20, "y": 10 },
-      "id": 8,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "reduceOptions": { "calcs": ["lastNotNull"] }
-      },
-      "title": "Brokers Online",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "kafka_brokers",
-          "legendFormat": "brokers"
-        }
-      ]
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
       "id": 300,
       "title": "PostgreSQL",
       "type": "row"
@@ -289,7 +162,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 19 },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 10 },
       "id": 9,
       "options": {
         "showThresholdLabels": false,
@@ -320,7 +193,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 19 },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 10 },
       "id": 10,
       "options": {
         "colorMode": "value",
@@ -354,7 +227,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 19 },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 10 },
       "id": 11,
       "options": {
         "colorMode": "background",
@@ -373,7 +246,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
       "id": 400,
       "title": "Redis",
       "type": "row"
@@ -395,7 +268,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 26 },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 17 },
       "id": 12,
       "options": {
         "showThresholdLabels": false,
@@ -427,7 +300,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 26 },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 17 },
       "id": 13,
       "options": {
         "colorMode": "value",
@@ -461,7 +334,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 26 },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 17 },
       "id": 14,
       "options": {
         "colorMode": "background",
