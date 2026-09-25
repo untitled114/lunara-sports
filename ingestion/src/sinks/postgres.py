@@ -130,6 +130,7 @@ class PostgresSink:
         self._plays: list[tuple] = []
         self._lock = asyncio.Lock()
         self._logged_skips: set[tuple[str, str]] = set()
+        self._backlog_logged = False
 
     async def connect(self) -> None:
         self._pool = await asyncpg.create_pool(
@@ -147,8 +148,13 @@ class PostgresSink:
             self._plays.append(_play_row(value))
         else:
             raise ValueError(f"unknown topic: {topic}")
-        if self.pending > PENDING_BACKLOG_THRESHOLD:
-            logger.error("sink.pending_backlog", pending=self.pending)
+        pending = self.pending
+        if pending > PENDING_BACKLOG_THRESHOLD:
+            if not self._backlog_logged:
+                self._backlog_logged = True
+                logger.error("sink.pending_backlog", pending=pending)
+        else:
+            self._backlog_logged = False
 
     async def flush(self) -> None:
         if not self.pending:
@@ -168,7 +174,11 @@ class PostgresSink:
             except _TRANSIENT_ERRORS as exc:
                 self._requeue(games, plays)
                 logger.warning(
-                    "sink.flush_deferred", error=str(exc), games=len(games), plays=len(plays)
+                    "sink.flush_deferred",
+                    error=str(exc),
+                    error_class=type(exc).__name__,  # str() is empty for e.g. TimeoutError
+                    games=len(games),
+                    plays=len(plays),
                 )
                 return
             except Exception as exc:
@@ -176,6 +186,18 @@ class PostgresSink:
                 logger.error(
                     "sink.flush_failed",
                     error=type(exc).__name__,
+                    games=len(games),
+                    plays=len(plays),
+                )
+                raise
+            except BaseException as exc:
+                # CancelledError (task cancellation at shutdown, asyncio.wait_for
+                # timeout) is a BaseException, not an Exception — it must still
+                # requeue the snapshot instead of silently dropping it.
+                self._requeue(games, plays)
+                logger.warning(
+                    "sink.flush_cancelled",
+                    error_class=type(exc).__name__,
                     games=len(games),
                     plays=len(plays),
                 )

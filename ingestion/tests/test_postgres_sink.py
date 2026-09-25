@@ -422,16 +422,30 @@ async def test_close_logs_and_reraises_when_final_flush_fails(monkeypatch):
     assert kw["error"] == "ValueError" and kw["games"] == 0 and kw["plays"] == 1
 
 
-async def test_pending_backlog_logs_error_but_never_drops(monkeypatch):
+async def test_pending_backlog_logs_once_per_crossing_and_resets_below_threshold(monkeypatch):
     spy = _LogSpy()
     monkeypatch.setattr(postgres_module, "logger", spy)
 
     sink = PostgresSink("postgresql://x", pool=FakePool(FakeConn()))
     sink._plays = [("seed",)] * PENDING_BACKLOG_THRESHOLD
-    sink.produce("raw.plays", "401", PLAY)  # crosses the threshold
+    sink.produce("raw.plays", "401", PLAY)  # crosses the threshold -> logs once
+    sink.produce("raw.plays", "401", PLAY)  # still above -> must not log again
 
-    assert sink.pending == PENDING_BACKLOG_THRESHOLD + 1
-    assert any(event == "sink.pending_backlog" for event, _ in spy.errors)
+    backlog_events = [event for event, _ in spy.errors if event == "sink.pending_backlog"]
+    assert len(backlog_events) == 1
+    assert sink.pending == PENDING_BACKLOG_THRESHOLD + 2  # never dropped, still all there
+
+    # Drop back below the threshold: the next produce() should just reset the
+    # flag (not log), so a later crossing logs again instead of staying silent.
+    sink._plays = sink._plays[:1]
+    sink.produce("raw.plays", "401", PLAY)
+    assert sink.pending <= PENDING_BACKLOG_THRESHOLD
+
+    sink._plays = [("seed",)] * PENDING_BACKLOG_THRESHOLD
+    sink.produce("raw.plays", "401", PLAY)  # crosses again -> logs a second time
+
+    backlog_events = [event for event, _ in spy.errors if event == "sink.pending_backlog"]
+    assert len(backlog_events) == 2
 
 
 async def test_row_skip_logged_once_per_key_but_retried_every_flush(monkeypatch):
@@ -587,3 +601,150 @@ async def test_lock_serializes_flushes_so_game_upserts_commit_in_order():
     await asyncio.gather(flush1, flush2)
 
     assert written == [(1, ["live"]), (2, ["final"])]  # commits land in request order
+
+
+# --- Fix round 2 (re-review): cancellation is a BaseException, not caught by
+# either existing except arm — it must still requeue instead of losing the
+# snapshot (repro_cancel.py). Plus the small follow-ups from the same review:
+# backlog-log-once, error_class on flush_deferred, and ordering/newer-wins
+# under a failed flush. -------------------------------------------------
+
+
+async def test_flush_deferred_logs_error_class_even_when_str_is_empty(monkeypatch):
+    # (c): str(asyncio.TimeoutError()) is "", so the bare error class must
+    # still identify what happened.
+    spy = _LogSpy()
+    monkeypatch.setattr(postgres_module, "logger", spy)
+
+    conn = FakeConn(fail_on={"games"}, fail_exc=asyncio.TimeoutError())
+    sink = PostgresSink("postgresql://x", pool=FakePool(conn))
+    sink.produce("raw.scoreboard", "401", GAME)
+    await sink.flush()
+
+    _, kw = next(item for item in spy.warnings if item[0] == "sink.flush_deferred")
+    assert kw["error"] == ""
+    assert kw["error_class"] == "TimeoutError"
+
+
+async def test_transient_failure_requeues_preserving_play_order_and_newer_game_state_wins():
+    # (b): a failed flush with plays and a newer game state produced during
+    # it must requeue with the old snapshot's plays first (commit order) and
+    # the newer, mid-flush game state winning over the stale snapshot.
+    proceed = asyncio.Event()
+
+    class Conn:
+        def transaction(self):
+            return _NullTx()
+
+        async def executemany(self, sql, rows):
+            if "plays" in sql:
+                await proceed.wait()
+                raise OSError("connection reset")  # transient
+
+    class Pool:
+        def acquire(self, timeout=None):
+            return _Acquire(Conn())
+
+    sink = PostgresSink("postgresql://x", pool=Pool())
+    sink.produce("raw.scoreboard", "401", {**GAME, "status": "live"})
+    sink.produce("raw.plays", "401", {**PLAY, "sequence_number": 1})
+
+    flush_task = asyncio.create_task(sink.flush())
+    await asyncio.sleep(0)  # games write completes; now blocked inside the plays write
+
+    # Produced while the (about-to-fail) flush is still in flight:
+    sink.produce("raw.plays", "401", {**PLAY, "sequence_number": 2})
+    sink.produce("raw.scoreboard", "401", {**GAME, "status": "final"})
+
+    proceed.set()
+    await flush_task
+
+    assert [row[1] for row in sink._plays] == [1, 2]  # snapshot play first, preserving order
+    assert sink._games["401"][3] == "final"  # newer game state wins over the stale snapshot
+    assert sink.pending == 3  # 1 game + 2 plays — nothing lost
+
+
+async def test_cancelling_a_flush_requeues_the_snapshot_and_reraises():
+    class HangingConn:
+        def transaction(self):
+            return _NullTx()
+
+        async def executemany(self, sql, rows):
+            await asyncio.sleep(10)  # only cancellation ever ends this
+
+    class HangingPool:
+        def acquire(self, timeout=None):
+            return _Acquire(HangingConn())
+
+    sink = PostgresSink("postgresql://x", pool=HangingPool())
+    sink.produce("raw.plays", "401", PLAY)
+
+    task = asyncio.create_task(sink.flush())
+    await asyncio.sleep(0)  # let it detach and start (and hang inside) the write
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert sink.pending == 1  # requeued — cancellation did not lose the snapshot
+
+
+async def test_wait_for_timeout_on_flush_requeues_the_snapshot():
+    class HangingConn:
+        def transaction(self):
+            return _NullTx()
+
+        async def executemany(self, sql, rows):
+            await asyncio.sleep(10)
+
+    class HangingPool:
+        def acquire(self, timeout=None):
+            return _Acquire(HangingConn())
+
+    sink = PostgresSink("postgresql://x", pool=HangingPool())
+    sink.produce("raw.plays", "401", PLAY)
+
+    with pytest.raises((asyncio.TimeoutError, TimeoutError)):
+        await asyncio.wait_for(sink.flush(), 0.01)
+
+    assert sink.pending == 1  # wait_for's internal cancellation still requeued it
+
+
+async def test_close_after_a_cancelled_flush_still_writes_the_requeued_events():
+    written: list[tuple[str, list]] = []
+
+    class HangThenSucceedConn:
+        def __init__(self):
+            self.attempts = 0
+
+        def transaction(self):
+            return _NullTx()
+
+        async def executemany(self, sql, rows):
+            self.attempts += 1
+            if self.attempts == 1:
+                await asyncio.sleep(10)  # cancelled before this ever returns
+            written.append((sql, [r[:2] for r in rows]))
+
+    hang_conn = HangThenSucceedConn()
+
+    class SwitchPool:
+        def acquire(self, timeout=None):
+            return _Acquire(hang_conn)
+
+        async def close(self):
+            pass
+
+    sink = PostgresSink("postgresql://x", pool=SwitchPool())
+    sink.produce("raw.plays", "401", PLAY)
+
+    task = asyncio.create_task(sink.flush())
+    await asyncio.sleep(0)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert sink.pending == 1
+
+    await sink.close()  # this flush attempt succeeds and writes the requeued play
+
+    assert sink.pending == 0
+    assert written == [(INSERT_PLAY_SQL, [("401", 7)])]
