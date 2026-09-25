@@ -5,19 +5,17 @@
 
 /* === ROOT VARIABLES === */
 :root {
-  --bg-base: #000105;
-  --bg-surface: #05070a;
-  --bg-card: rgba(8, 10, 16, 0.98); /* Near-solid for max contrast */
-  --accent: #6366f1; /* Indigo Base */
-  --accent-alt: #10b981; /* Emerald Contrast */
-  --accent-warm: #f59e0b; /* Stadium Amber */
-  --text-primary: #ffffff;
-  --text-secondary: #cbd5e1; /* Brighter secondary text */
-  --text-muted: #94a3b8; /* Significantly brighter muted text */
-  --border: rgba(255, 255, 255, 0.1);
+  --bg-base: var(--surface-0);
+  --bg-surface: var(--surface-1);
+  --bg-card: var(--surface-1); /* Near-solid for max contrast */
+  --accent-alt: var(--live); /* Emerald Contrast */
+  --accent-warm: var(--warn); /* Stadium Amber */
+  --text-primary: var(--text-1);
+  --text-secondary: var(--text-2); /* Brighter secondary text */
+  --text-muted: var(--text-3); /* Significantly brighter muted text */
   --border-bright: rgba(255, 255, 255, 0.2);
-  --bg-card-alt: rgba(15, 18, 28, 0.98);
-  --green: #22c55e;
+  --bg-card-alt: var(--surface-2);
+  --green: var(--live);
   --red: #ef4444;
 
   /* High-Fidelity Shadows */
