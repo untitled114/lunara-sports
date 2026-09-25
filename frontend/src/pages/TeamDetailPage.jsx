@@ -8,7 +8,7 @@ import {
   fetchStandings,
   buildStandingsLookup,
 } from '@/services/api';
-import { getLogoUrl } from '@/utils/teamColors';
+import { getHeadshotUrl, getLogoUrl } from '@/utils/teamColors';
 import { useTheme } from '@/context/ThemeContext';
 import { recordLine, seedBadge } from '@/lib/gameMath';
 import { Badge, Card, DataTable, PageState, SectionHeader, Segmented, Stat, TeamMark } from '@/components/ui';
@@ -18,6 +18,24 @@ const TABS = [
   { id: 'schedule', label: 'Schedule' },
   { id: 'stats', label: 'Stats' },
 ];
+
+// Conference position for every team, not just the top 10 that seedBadge()
+// badges. ESPN's playoffSeed (`seed`) is conference-relative 1..15 and
+// present for the whole conference during the season; the computed standings
+// sort `rank` (also conference-relative, from buildStandingsLookup) is the
+// fallback for the rare case it isn't (e.g. very early season).
+function confRank(standingsTeam) {
+  if (!standingsTeam) return null;
+  const n = standingsTeam.seed ?? standingsTeam.rank;
+  if (!n) return null;
+  return standingsTeam.conf ? `#${n} ${standingsTeam.conf}` : `#${n}`;
+}
+
+// "0"/"-" games back means this team leads its conference — say so in plain
+// copy instead of showing a bare dash or zero.
+function gbLabel(gb) {
+  return gb === '-' || gb === '0' ? 'Leader' : gb;
+}
 
 // ─── Roster tab ─────────────────────────────────────────────
 
@@ -34,7 +52,19 @@ function RosterTab({ roster, loading }) {
           key: 'name',
           label: 'Player',
           render: (p) => (
-            <Link to={`/player/${p.id}`} className="text-text-1 hover:text-accent">
+            <Link to={`/player/${p.id}`} className="flex items-center gap-2 text-text-1 hover:text-accent">
+              {p.headshot_url ? (
+                <img
+                  src={getHeadshotUrl(p.headshot_url, 64)}
+                  alt=""
+                  loading="lazy"
+                  className="h-8 w-8 shrink-0 rounded-lg border border-border object-cover"
+                />
+              ) : (
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 t-label text-text-3">
+                  {p.name?.[0] || '?'}
+                </span>
+              )}
               {p.name}
             </Link>
           ),
@@ -130,10 +160,11 @@ function StatsTab({ standingsTeam, seasonLabel, isPrevSeason, seed }) {
   }
 
   const fields = [
+    { label: 'Rank', value: confRank(standingsTeam) },
     { label: 'W', value: standingsTeam.w },
     { label: 'L', value: standingsTeam.l },
     { label: 'PCT', value: standingsTeam.pct },
-    { label: 'GB', value: standingsTeam.gb },
+    { label: 'GB', value: gbLabel(standingsTeam.gb) },
     { label: 'Home', value: standingsTeam.home },
     { label: 'Road', value: standingsTeam.road },
     { label: 'L10', value: standingsTeam.l10 },
@@ -270,6 +301,7 @@ export default function TeamDetailPage() {
   const logoUrl = getLogoUrl(abbrev);
   const record = recordLine(standingsTeam, seasonLabel, isPrevSeason);
   const seed = standingsTeam ? seedBadge(standingsTeam, isPrevSeason) : null;
+  const rank = confRank(standingsTeam);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -301,11 +333,19 @@ export default function TeamDetailPage() {
             {seed && <Badge variant={seed.variant}>{seed.text}</Badge>}
           </div>
 
-          {record && <Stat label="Record" value={record} />}
+          {(record || rank) && (
+            <div className="flex flex-wrap items-center gap-6">
+              {record && <Stat label="Record" value={record} />}
+              {rank && <Stat label="Conference rank" value={rank} />}
+            </div>
+          )}
         </div>
       </Card>
 
-      <Segmented options={TABS} value={activeTab} onChange={handleTabChange} />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Segmented options={TABS} value={activeTab} onChange={handleTabChange} />
+        <p className="t-small text-text-2">Roster size: {roster.length || '—'}</p>
+      </div>
 
       <div key={activeTab}>
         {activeTab === 'roster' && <RosterTab roster={roster} loading={rosterLoading} />}

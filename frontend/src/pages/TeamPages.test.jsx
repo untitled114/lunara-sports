@@ -108,6 +108,7 @@ const ROSTER_FIXTURE = [
     weight: '230',
     age: 34,
     experience: '13',
+    headshot_url: 'https://a.espncdn.com/i/headshots/nba/players/full/2199.png',
   },
   {
     id: '3155',
@@ -118,6 +119,7 @@ const ROSTER_FIXTURE = [
     weight: '255',
     age: 27,
     experience: '7',
+    headshot_url: '',
   },
 ]
 
@@ -256,6 +258,91 @@ describe('TeamDetailPage', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Stats' }))
 
     expect(await screen.findByText("Stats aren't available for this team yet.")).toBeInTheDocument()
+  })
+
+  it('D9: restores conference rank, roster headshots, roster size, and the GB "Leader" wording', async () => {
+    fetchTeamDetail.mockResolvedValue({
+      name: 'Miami Heat',
+      abbrev: 'MIA',
+      city: 'Miami, FL',
+      venue: 'Kaseya Center',
+      conference: 'Eastern',
+      division: 'Southeast',
+      color: '#98002E',
+      logo_url: '',
+    })
+    fetchStandings.mockResolvedValue(STANDINGS_FIXTURE)
+    fetchTeamRoster.mockResolvedValue(ROSTER_FIXTURE)
+    fetchTeamSchedule.mockResolvedValue([])
+
+    const { container } = renderTeamDetail('MIA')
+    await screen.findByText('Miami Heat')
+    await screen.findByText('Jimmy Butler')
+
+    // 1. Conference rank Stat in the hero: seed (9) is present, so it wins over rank.
+    expect(screen.getByText('Conference rank')).toBeInTheDocument()
+    expect(screen.getAllByText('#9 East').length).toBeGreaterThanOrEqual(1)
+
+    // 2. Roster headshots: an <img> via getHeadshotUrl (its /combiner/ URL,
+    // distinct from the hero's team-logo combiner URL) for the player with a
+    // headshot_url, an initials fallback for the one without.
+    const avatars = container.querySelectorAll('img[src*="headshots"]')
+    expect(avatars.length).toBe(1)
+    expect(avatars[0].getAttribute('src')).toContain('2199.png')
+    expect(screen.getByText('B')).toBeInTheDocument() // Bam Adebayo's initials fallback
+
+    // 3. Roster size restored near the tab bar.
+    expect(screen.getByText('Roster size: 2')).toBeInTheDocument()
+
+    // 4. GB "Leader" wording (fixture's gb is "-") — in the Stats tab grid.
+    await userEvent.click(screen.getByRole('tab', { name: 'Stats' }))
+    expect(screen.getByText('Leader')).toBeInTheDocument()
+    // Conference rank also appears in the Stats tab grid (hero + tab = 2+).
+    expect(screen.getAllByText('#9 East').length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('D9: conference rank falls back to standings rank when seed is missing (below the top 10)', async () => {
+    fetchTeamDetail.mockResolvedValue({
+      name: 'Charlotte Hornets',
+      abbrev: 'CHA',
+      conference: 'Eastern',
+      division: 'Southeast',
+    })
+    fetchStandings.mockResolvedValue({
+      eastern: [
+        {
+          rank: 12,
+          name: 'Charlotte Hornets',
+          abbrev: 'CHA',
+          w: 18,
+          l: 64,
+          pct: '.220',
+          gb: '25',
+          conf: '',
+          home: '10-31',
+          road: '8-33',
+          l10: '2-8',
+          strk: 'L6',
+          logo_url: '',
+          seed: null,
+        },
+      ],
+      western: [],
+      season: '2025-26',
+      season_label: '2025–26',
+      is_previous_season: false,
+    })
+    fetchTeamRoster.mockResolvedValue([])
+    fetchTeamSchedule.mockResolvedValue([])
+
+    renderTeamDetail('CHA')
+    await screen.findByText('Charlotte Hornets')
+
+    // No seed (rank 12 is outside seedBadge's 1-10 range, and seed itself is
+    // null) — no seed Badge — but the Conference rank Stat still shows,
+    // falling back to the standings `rank`.
+    expect(screen.queryByText('Play-in')).not.toBeInTheDocument()
+    expect(screen.getAllByText('#12 East').length).toBeGreaterThanOrEqual(1)
   })
 })
 
