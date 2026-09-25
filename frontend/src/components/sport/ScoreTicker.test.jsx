@@ -55,6 +55,16 @@ describe('ScoreTicker', () => {
     expect(link).toHaveAttribute('href', `/scoreboard?date=${gamesNext.data.date}`)
   })
 
+  it('empty: a failed next-game lookup keeps "No games today" and shows no link', async () => {
+    useScoreboardMock.mockReturnValue({ games: [], connected: false, loading: false })
+    global.fetch.mockResolvedValue({ ok: false, json: async () => ({}) })
+    wrap(<ScoreTicker />)
+    expect(screen.getByText('No games today')).toBeInTheDocument()
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    await Promise.resolve()
+    expect(screen.queryByRole('link', { name: /Next game/ })).toBeNull()
+  })
+
   it('scheduled: shows tip-off time and a "games today" status (not live, not all final)', () => {
     useScoreboardMock.mockReturnValue({ games: [scheduledGame], connected: false, loading: false })
     wrap(<ScoreTicker />)

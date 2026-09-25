@@ -100,7 +100,7 @@ const AppLayout = () => {
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none' }} className="bg-surface-0">
         <div
           data-testid="page-grain"
-          className="texture-grain absolute inset-0 mix-blend-overlay"
+          className="page-grain absolute inset-0 mix-blend-overlay"
           style={{ opacity: arenaIntensity * GRAIN_MAX_OPACITY }}
         />
       </div>

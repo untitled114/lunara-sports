@@ -8,23 +8,7 @@ import { useScoreboard } from '@/hooks/useScoreboard';
 import { useFormatTime } from '@/utils/formatTime';
 import { Badge, Skeleton } from '@/components/ui';
 import { todayET, formatLongDay } from '@/lib/et';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-// Mirrors the api.js fetch* convention (read-only GET, tolerant of failure).
-// Lives here rather than in services/api.js because that file is owned by
-// another task in this rollout; once it lands its own fetchNextGameDate this
-// local copy can be swapped out.
-async function fetchNextGameDate(afterIso) {
-  try {
-    const res = await fetch(`${API_URL}/games/next?after=${afterIso}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.date ?? null;
-  } catch {
-    return null;
-  }
-}
+import { fetchNextGameDate } from '@/services/api';
 
 function TickerItem({ game }) {
   const isLive = game.status === 'live' || game.status === 'halftime';
@@ -141,9 +125,12 @@ function EmptyTicker() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchNextGameDate(todayET()).then((date) => {
-      if (!cancelled) setNext(date);
-    });
+    // The next-game link is optional: a failed lookup just hides it.
+    fetchNextGameDate(todayET())
+      .catch(() => null)
+      .then((date) => {
+        if (!cancelled) setNext(date);
+      });
     return () => {
       cancelled = true;
     };
