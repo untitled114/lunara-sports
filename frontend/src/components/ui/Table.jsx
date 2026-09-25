@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import clsx from 'clsx';
 
 /**
  * Table - Data table component with sorting and selection
@@ -39,7 +40,7 @@ const Table = ({
   loading = false,
   emptyState,
   striped = true,
-  className = ''
+  className = '',
 }) => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
   const [selectedRows, setSelectedRows] = useState(new Set());
@@ -59,7 +60,7 @@ const Table = ({
 
     const newConfig = {
       key: direction ? column.key : null,
-      direction
+      direction,
     };
 
     setSortConfig(newConfig);
@@ -114,12 +115,12 @@ const Table = ({
     <tr className="animate-pulse">
       {selectable && (
         <td className="px-6 py-4">
-          <div className="w-4 h-4 bg-gray-700 rounded"></div>
+          <div className="w-4 h-4 bg-surface-2 rounded-sm" />
         </td>
       )}
       {columns.map((column) => (
         <td key={column.key} className="px-6 py-4">
-          <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+          <div className="h-4 bg-surface-2 rounded-sm w-3/4" />
         </td>
       ))}
     </tr>
@@ -128,17 +129,9 @@ const Table = ({
   // Default empty state
   const DefaultEmptyState = () => (
     <tr>
-      <td
-        colSpan={columns.length + (selectable ? 1 : 0)}
-        className="px-6 py-12 text-center text-gray-400"
-      >
+      <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-6 py-12 text-center text-text-2">
         <div className="flex flex-col items-center gap-2">
-          <svg
-            className="w-12 h-12 text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-12 h-12 text-text-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -146,8 +139,8 @@ const Table = ({
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p className="text-lg font-medium">No data available</p>
-          <p className="text-sm">Get started by adding your first item</p>
+          <p className="t-body font-medium text-text-1">No data available</p>
+          <p className="t-small text-text-2">Get started by adding your first item.</p>
         </div>
       </td>
     </tr>
@@ -166,10 +159,10 @@ const Table = ({
   };
 
   return (
-    <div className={`overflow-x-auto rounded-lg border border-gray-700 ${className}`}>
-      <table className="w-full text-sm text-left text-gray-300">
+    <div className={clsx('overflow-x-auto rounded-lg border border-border', className)}>
+      <table className="w-full t-small text-left text-text-2">
         {/* Table Header */}
-        <thead className="text-sm uppercase bg-gray-800 border-b border-gray-700">
+        <thead className="t-label bg-surface-2 border-b border-border">
           <tr>
             {/* Select all checkbox */}
             {selectable && (
@@ -180,7 +173,7 @@ const Table = ({
                     checked={isAllSelected}
                     ref={(el) => el && (el.indeterminate = isSomeSelected)}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 bg-gray-700 border-gray-600 rounded text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded-sm border-border bg-surface-2 text-accent focus-visible:outline-2 outline-accent"
                     aria-label="Select all rows"
                   />
                 </div>
@@ -192,11 +185,11 @@ const Table = ({
               <th
                 key={column.key}
                 scope="col"
-                className={`
-                  px-6 py-4 font-semibold text-gray-400 tracking-wider
-                  ${column.sortable ? 'cursor-pointer select-none hover:text-gray-200' : ''}
-                  ${getAlignClass(column.align)}
-                `}
+                className={clsx(
+                  'px-6 py-4 text-text-3',
+                  column.sortable && 'cursor-pointer select-none hover:text-text-2',
+                  getAlignClass(column.align)
+                )}
                 style={{ width: column.width }}
                 onClick={() => handleSort(column)}
               >
@@ -226,12 +219,12 @@ const Table = ({
               return (
                 <tr
                   key={row.id || rowIndex}
-                  className={`
-                    border-b border-gray-700/50 transition-colors
-                    ${striped && rowIndex % 2 === 1 ? 'bg-gray-800/30' : 'bg-gray-800/10'}
-                    ${isSelected ? 'bg-indigo-900/20' : ''}
-                    ${isClickable ? 'cursor-pointer hover:bg-gray-700/50' : ''}
-                  `}
+                  className={clsx(
+                    'border-b border-border transition-colors',
+                    striped && rowIndex % 2 === 1 ? 'bg-surface-1' : 'bg-transparent',
+                    isSelected && 'bg-accent/10',
+                    isClickable && 'cursor-pointer hover:bg-surface-2'
+                  )}
                   onClick={isClickable ? () => onRowClick(row) : undefined}
                 >
                   {/* Selection checkbox */}
@@ -242,7 +235,7 @@ const Table = ({
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleSelectRow(rowIndex, row)}
-                          className="w-4 h-4 bg-gray-700 border-gray-600 rounded text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+                          className="w-4 h-4 rounded-sm border-border bg-surface-2 text-accent focus-visible:outline-2 outline-accent"
                           aria-label={`Select row ${rowIndex + 1}`}
                         />
                       </div>
@@ -251,10 +244,7 @@ const Table = ({
 
                   {/* Data cells */}
                   {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className={`px-6 py-4 ${getAlignClass(column.align)}`}
-                    >
+                    <td key={column.key} className={clsx('px-6 py-4', getAlignClass(column.align))}>
                       {column.render ? column.render(row, rowIndex) : row[column.key]}
                     </td>
                   ))}

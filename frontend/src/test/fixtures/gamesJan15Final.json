@@ -1,0 +1,122 @@
+{
+  "_source": "GET https://api.lunara-app.com/games/?game_date=2026-01-15, captured 2026-09-25T16:55:30Z. Real completed 2025-26 regular-season games, all status=final with real final scores.",
+  "data": [
+    {
+      "id": "401810433",
+      "home_team": "ORL",
+      "away_team": "MEM",
+      "home_score": 118,
+      "away_score": 111,
+      "status": "final",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-01-15T19:00:00Z",
+      "venue": "Uber Arena",
+      "updated_at": "2026-09-25T16:27:01.796512Z"
+    },
+    {
+      "id": "401810434",
+      "home_team": "DET",
+      "away_team": "PHX",
+      "home_score": 108,
+      "away_score": 105,
+      "status": "final",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-01-16T00:00:00Z",
+      "venue": "Little Caesars Arena",
+      "updated_at": "2026-09-25T16:27:01.796512Z"
+    },
+    {
+      "id": "401810435",
+      "home_team": "MIA",
+      "away_team": "BOS",
+      "home_score": 114,
+      "away_score": 119,
+      "status": "final",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-01-16T00:30:00Z",
+      "venue": "Kaseya Center",
+      "updated_at": "2026-09-25T16:27:01.796512Z"
+    },
+    {
+      "id": "401810436",
+      "home_team": "HOU",
+      "away_team": "OKC",
+      "home_score": 91,
+      "away_score": 111,
+      "status": "final",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-01-16T00:30:00Z",
+      "venue": "Toyota Center (Houston)",
+      "updated_at": "2026-09-25T16:27:01.796512Z"
+    },
+    {
+      "id": "401810437",
+      "home_team": "SA",
+      "away_team": "MIL",
+      "home_score": 119,
+      "away_score": 101,
+      "status": "final",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-01-16T01:00:00Z",
+      "venue": "Frost Bank Center",
+      "updated_at": "2026-09-25T16:27:01.796512Z"
+    },
+    {
+      "id": "401810438",
+      "home_team": "DAL",
+      "away_team": "UTA",
+      "home_score": 144,
+      "away_score": 122,
+      "status": "final",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-01-16T01:30:00Z",
+      "venue": "American Airlines Center",
+      "updated_at": "2026-09-25T16:27:01.796512Z"
+    },
+    {
+      "id": "401810439",
+      "home_team": "GS",
+      "away_team": "NY",
+      "home_score": 126,
+      "away_score": 113,
+      "status": "final",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-01-16T03:00:00Z",
+      "venue": "Chase Center",
+      "updated_at": "2026-09-25T16:27:01.796512Z"
+    },
+    {
+      "id": "401810440",
+      "home_team": "POR",
+      "away_team": "ATL",
+      "home_score": 117,
+      "away_score": 101,
+      "status": "final",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-01-16T03:00:00Z",
+      "venue": "Moda Center",
+      "updated_at": "2026-09-25T16:27:01.796512Z"
+    },
+    {
+      "id": "401810441",
+      "home_team": "LAL",
+      "away_team": "CHA",
+      "home_score": 117,
+      "away_score": 135,
+      "status": "final",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-01-16T03:30:00Z",
+      "venue": "crypto.com Arena",
+      "updated_at": "2026-09-25T16:27:01.796512Z"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Inbox, Search, FileX, AlertCircle, Plus } from 'lucide-react';
+import clsx from 'clsx';
 
 /**
  * EmptyState Component
@@ -30,20 +31,13 @@ import { Inbox, Search, FileX, AlertCircle, Plus } from 'lucide-react';
  *   title="No projects"
  *   description="Create your first project to get started"
  *   action={
- *     <button onClick={onCreate} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">
- *       Create Project
+ *     <button onClick={onCreate} className="px-4 py-2 bg-accent-fill text-white rounded-md">
+ *       Create project
  *     </button>
  *   }
  * />
  */
-const EmptyState = ({
-  type = 'data',
-  title,
-  description,
-  icon: CustomIcon,
-  action,
-  className = '',
-}) => {
+const EmptyState = ({ type = 'data', title, description, icon: CustomIcon, action, className = '' }) => {
   // Default icons for each type
   const defaultIcons = {
     inbox: Inbox,
@@ -55,50 +49,29 @@ const EmptyState = ({
 
   const IconComponent = CustomIcon || defaultIcons[type];
 
-  // Icon colors by type
-  const iconColors = {
-    inbox: 'text-gray-400',
-    search: 'text-blue-400',
-    data: 'text-gray-400',
-    error: 'text-red-400',
-    custom: 'text-gray-400',
-  };
-
   return (
-    <div className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className}`}>
+    <div className={clsx('flex flex-col items-center justify-center px-4 py-12 text-center', className)}>
       {/* Icon */}
       {IconComponent && (
         <div className="mb-4">
-          <IconComponent className={`w-16 h-16 ${iconColors[type]}`} />
+          <IconComponent className="h-16 w-16 text-text-3" />
         </div>
       )}
 
       {/* Title */}
-      {title && (
-        <h3 className="text-xl font-semibold text-gray-200 mb-2">
-          {title}
-        </h3>
-      )}
+      {title && <h3 className="t-section text-text-1 mb-2">{title}</h3>}
 
       {/* Description */}
-      {description && (
-        <p className="text-gray-400 max-w-md mb-6">
-          {description}
-        </p>
-      )}
+      {description && <p className="t-small text-text-2 mb-6 max-w-md">{description}</p>}
 
       {/* Action */}
-      {action && (
-        <div className="mt-2">
-          {action}
-        </div>
-      )}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 };
 
 // Preset variants for common use cases
-EmptyState.NoData = ({ title = "No data available", description, action }) => (
+EmptyState.NoData = ({ title = 'No data available', description, action }) => (
   <EmptyState type="data" title={title} description={description} action={action} />
 );
 
@@ -106,7 +79,7 @@ EmptyState.NoResults = ({ query }) => (
   <EmptyState
     type="search"
     title="No results found"
-    description={query ? `No results for "${query}". Try different keywords.` : "Try adjusting your search or filter."}
+    description={query ? `No results for "${query}". Try different keywords.` : 'Try adjusting your search or filter.'}
   />
 );
 
@@ -123,22 +96,22 @@ EmptyState.NoProjects = ({ onCreate }) => (
   <EmptyState
     type="data"
     title="No projects found"
-    description="Create your first project to get started!"
+    description="Create your first project to get started."
     action={
       onCreate && (
         <button
           onClick={onCreate}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+          className="t-small inline-flex items-center gap-2 rounded-md bg-accent-fill px-6 py-3 font-medium text-white hover:bg-accent-fill-hover transition-colors"
         >
-          <Plus className="w-5 h-5" />
-          Create Project
+          <Plus className="h-5 w-5" />
+          Create project
         </button>
       )
     }
   />
 );
 
-EmptyState.Error = ({ title = "Something went wrong", description = "Please try again later.", action }) => (
+EmptyState.Error = ({ title = 'Something went wrong', description = 'Please try again later.', action }) => (
   <EmptyState type="error" title={title} description={description} action={action} />
 );
 

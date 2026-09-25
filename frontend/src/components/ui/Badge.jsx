@@ -27,6 +27,7 @@ const LEGACY_VARIANT_ALIAS = {
 export function Badge({
   variant = 'neutral',
   dot = false,
+  pulse = false,
   // Legacy props from the pre-redesign API. Destructured (not spread) purely to drop
   // them here so they never leak onto the DOM node as unknown attributes/handlers.
   // TODO(Task 14): delete once every consumer drops these too.
@@ -47,7 +48,15 @@ export function Badge({
       )}
       {...rest}
     >
-      {dot && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}
+      {dot &&
+        (pulse ? (
+          <span aria-hidden className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full rounded-sm bg-current opacity-75 animate-ping" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-sm bg-current" />
+          </span>
+        ) : (
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
+        ))}
       {children}
     </span>
   )

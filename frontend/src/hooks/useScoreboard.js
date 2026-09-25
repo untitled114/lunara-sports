@@ -26,6 +26,7 @@ export function useScoreboard(dateStr) {
 
   const [games, setGames] = useState([]);
   const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Keep dateRef in sync so the WS callback sees the current date
   useEffect(() => {
@@ -46,11 +47,15 @@ export function useScoreboard(dateStr) {
   // One-shot initial REST fetch for immediate data
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     fetchGames(dateStr)
       .then((data) => {
         if (!cancelled && Array.isArray(data)) setGames(data);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => { cancelled = true; };
   }, [dateStr]);
 
@@ -130,6 +135,7 @@ export function useScoreboard(dateStr) {
           const nowET = `${y}-${m}-${d}`;
           if (dateRef.current === nowET) {
             setGames(msg.data);
+            setLoading(false);
           }
         }
       } catch {
@@ -165,5 +171,5 @@ export function useScoreboard(dateStr) {
     };
   }, [connect]);
 
-  return { games, connected };
+  return { games, connected, loading };
 }

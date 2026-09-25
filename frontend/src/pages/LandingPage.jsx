@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, Zap, Trophy, TrendingUp, Users, Activity, Target, Shield, BarChart2, Globe, Brain } from 'lucide-react';
+import { ChevronRight, Trophy, Target, Activity, Shield, BarChart2, Brain, Users } from 'lucide-react';
+import clsx from 'clsx';
 import { useTheme } from '@/context/ThemeContext';
 import { BRANDING_IMAGES } from '@/constants/branding';
+import { Badge, SectionHeader } from '@/components/ui';
 
 function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var(--accent)', image, transitionImage }) {
   const { playGlassClick, triggerArenaEntry } = useTheme();
@@ -17,35 +19,30 @@ function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var
   };
 
   return (
-    <div className="relative group perspective h-full">
-      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-3/4 h-12 bg-white/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-
-      <a
-        href={link}
-        onClick={handleClick}
-        className="block liquid-mirror rounded-[2rem] sm:rounded-[3rem] p-7 sm:p-12 gloss-sweep transition-all duration-1000 hover:-translate-y-6 animate-float relative z-10 luxury-edge shadow-[25px_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden h-full"
-        style={{ animationDelay: delay }}
-      >
-        {image && (
-          <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-40 transition-opacity duration-1000 pointer-events-none">
-            <img src={image} alt="" width={600} height={400} loading="lazy" className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-1000" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050a18] via-[#050a18]/80 to-transparent" />
-          </div>
-        )}
-
-        <div className="relative z-10">
-          <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl sm:rounded-2xl bg-[#050a18] border-t-2 border-white/20 border-x border-white/5 border-b-2 border-black/80 flex items-center justify-center mb-6 sm:mb-10 shadow-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10 blur-xl" style={{ backgroundColor: color }} />
-            <Icon className="h-6 w-6 sm:h-8 sm:w-8 relative z-10" style={{ color: color }} />
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white mb-3 sm:mb-5 leading-tight">{title}</h2>
-          <p className="text-[12px] sm:text-[13px] font-bold text-white/80 uppercase tracking-[0.3em] leading-relaxed mb-6 sm:mb-10">{desc}</p>
-          <div className="flex items-center gap-3 text-sm font-black uppercase tracking-[0.4em] text-white/30 group-hover:text-white transition-all">
-            Explore <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-          </div>
+    <a
+      href={link}
+      onClick={handleClick}
+      className="group block bg-surface-1 border border-border rounded-lg p-7 sm:p-10 transition-all duration-1000 hover:border-border-strong hover:-translate-y-2 animate-float relative overflow-hidden h-full"
+      style={{ animationDelay: delay }}
+    >
+      {image && (
+        <div className="absolute inset-0 z-0 opacity-15 group-hover:opacity-30 transition-opacity duration-1000 pointer-events-none">
+          <img src={image} alt="" width={600} height={400} loading="lazy" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-surface-1/80" />
         </div>
-      </a>
-    </div>
+      )}
+
+      <div className="relative z-10">
+        <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-md bg-surface-2 border border-border flex items-center justify-center mb-6 sm:mb-8">
+          <Icon className="h-6 w-6 sm:h-8 sm:w-8" style={{ color }} />
+        </div>
+        <h2 className="t-section text-text-1 mb-3 sm:mb-4">{title}</h2>
+        <p className="t-body text-text-2 mb-6 sm:mb-8">{desc}</p>
+        <div className="flex items-center gap-3 t-label text-text-3 group-hover:text-text-1 transition-colors">
+          Explore <ChevronRight className="h-3.5 w-3.5" />
+        </div>
+      </div>
+    </a>
   );
 }
 
@@ -61,147 +58,141 @@ export default function LandingPage() {
 
   return (
     <div className="animate-fadeIn">
-      {/* Hero — full bleed, extends behind navbar */}
+      {/* Hero */}
       <div className="relative text-center flex flex-col items-center justify-center min-h-[70vh]">
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center gap-10">
-          <div className="deboss px-8 py-2.5 rounded-full inline-flex items-center gap-4 border-white/10 shadow-2xl backdrop-blur-md rim-light">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-ping shadow-[0_0_10px_rgba(16,185,129,0.6)]" />
-            <span className="text-sm font-black uppercase tracking-[0.5em] text-white/90">Live <span className="text-emerald-400 ml-1">Now</span></span>
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <div className="inline-flex items-center gap-2 rounded-sm bg-live/10 border border-live/20 px-3 py-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-sm bg-live opacity-75 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-sm bg-live" />
+            </span>
+            <span className="t-label text-live">Live now</span>
           </div>
 
-          <div className="drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
-            <h1 className="text-5xl sm:text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic">
-              Lunara
-            </h1>
-            <p className="text-5xl sm:text-6xl md:text-[10rem] text-jumbotron tracking-tighter leading-[0.9] uppercase italic opacity-90" aria-hidden="true">
-              Sports
-            </p>
-          </div>
+          <h1 className="t-title text-text-1">Lunara Sports</h1>
 
-          <p className="max-w-xl mx-auto text-sm md:text-base font-medium text-white/90 leading-relaxed tracking-wide">
-            Live scores, real-time stats, and ML-powered picks<br className="hidden md:block" /> across every league that matters.
+          <p className="max-w-xl mx-auto t-body text-text-2">
+            Live scores, real-time stats, and ML-powered picks
+            <br className="hidden md:block" /> across every league that matters.
           </p>
 
-          <div className="pt-6 flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 px-4 sm:px-0">
+          <div className="pt-6 flex flex-col sm:flex-row justify-center items-center gap-4 px-4 sm:px-0">
             <button
               onClick={handleEnterArena}
-              className="group relative w-full sm:w-auto px-10 sm:px-16 py-5 sm:py-7 rounded-2xl bg-white text-black font-black uppercase tracking-[0.4em] text-[13px] sm:text-[14px] transition-all duration-500 shadow-[0_20px_50px_rgba(255,255,255,0.15)] hover:shadow-[0_0_60px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 z-20 overflow-hidden text-center"
+              className="w-full sm:w-auto px-10 py-4 rounded-md bg-accent-fill hover:bg-accent-fill-hover text-white t-small font-semibold transition-colors duration-500 text-center"
             >
-              <div className="absolute inset-0 border-t-4 border-white/40 border-l-2 border-white/20 border-r-2 border-black/10 border-b-4 border-black/20 rounded-2xl pointer-events-none" />
-              <span className="relative z-10">Enter Arena</span>
+              View live scores
             </button>
             <Link
               to="/standings"
-              className="group relative w-full sm:w-auto px-10 sm:px-16 py-5 sm:py-7 rounded-2xl liquid-mirror text-white font-black uppercase tracking-[0.4em] text-[13px] sm:text-[14px] hover:border-white/30 transition-all z-20 rim-light shadow-2xl gloss-sweep flex items-center justify-center"
+              className="w-full sm:w-auto px-10 py-4 rounded-md bg-surface-1 border border-border hover:border-border-strong text-text-1 t-small font-semibold transition-colors flex items-center justify-center"
             >
-              <span className="relative z-10">Standings</span>
+              Standings
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Below hero — contained width */}
-      <div className="space-y-16 sm:space-y-32 pb-24 sm:pb-40 max-w-[1400px] mx-auto px-4">
-
-      {/* League Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-12">
-        <FeatureCard
-          icon={Trophy}
-          title="NBA"
-          desc="Live play-by-play, box scores, player profiles, and league-wide stat leaders."
-          link="/scoreboard"
-          delay="0s"
-          color="var(--accent-warm)"
-          image={BRANDING_IMAGES.logos.nba}
-          transitionImage={BRANDING_IMAGES.sites.nba}
-        />
-        <FeatureCard
-          icon={Target}
-          title="MLB"
-          desc="Pitch tracking, batting splits, and diamond analytics. Coming Spring 2026."
-          link="/scoreboard"
-          delay="0.2s"
-          color="#10b981"
-          image={BRANDING_IMAGES.logos.mlb}
-          transitionImage={BRANDING_IMAGES.sites.mlb}
-        />
-        <FeatureCard
-          icon={Activity}
-          title="NFL"
-          desc="Drive charts, snap counts, and matchup breakdowns. Coming Fall 2026."
-          link="/scoreboard"
-          delay="0.4s"
-          color="var(--accent-alt)"
-          image={BRANDING_IMAGES.logos.nfl}
-          transitionImage={BRANDING_IMAGES.sites.nfl}
-        />
-      </div>
-
-      {/* What We Offer */}
-      <div className="pb-40">
-        <div className="liquid-mirror rounded-[2rem] sm:rounded-[5rem] p-8 sm:p-16 md:p-24 relative overflow-hidden group shadow-[inset_0_0_150px_rgba(0,0,0,0.8)] border-white/5 luxury-edge deep-occlusion">
-           <img src={BRANDING_IMAGES.transitions.main1} alt="" width={1200} height={800} loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-30 transition-opacity duration-[2s]" />
-           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent" />
-
-           <div className="relative z-10">
-              <div className="space-y-10">
-                 <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-sm font-black uppercase tracking-[0.3em] text-indigo-400">
-                    <Shield className="h-3 w-3" /> What We Do
-                 </div>
-
-                 <h2 className="text-4xl sm:text-5xl md:text-7xl text-jumbotron leading-[0.85] uppercase">
-                    Sports<br />Intelligence
-                 </h2>
-
-                 <p className="text-sm text-white/80 leading-relaxed max-w-lg">
-                    Lunara Sports is a free platform for fans who want more than just a score. We provide real-time play-by-play feeds, deep player analytics, and league-wide stat tracking — all in one place.
-                 </p>
-
-                 <div className="grid grid-cols-1 gap-5">
-                    <div className="flex gap-4 items-start">
-                       <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-indigo-400">
-                          <BarChart2 className="h-5 w-5" />
-                       </div>
-                       <div>
-                          <h3 className="text-sm font-black text-white uppercase tracking-widest mb-1">Live Stats & Scores</h3>
-                          <p className="text-sm text-white/80 leading-relaxed">Real-time scoreboards, box scores, and play-by-play across NBA — with MLB and NFL on the way.</p>
-                       </div>
-                    </div>
-
-                    <div className="flex gap-4 items-start">
-                       <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400">
-                          <Brain className="h-5 w-5" />
-                       </div>
-                       <div>
-                          <h3 className="text-sm font-black text-white uppercase tracking-widest mb-1">ML-Powered Picks</h3>
-                          <p className="text-sm text-white/80 leading-relaxed">Our Sport-suite models analyze 100+ features per prop across 7 sportsbooks to find edges others miss. Player points and rebounds picks with verified win rates.</p>
-                       </div>
-                    </div>
-
-                    <div className="flex gap-4 items-start">
-                       <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-orange-400">
-                          <Users className="h-5 w-5" />
-                       </div>
-                       <div>
-                          <h3 className="text-sm font-black text-white uppercase tracking-widest mb-1">Player Profiles</h3>
-                          <p className="text-sm text-white/80 leading-relaxed">Full rosters for all 30 teams. Season averages, recent game logs, shooting splits, and performance trends for every player.</p>
-                       </div>
-                    </div>
-                 </div>
-
-                 <button
-                    onClick={handleEnterArena}
-                    className="flex items-center gap-6 group/btn text-sm font-black uppercase tracking-[0.5em] text-white/80 hover:text-indigo-400 transition-all pt-4"
-                 >
-                    Get Started <ChevronRight className="h-5 w-5 group-hover/btn:translate-x-4 transition-transform" />
-                 </button>
-              </div>
-
-           </div>
+      {/* Below hero */}
+      <div className="space-y-16 sm:space-y-24 pb-24 sm:pb-40 max-w-[1400px] mx-auto px-4">
+        {/* League cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-10">
+          <FeatureCard
+            icon={Trophy}
+            title="NBA"
+            desc="Live play-by-play, box scores, player profiles, and league-wide stat leaders."
+            link="/scoreboard"
+            delay="0s"
+            color="var(--warn)"
+            image={BRANDING_IMAGES.logos.nba}
+            transitionImage={BRANDING_IMAGES.sites.nba}
+          />
+          <FeatureCard
+            icon={Target}
+            title="MLB"
+            desc="Pitch tracking, batting splits, and diamond analytics. Coming spring 2026."
+            link="/scoreboard"
+            delay="0.2s"
+            color="var(--live)"
+            image={BRANDING_IMAGES.logos.mlb}
+            transitionImage={BRANDING_IMAGES.sites.mlb}
+          />
+          <FeatureCard
+            icon={Activity}
+            title="NFL"
+            desc="Drive charts, snap counts, and matchup breakdowns. Coming fall 2026."
+            link="/scoreboard"
+            delay="0.4s"
+            color="var(--accent)"
+            image={BRANDING_IMAGES.logos.nfl}
+            transitionImage={BRANDING_IMAGES.sites.nfl}
+          />
         </div>
-      </div>
+
+        {/* What we offer */}
+        <div className="group bg-surface-1 border border-border rounded-lg p-8 sm:p-16 relative overflow-hidden">
+          <img
+            src={BRANDING_IMAGES.transitions.main1}
+            alt=""
+            width={1200}
+            height={800}
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-30 transition-opacity duration-[2s]"
+          />
+
+          <div className="relative z-10 space-y-10">
+            <Badge variant="accent">
+              <Shield className="h-3 w-3" /> What we do
+            </Badge>
+
+            <SectionHeader title="Sports intelligence" />
+
+            <p className="t-body text-text-2 max-w-lg">
+              Lunara Sports is a free platform for fans who want more than just a score. We provide real-time
+              play-by-play feeds, deep player analytics, and league-wide stat tracking — all in one place.
+            </p>
+
+            <div className="grid grid-cols-1 gap-5">
+              {[
+                {
+                  icon: BarChart2,
+                  color: 'text-accent',
+                  title: 'Live stats and scores',
+                  body: 'Real-time scoreboards, box scores, and play-by-play across NBA — with MLB and NFL on the way.',
+                },
+                {
+                  icon: Brain,
+                  color: 'text-live',
+                  title: 'ML-powered picks',
+                  body: 'Our Sport-suite models analyze 100+ features per prop across 7 sportsbooks to find edges others miss. Player points and rebounds picks with verified win rates.',
+                },
+                {
+                  icon: Users,
+                  color: 'text-warn',
+                  title: 'Player profiles',
+                  body: 'Full rosters for all 30 teams. Season averages, recent game logs, shooting splits, and performance trends for every player.',
+                },
+              ].map((item) => (
+                <div key={item.title} className="flex gap-4 items-start">
+                  <div className={clsx('h-10 w-10 shrink-0 rounded-md bg-surface-2 border border-border flex items-center justify-center', item.color)}>
+                    <item.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="t-body font-semibold text-text-1 mb-1">{item.title}</h3>
+                    <p className="t-small text-text-2">{item.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleEnterArena}
+              className="flex items-center gap-3 t-label text-text-2 hover:text-accent transition-colors pt-4"
+            >
+              Get started <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

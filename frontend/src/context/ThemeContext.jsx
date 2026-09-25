@@ -6,7 +6,7 @@ const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [favoriteTeam, setFavoriteTeam] = useState(localStorage.getItem('favTeam') || null);
-  const [accentColors, setAccentColors] = useState({ primary: '#6366f1', secondary: '#1e293b' });
+  const [accentColors, setAccentColors] = useState({ primary: 'var(--accent)', secondary: 'var(--surface-2)' });
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionImage, setTransitionImage] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(localStorage.getItem('soundEnabled') !== 'false');
@@ -21,7 +21,7 @@ export function ThemeProvider({ children }) {
     const targetAbbrev = abbrev || favoriteTeam;
 
     if (!targetAbbrev) {
-      setAccentColors({ primary: '#6366f1', secondary: '#1e293b' });
+      setAccentColors({ primary: 'var(--accent)', secondary: 'var(--surface-2)' });
       return;
     }
     const colors = getTeamColor(targetAbbrev);

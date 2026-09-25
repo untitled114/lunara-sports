@@ -1,0 +1,18 @@
+{
+  "_source": "GET https://api.lunara-app.com/games/?game_date=2026-10-03, captured 2026-09-25T16:55:30Z. Real scheduled game (first game of the 2026-27 preseason slate returned by /games/next).",
+  "data": [
+    {
+      "id": "401902644",
+      "home_team": "TOR",
+      "away_team": "MIA",
+      "home_score": 0,
+      "away_score": 0,
+      "status": "scheduled",
+      "quarter": null,
+      "clock": null,
+      "start_time": "2026-10-03T23:00:00Z",
+      "venue": "Videotron Centre",
+      "updated_at": "2026-09-25T16:55:11.348655Z"
+    }
+  ]
+}

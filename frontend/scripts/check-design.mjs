@@ -11,7 +11,12 @@ import { fileURLToPath } from 'node:url'
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 const HEX_OK = ['src/styles/tokens.css', 'src/utils/teamColors.js']
 // glass on top bar/bottom tabs; grain on page background; live glow in GameCard
-const EFFECT_OK = ['src/components/layout/AppLayout.jsx', 'src/styles/tokens.css', 'src/components/sport/GameCard.jsx']
+const EFFECT_OK = [
+  'src/components/layout/AppLayout.jsx',
+  'src/styles/tokens.css',
+  'src/components/sport/GameCard.jsx',
+  'src/components/sport/BottomNav.jsx',
+]
 // rgb()/rgba()/hsl()/hsla() literals: only the token file gets to define raw
 // color functions; everywhere else should reference a --token instead.
 const COLORFN_OK = ['src/styles/tokens.css']

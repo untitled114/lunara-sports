@@ -31,6 +31,11 @@ describe('ui', () => {
     expect(indicator).toHaveClass('rounded-full', 'bg-current')
     expect(onRemove).not.toHaveBeenCalled()
   })
+  it('Badge pulse adds a ping to the dot, and the plain dot stays still', () => {
+    render(<><Badge variant="live" dot pulse>Live</Badge><Badge variant="live" dot>Still</Badge></>)
+    expect(screen.getByText('Live').querySelector('.animate-ping')).not.toBeNull()
+    expect(screen.getByText('Still').querySelector('.animate-ping')).toBeNull()
+  })
   it('Stat renders tabular value and delta with an sr-only direction and a hidden glyph', () => {
     const { rerender } = render(<Stat label="PTS" value="32.7" delta={1.2} />)
     expect(screen.getByText('32.7')).toHaveClass('tnum')
