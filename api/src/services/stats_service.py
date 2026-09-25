@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import structlog
 
 from ..models.schemas import PlayerSeasonStats, StatLeader, StatLeadersResponse, TeamStatsRow
@@ -204,13 +206,34 @@ async def _resolve_athlete(aid: str, athlete_map: dict) -> dict:
     return {"name": f"Player {aid}", "abbrev": ""}
 
 
+_SEASON_REF = re.compile(r"/seasons/(\d{4})/types/(\d+)/")
+_SEASON_TYPES = {1: "preseason", 2: "regular season", 3: "postseason"}
+
+
+def _leaders_season_label(ref: str) -> str:
+    """The season an ESPN leaders payload is for, from its own $ref URL.
+
+    ESPN names a season by the year it ends in: .../seasons/2025/types/2/ is the
+    2024–25 regular season. "" when the URL doesn't say.
+    """
+    m = _SEASON_REF.search(ref or "")
+    if not m:
+        return ""
+    end = int(m.group(1))
+    years = f"{end - 1}–{end % 100:02d}"
+    kind = _SEASON_TYPES.get(int(m.group(2)))
+    return f"{years} {kind}" if kind else years
+
+
 async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
     """Get league stat leaders from the ESPN core API."""
     categories = {}
+    season_label = ""
 
     try:
         espn_data = await espn_client.get_stat_leaders(limit=limit)
         if espn_data:
+            season_label = _leaders_season_label(espn_data.get("$ref", ""))
             # Build athlete lookup from cached rosters
             athlete_map = await _build_athlete_lookup()
 
@@ -254,7 +277,10 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
     except Exception as espn_e:
         logger.warning("stat_leaders.espn_failed", error=str(espn_e))
 
-    return StatLeadersResponse(categories=categories)
+    # No leaders means nothing to label.
+    return StatLeadersResponse(
+        categories=categories, season_label=season_label if categories else ""
+    )
 
 
 async def get_team_stats_list() -> list[TeamStatsRow]:

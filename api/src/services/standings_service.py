@@ -107,6 +107,8 @@ def _season_years(data: dict, index: int) -> tuple[int | None, str]:
 
 def _label(years: str, final: bool) -> str:
     """Render a season-years string (e.g. "2025-26") as a display label."""
+    if not years:
+        return ""  # ESPN sent no season name: no label rather than " final"
     pretty = years.replace("-", "–")
     return f"{pretty} final" if final else pretty
 
@@ -151,6 +153,14 @@ async def get_standings() -> StandingsResponse:
         )
 
     p_east, p_west = _parse(prev)
+    if not (p_east or p_west):
+        # A previous-season payload with no conferences is no fallback at all.
+        return StandingsResponse(
+            eastern=eastern,
+            western=western,
+            season=cur_years,
+            season_label=_label(cur_years, final=False),
+        )
     return StandingsResponse(
         eastern=p_east,
         western=p_west,
