@@ -2,7 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import GameDetailPage from './GameDetailPage'
+import { LiveFeed } from '@/components/sport/LiveFeed'
 import * as api from '@/services/api'
+
+// Real, captured API responses (frontend/src/test/fixtures/README below) — no invented
+// data. Game 401811037 (DEN 127 @ home, OKC 107 away, 2026-04-10, status "final") was
+// fetched live from https://api.lunara-app.com and trimmed:
+//   curl 'https://api.lunara-app.com/games/401811037'
+//   curl 'https://api.lunara-app.com/games/401811037/boxscore'   (kept 5 starters + 3
+//     bench per team, all stat values verbatim)
+//   curl 'https://api.lunara-app.com/games/401811037/plays'      (returned `[]` — see note
+//     below; kept as-is)
+import REAL_GAME from '@/test/fixtures/game-401811037.json'
+import REAL_BOX_DATA from '@/test/fixtures/boxscore-401811037.json'
+import REAL_PLAYS from '@/test/fixtures/plays-401811037.json'
 
 // The mocked hook must return stable function references across re-renders —
 // GameDetailPage's data-loading effect depends on `setArenaTheme`, so a fresh
@@ -23,31 +36,6 @@ vi.mock('@/context/ThemeContext', () => {
   }
 })
 
-const MOCK_PLAYS = []
-const MOCK_BOX_DATA = {
-  home: {
-    players: [
-      { name: 'Nikola Jokic', points: 24, rebounds: 10, assists: 8, fouls: 2, fg: '9-14', starter: true },
-    ],
-  },
-  away: {
-    players: [
-      { name: 'LeBron James', points: 20, rebounds: 6, assists: 5, fouls: 1, fg: '8-16', starter: true },
-    ],
-  },
-}
-
-vi.mock('@/hooks/useGameFeed', () => ({
-  useGameFeed: () => ({
-    plays: MOCK_PLAYS,
-    connected: true,
-    error: null,
-    gameUpdate: null,
-    pickUpdates: null,
-    boxData: MOCK_BOX_DATA,
-  }),
-}))
-
 vi.mock('@/services/api', () => ({
   fetchGame: vi.fn(),
   fetchStandings: vi.fn(),
@@ -58,24 +46,9 @@ vi.mock('@/services/api', () => ({
   addReaction: vi.fn(),
 }))
 
-const MOCK_GAME = {
-  id: '401902644',
-  home_team: 'DEN',
-  away_team: 'LAL',
-  home_team_full: 'Denver Nuggets',
-  away_team_full: 'Los Angeles Lakers',
-  home_score: 58,
-  away_score: 52,
-  status: 'live',
-  quarter: 3,
-  clock: '7:41',
-  venue: 'Ball Arena',
-  start_time: '2026-09-25T19:00:00Z',
-}
-
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/game/401902644']}>
+    <MemoryRouter initialEntries={['/game/401811037']}>
       <Routes>
         <Route path="/game/:id" element={<GameDetailPage />} />
       </Routes>
@@ -86,25 +59,35 @@ function renderPage() {
 describe('GameDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    api.fetchGame.mockResolvedValue(MOCK_GAME)
+    // status "final" here (real) means useGameFeed's isLive branch is false, so it never
+    // opens a WebSocket — no WS mocking needed for this real, completed game.
+    api.fetchGame.mockResolvedValue(REAL_GAME)
     api.fetchStandings.mockResolvedValue([])
     api.fetchModelPicks.mockResolvedValue([])
-    api.fetchBoxScore.mockResolvedValue(MOCK_BOX_DATA)
-    api.fetchPlays.mockResolvedValue([])
+    api.fetchBoxScore.mockResolvedValue(REAL_BOX_DATA)
+    api.fetchPlays.mockResolvedValue(REAL_PLAYS)
   })
 
-  it('shows both TeamMarks and t-score scores in the header for a live game', async () => {
+  it('shows both TeamMarks and t-score scores in the header for the real final score', async () => {
     renderPage()
     const header = within(await screen.findByTestId('scoreboard-header'))
-    expect(header.getByText('DEN')).toBeInTheDocument()
-    expect(header.getByText('LAL')).toBeInTheDocument()
+    // The real fixture has no separate full-team-name field, so the abbreviation appears
+    // twice (TeamMark + the name line) — assert presence, not uniqueness.
+    expect(header.getAllByText('OKC').length).toBeGreaterThan(0)
+    expect(header.getAllByText('DEN').length).toBeGreaterThan(0)
+    expect(header.getByAltText('OKC logo')).toBeInTheDocument()
     expect(header.getByAltText('DEN logo')).toBeInTheDocument()
-    expect(header.getByAltText('LAL logo')).toBeInTheDocument()
-    expect(header.getByText('58')).toHaveClass('t-score')
-    expect(header.getByText('52')).toHaveClass('t-score')
+    expect(header.getByText('107')).toHaveClass('t-score')
+    expect(header.getByText('127')).toHaveClass('t-score')
+    expect(header.getByText('Final')).toBeInTheDocument()
   })
 
-  it('shows a live badge for the current quarter', async () => {
+  it('shows a live badge for the current quarter of a live game', async () => {
+    // Rendering-state fixture: the real fixture game is "final" (no live game exists in
+    // the live API right now — verified), so this overrides only the status/quarter/clock
+    // fields to exercise the live-badge branch. Team identity, scores and venue stay the
+    // real fixture's values.
+    api.fetchGame.mockResolvedValue({ ...REAL_GAME, status: 'live', quarter: 3, clock: '7:41' })
     renderPage()
     const header = within(await screen.findByTestId('scoreboard-header'))
     const badge = header.getByText('Quarter 3')
@@ -112,20 +95,37 @@ describe('GameDetailPage', () => {
     expect(badge.querySelector('[aria-hidden]')).toBeInTheDocument()
   })
 
-  it('renders the box score as a table with tabular numbers', async () => {
+  it('renders the box score as a table with starters, bench, a totals row, and tabular numbers', async () => {
     renderPage()
     const tables = await screen.findAllByRole('table')
     expect(tables.length).toBeGreaterThan(0)
 
     let numericCell = null
+    let sawStarters = false
+    let sawBench = false
+    let sawTotals = false
     for (const table of tables) {
-      const matches = within(table).queryAllByText('24')
-      if (matches.length) {
-        numericCell = matches[0]
-        break
-      }
+      const t = within(table)
+      if (t.queryAllByText('Starters').length) sawStarters = true
+      if (t.queryAllByText('Bench').length) sawBench = true
+      if (t.queryAllByText('Totals').length) sawTotals = true
+      // Jonas Valanciunas' real rebound total for this game
+      const matches = t.queryAllByText('17')
+      if (matches.length && !numericCell) numericCell = matches[0]
     }
+    expect(sawStarters).toBe(true)
+    expect(sawBench).toBe(true)
+    expect(sawTotals).toBe(true)
     expect(numericCell).toHaveClass('tnum')
+  })
+
+  it('shows real player headshots on the on-court and full box score cards', async () => {
+    renderPage()
+    await screen.findByTestId('scoreboard-header')
+    // Headshot <img> tags are decorative (empty alt) — assert at least one real
+    // espncdn headshot URL made it into the DOM.
+    const headshotImgs = document.querySelectorAll('img[src*="headshots/nba/players"]')
+    expect(headshotImgs.length).toBeGreaterThan(0)
   })
 
   it('has no banned copy anywhere on the page', async () => {
@@ -135,10 +135,53 @@ describe('GameDetailPage', () => {
     expect(document.body.textContent).not.toMatch(banned)
   })
 
-  it('shows PageState when fetchGame fails', async () => {
+  it('shows PageState with a retry action when fetchGame fails', async () => {
     api.fetchGame.mockRejectedValue(new Error('boom'))
     renderPage()
     expect(await screen.findByText("Couldn't load this game.")).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+})
+
+describe('LiveFeed play card', () => {
+  // This API does not retain historical play-by-play for any completed game (checked
+  // 401811037 and 15+ other 2025-26 games — every /plays response is `[]`) and no game
+  // is live right now (/ws/stats reports 0 active games), so there is no real captured
+  // play to fetch. This single play's team and running score are anchored to the real
+  // game 401811037 (DEN home, OKC away, final 127-107); only the shot description text
+  // — which the API simply does not retain historically — is a minimal representative
+  // string needed to exercise the "made shot" render branch.
+  const REPRESENTATIVE_PLAY = {
+    id: 1,
+    game_id: '401811037',
+    sequence_number: 1,
+    quarter: 4,
+    clock: '0:00',
+    event_type: 'shot',
+    description: 'Julian Strawther makes two point shot',
+    team: 'DEN',
+    player_name: 'Julian Strawther',
+    home_score: 127,
+    away_score: 107,
+  }
+
+  it('shows the team logo and the score after the play', () => {
+    render(
+      <LiveFeed
+        gameId="401811037"
+        status="final"
+        homeTeam="DEN"
+        awayTeam="OKC"
+        plays={[REPRESENTATIVE_PLAY]}
+        connected
+        boxData={REAL_BOX_DATA}
+      />
+    )
+    // Team logo appears at least once on the play card (avatar fallback + name line).
+    const teamLogos = document.querySelectorAll('img[src*="teamlogos/nba"]')
+    expect(teamLogos.length).toBeGreaterThan(0)
+    // Score after the play — the real final score.
+    expect(screen.getByText('107')).toBeInTheDocument()
+    expect(screen.getByText('127')).toBeInTheDocument()
   })
 })

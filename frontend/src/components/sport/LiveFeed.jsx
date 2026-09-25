@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useGameFeed } from "@/hooks/useGameFeed";
-import { addReaction, fetchBoxScore } from "@/services/api";
+import { addReaction, fetchBoxScore, fetchPlays } from "@/services/api";
 import { useTheme } from "@/context/ThemeContext";
 import { getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
 import { Card, Badge, PageState } from "@/components/ui";
@@ -264,28 +264,44 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
 
       {/* Main content */}
       <div className="flex items-start gap-3">
-        <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md overflow-hidden bg-surface-2 border border-border shrink-0">
+        <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-md overflow-hidden bg-surface-2 border border-border shrink-0">
           {headshot ? (
             <img src={headshot} alt="" width={48} height={48} loading="lazy" className="w-full h-full object-cover" />
           ) : tl ? (
             <img src={tl} alt="" width={48} height={48} loading="lazy" className="w-full h-full object-contain p-2" />
           ) : null}
+          {/* Team logo corner badge — only needed when the headshot is already occupying the avatar */}
+          {headshot && tl && (
+            <img
+              src={tl}
+              alt=""
+              width={16}
+              height={16}
+              className="absolute -bottom-1 -right-1 h-4 w-4 rounded-sm border border-border bg-surface-1"
+            />
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
           <p className="t-body font-semibold text-text-1">{title}</p>
 
           {play.player_name && (
-            <p className="t-small text-text-2 mt-1">
-              {abbr(play.player_name)}
-              {meta && <span className="text-text-3"> &middot; {meta}</span>}
+            <p className="t-small text-text-2 mt-1 flex items-center gap-1.5">
+              {tl && <img src={tl} alt="" width={16} height={16} className="h-4 w-4 shrink-0" />}
+              <span>
+                {abbr(play.player_name)}
+                {meta && <span className="text-text-3"> &middot; {meta}</span>}
+              </span>
             </p>
           )}
 
           {assist && (
-            <p className="t-small text-text-3 mt-0.5">
-              {abbr(assist)}
-              {aStats && aStats.ast > 0 && <span> &middot; {aStats.ast} ast</span>}
+            <p className="t-small text-text-3 mt-0.5 flex items-center gap-1.5">
+              {tl && <img src={tl} alt="" width={16} height={16} className="h-4 w-4 shrink-0" />}
+              <span>
+                {abbr(assist)}
+                {aStats && aStats.ast > 0 && <span> &middot; {aStats.ast} ast</span>}
+              </span>
             </p>
           )}
         </div>
@@ -298,7 +314,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
             type="button"
             aria-label="React with fire"
             onClick={() => onReact("fire")}
-            className={`t-small rounded-md px-2 py-1 transition-colors ${
+            className={`t-small rounded-md px-2 py-1 transition-colors duration-300 ${
               myReaction === "fire" ? "bg-surface-2 text-text-1" : "text-text-3 hover:bg-surface-2"
             }`}
           >
@@ -358,7 +374,14 @@ export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam, pla
   }, [plays.length]);
 
   if (error) {
-    return <PageState kind="error" title="Couldn't load the feed." message={error} />;
+    return (
+      <PageState
+        kind="error"
+        title="Couldn't load the feed."
+        message={error}
+        onRetry={() => { fetchPlays(gameId).catch(() => {}); }}
+      />
+    );
   }
 
   const title = status === "final" ? "Recap" : status === "scheduled" ? "Feed" : "Live feed";

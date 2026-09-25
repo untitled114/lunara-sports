@@ -36,7 +36,7 @@ function ProgressBar({ actual, line, isHit, prediction }) {
 
   return (
     <div className="w-full h-1.5 rounded-sm bg-surface-2 overflow-hidden mt-1.5">
-      <div className={`h-full ${barClass}`} style={{ width: `${pct}%` }} />
+      <div className={`h-full transition-all duration-500 ${barClass}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -87,9 +87,9 @@ function PickCard({ pick }) {
       {/* Hit/miss indicator */}
       <div className="shrink-0 w-6 text-center">
         {pick.is_hit === true ? (
-          <span className="t-small font-semibold text-live">W</span>
+          <span className="t-small font-semibold text-live animate-fadeIn">W</span>
         ) : pick.is_hit === false ? (
-          <span className="t-small font-semibold text-loss">L</span>
+          <span className="t-small font-semibold text-loss animate-fadeIn">L</span>
         ) : (
           <span className="t-small text-text-3">&middot;</span>
         )}

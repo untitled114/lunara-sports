@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchPlays, fetchBoxScore } from "@/services/api";
 import { Skeleton, Card, DataTable, TeamMark } from "@/components/ui";
 import { useTheme } from "@/context/ThemeContext";
-import { getLogoUrl } from "@/utils/teamColors";
+import { getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
 
 /* ─── On-Court Tracking ─── */
 
@@ -60,9 +60,16 @@ function StatBlock({ label, value, isPrimary = false }) {
 
 function PlayerRow({ player }) {
   const { playGlassClick } = useTheme();
+  const headshot = player.headshot_url ? getHeadshotUrl(player.headshot_url) : null;
 
   return (
     <div className="flex items-center gap-3 py-3">
+      <div className="h-10 w-10 rounded-md overflow-hidden bg-surface-2 border border-border shrink-0">
+        {headshot && (
+          <img src={headshot} alt="" width={40} height={40} loading="lazy" className="w-full h-full object-cover" />
+        )}
+      </div>
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1.5">
           <Link
@@ -116,60 +123,103 @@ function TeamSection({ teamAbbrev, players }) {
 
 /* ─── Full Box Score Table ─── */
 
-const STAT_COLUMNS = [
-  { key: 'minutes', label: 'MIN', numeric: true },
-  { key: 'fg', label: 'FG', numeric: true },
-  { key: 'three_pt', label: '3PT', numeric: true },
-  { key: 'ft', label: 'FT', numeric: true },
-  { key: 'rebounds', label: 'REB', numeric: true },
-  { key: 'assists', label: 'AST', numeric: true },
-  { key: 'steals', label: 'STL', numeric: true },
-  { key: 'blocks', label: 'BLK', numeric: true },
-  { key: 'turnovers', label: 'TO', numeric: true },
-  { key: 'fouls', label: 'PF', numeric: true },
-  {
-    key: 'plus_minus',
-    label: '+/-',
-    numeric: true,
-    render: (p) => {
-      const val = p.plus_minus;
-      const n = parseInt(val, 10);
-      if (Number.isNaN(n)) return val ?? '';
-      return <span className={n > 0 ? 'text-live' : n < 0 ? 'text-loss' : ''}>{n > 0 ? `+${val}` : val}</span>;
-    },
-  },
-  { key: 'points', label: 'PTS', numeric: true },
+// Each stat has a snake_case player-row key (what a player object from the box score
+// API uses) and the short label the `totals` object is keyed by (e.g. totals['3PT']) —
+// see buildTotalsRow, which copies totals onto both key shapes so a single render
+// function can read `r[key]` for a player row, a totals row, or a blank label row.
+const STAT_DEFS = [
+  { key: 'minutes', totalsKey: 'MIN', label: 'MIN' },
+  { key: 'fg', totalsKey: 'FG', label: 'FG' },
+  { key: 'three_pt', totalsKey: '3PT', label: '3PT' },
+  { key: 'ft', totalsKey: 'FT', label: 'FT' },
+  { key: 'rebounds', totalsKey: 'REB', label: 'REB' },
+  { key: 'assists', totalsKey: 'AST', label: 'AST' },
+  { key: 'steals', totalsKey: 'STL', label: 'STL' },
+  { key: 'blocks', totalsKey: 'BLK', label: 'BLK' },
+  { key: 'turnovers', totalsKey: 'TO', label: 'TO' },
+  { key: 'fouls', totalsKey: 'PF', label: 'PF' },
+  { key: 'plus_minus', totalsKey: '+/-', label: '+/-', isPlusMinus: true },
+  { key: 'points', totalsKey: 'PTS', label: 'PTS' },
 ];
+
+function statCellValue(row, key, isPlusMinus) {
+  if (row.__kind === 'label') return '';
+  const raw = row[key];
+  if (isPlusMinus && row.__kind === 'player') {
+    const n = parseInt(raw, 10);
+    if (!Number.isNaN(n)) {
+      return <span className={n > 0 ? 'text-live' : n < 0 ? 'text-loss' : ''}>{n > 0 ? `+${raw}` : raw}</span>;
+    }
+  }
+  return raw ?? 0;
+}
+
+const STAT_COLUMNS = STAT_DEFS.map(({ key, label, isPlusMinus }) => ({
+  key,
+  label,
+  numeric: true,
+  render: (r) => statCellValue(r, key, isPlusMinus),
+}));
+
+function buildTotalsRow(totals) {
+  const row = { name: 'Totals', __kind: 'totals', ...totals };
+  for (const { key, totalsKey } of STAT_DEFS) row[key] = totals[totalsKey];
+  return row;
+}
+
+function buildRows(players) {
+  const starters = players.filter((p) => p.starter);
+  const bench = players.filter((p) => !p.starter);
+  const rows = [];
+  if (starters.length) {
+    rows.push({ name: '__starters_label__', __kind: 'label', __label: 'Starters' });
+    for (const p of starters) rows.push({ ...p, __kind: 'player' });
+  }
+  if (bench.length) {
+    rows.push({ name: '__bench_label__', __kind: 'label', __label: 'Bench' });
+    for (const p of bench) rows.push({ ...p, __kind: 'player' });
+  }
+  return rows;
+}
+
+function playerColumnCell(row, playGlassClick) {
+  if (row.__kind === 'label') return <span className="t-label text-text-3">{row.__label}</span>;
+  if (row.__kind === 'totals') return <span className="t-small font-semibold text-text-1">Totals</span>;
+
+  const headshot = row.headshot_url ? getHeadshotUrl(row.headshot_url, 48) : null;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="h-6 w-6 rounded-sm overflow-hidden bg-surface-2 border border-border shrink-0">
+        {headshot && <img src={headshot} alt="" width={24} height={24} loading="lazy" className="w-full h-full object-cover" />}
+      </span>
+      <Link to={`/player/${row.id || '1'}`} onClick={playGlassClick} className="text-text-1 hover:text-accent transition-colors">
+        {row.name}
+      </Link>
+      {row.position && <span className="t-label text-text-3">{row.position}</span>}
+    </span>
+  );
+}
 
 function FullTeamTable({ teamAbbrev, players, totals }) {
   const logo = getLogoUrl(teamAbbrev);
   const { playGlassClick } = useTheme();
-  const totalPts = totals?.PTS ?? totals?.points;
 
-  const rows = [...players.filter((p) => p.starter), ...players.filter((p) => !p.starter)];
+  const rows = buildRows(players);
+  if (totals && Object.keys(totals).length > 0) rows.push(buildTotalsRow(totals));
 
   const columns = [
     {
       key: 'player',
       label: 'Player',
-      render: (p) => (
-        <Link to={`/player/${p.id || '1'}`} onClick={playGlassClick} className="text-text-1 hover:text-accent transition-colors">
-          {p.name}
-        </Link>
-      ),
+      render: (r) => playerColumnCell(r, playGlassClick),
     },
     ...STAT_COLUMNS,
   ];
 
   return (
     <Card>
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3">
         <TeamMark abbrev={teamAbbrev} logoUrl={logo} size="sm" />
-        {totalPts != null && (
-          <span className="t-label text-text-3">
-            Total <span className="tnum text-text-2">{totalPts}</span>
-          </span>
-        )}
       </div>
       <DataTable columns={columns} rows={rows} getKey={(r) => r.name} />
     </Card>

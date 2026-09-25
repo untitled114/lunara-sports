@@ -45,7 +45,7 @@ export function MomentumMeter({ game }) {
       <div className="relative h-2 rounded-sm bg-surface-2 overflow-hidden">
         <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
         <div
-          className="absolute inset-y-0 bg-live"
+          className="absolute inset-y-0 bg-live transition-all duration-1000 ease-out"
           style={{
             width: `${fillPct / 2}%`,
             left: homeLeads ? '50%' : `${50 - fillPct / 2}%`,

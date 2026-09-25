@@ -19,18 +19,31 @@ function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf 
   const { playGlassClick } = useTheme();
 
   return (
-    <div className={`flex items-center gap-3 sm:gap-4 ${isAway ? '' : 'flex-row-reverse text-right'}`}>
-      <Link to={`/team/${abbrev}`} onClick={() => playGlassClick()} className="shrink-0">
-        <TeamMark abbrev={abbrev} logoUrl={logoUrl} size="lg" />
-      </Link>
+    <div className={`flex flex-col gap-1.5 min-w-0 ${isAway ? '' : 'items-end text-right'}`}>
+      {/* Row 1: logo+abbrev and score — the two things that must never crowd each other */}
+      <div className={`flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0 ${isAway ? '' : 'flex-row-reverse'}`}>
+        <Link to={`/team/${abbrev}`} onClick={() => playGlassClick()} className="shrink-0">
+          <TeamMark abbrev={abbrev} logoUrl={logoUrl} size="lg" />
+        </Link>
 
-      <div className="flex flex-col gap-1 min-w-0">
-        {seed && <Badge className="self-start">{conf || 'Conf'} #{seed}</Badge>}
-        <p className="t-small text-text-2 truncate max-w-[160px]">{name}</p>
-        {record && <p className="t-small tnum text-text-3">{record}</p>}
+        <span className="relative shrink-0">
+          <span className={`t-score tnum ${isWinner ? 'text-text-1' : 'text-text-3'}`}>{score}</span>
+          {isWinner && (
+            <span className="absolute -right-2 -top-1 h-2 w-2 rounded-sm bg-live animate-ping" aria-hidden="true" />
+          )}
+        </span>
       </div>
 
-      <span className={`t-score tnum ml-auto ${isWinner ? 'text-text-1' : 'text-text-3'}`}>{score}</span>
+      {/* Row 2: seed, full name (sm+) and record — never competes with the score for width */}
+      <div className={`flex flex-col gap-1 min-w-0 ${isAway ? '' : 'items-end'}`}>
+        {seed && (
+          <span className="hidden sm:inline-flex">
+            <Badge>{conf || 'Conf'} #{seed}</Badge>
+          </span>
+        )}
+        <p className="hidden sm:block t-small text-text-2 truncate max-w-[160px]">{name}</p>
+        {record && <p className="t-small tnum text-text-3 whitespace-nowrap">{record}</p>}
+      </div>
     </div>
   );
 }
