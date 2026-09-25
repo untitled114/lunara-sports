@@ -9,6 +9,7 @@ straight to Postgres, so this poll is the sole play-broadcast path.
 from __future__ import annotations
 
 import asyncio
+import time
 
 import structlog
 from sqlalchemy import select
@@ -25,6 +26,16 @@ logger = structlog.get_logger(__name__)
 _watermarks: dict[str, int] = {}
 
 POLL_INTERVAL = 0.25  # seconds — the only path from a new DB play to WebSocket clients
+ERROR_LOG_WINDOW = 60.0  # seconds — at most one ws.poller_error per window (PG down)
+
+
+def forget_watermark(game_id: str) -> None:
+    """Drop a game's watermark once its room empties, so a later first joiner starts
+    from that joiner's history instead of replaying everything since it was set."""
+    _watermarks.pop(game_id, None)
+
+
+manager.on_room_emptied(forget_watermark)
 
 
 def _play_to_dict(play: Play) -> dict:
@@ -93,11 +104,19 @@ async def _poll_once() -> None:
 async def run_play_poller() -> None:
     """Run the play poller loop indefinitely."""
     logger.info("ws.poller_started", interval=POLL_INTERVAL)
+    last_logged: float | None = None
+    suppressed = 0
     while True:
         try:
             await _poll_once()
         except Exception as e:
-            logger.warning("ws.poller_error", error=str(e))
+            # 4 cycles/s against a down Postgres would flood the journal.
+            now = time.monotonic()
+            if last_logged is None or now - last_logged >= ERROR_LOG_WINDOW:
+                logger.warning("ws.poller_error", error=str(e), suppressed=suppressed)
+                last_logged, suppressed = now, 0
+            else:
+                suppressed += 1
         await asyncio.sleep(POLL_INTERVAL)
 
 
@@ -117,8 +136,10 @@ async def get_recent_plays(game_id: str, limit: int = 50) -> list[dict]:
         result = await session.execute(stmt)
         plays = list(reversed(result.scalars().all()))
 
-        # Update watermark so poller doesn't re-broadcast these
+        # A game's FIRST joiner starts the watermark at its history, so the poller
+        # doesn't re-broadcast it. A later joiner must not move it: plays committed
+        # since the poller's last cycle would never reach the clients already here.
         if plays:
-            _watermarks[game_id] = max(p.sequence_number for p in plays)
+            _watermarks.setdefault(game_id, max(p.sequence_number for p in plays))
 
         return [_play_to_dict(p) for p in plays]
