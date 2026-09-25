@@ -25,18 +25,27 @@ function ResultBadge({ result }) {
   return <Badge variant={result === 'W' ? 'win' : 'loss'}>{result}</Badge>;
 }
 
+// Every field the pre-design-system profile rendered for a game row (date,
+// home/away + opponent, result, final score, PTS/REB/AST/STL/BLK, FG, MIN) —
+// kept here in one place so neither the Recent Performances preview nor the
+// full Game Log table can drop a field the old page showed (ruling D9).
 const GAME_LOG_COLUMNS = [
   { key: 'date', label: 'Date' },
-  { key: 'opponent', label: 'Opponent' },
+  {
+    key: 'opponent',
+    label: 'Opponent',
+    render: (r) => `${r.home_away ? `${r.home_away} ` : ''}${r.opponent ?? ''}`,
+  },
   { key: 'result', label: 'W/L', render: (r) => <ResultBadge result={r.result} /> },
+  { key: 'score', label: 'Score', numeric: true, render: (r) => r.score ?? '—' },
   { key: 'pts', label: 'PTS', numeric: true },
   { key: 'reb', label: 'REB', numeric: true },
   { key: 'ast', label: 'AST', numeric: true },
+  { key: 'stl', label: 'STL', numeric: true },
+  { key: 'blk', label: 'BLK', numeric: true },
   { key: 'fg', label: 'FG', numeric: true },
   { key: 'min', label: 'MIN', numeric: true, render: (r) => r.min ?? '—' },
 ];
-
-const RECENT_COLUMNS = GAME_LOG_COLUMNS.filter((c) => ['date', 'opponent', 'result', 'pts', 'reb', 'ast'].includes(c.key));
 
 export default function PlayerProfilePage() {
   const { id } = useParams();
@@ -119,7 +128,6 @@ export default function PlayerProfilePage() {
     <div className="max-w-[1400px] mx-auto space-y-8 pb-32 px-4 pt-10">
       <Link
         to="/players"
-        onClick={() => playGlassClick()}
         className="inline-flex items-center gap-2 t-small text-text-2 hover:text-text-1 transition-colors group"
       >
         <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Players
@@ -201,7 +209,7 @@ export default function PlayerProfilePage() {
                             title="Recent performances"
                             aside={`Last ${recentGames.length} games`}
                           />
-                          <DataTable columns={RECENT_COLUMNS} rows={recentGames} getKey={(r) => r._key} />
+                          <DataTable columns={GAME_LOG_COLUMNS} rows={recentGames} getKey={(r) => r._key} />
                         </div>
                       )}
                     </div>

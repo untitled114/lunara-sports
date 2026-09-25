@@ -117,7 +117,6 @@ export default function PlayersPage() {
 
               <Link
                 to={`/team/${teamData.abbrev}?tab=roster`}
-                onClick={() => playGlassClick()}
                 className="block w-full py-2 t-label text-text-3 hover:text-text-1 hover:bg-surface-1 rounded-md transition-colors border border-dashed border-border text-center"
               >
                 View full roster

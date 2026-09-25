@@ -94,6 +94,57 @@ describe('PlayerProfilePage', () => {
       expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     })
   })
+
+  // Real fixture shape, captured from GET /players/:id/log against the live
+  // API (ruling D9: restyle only, never drop the fields the old profile
+  // rendered — the pre-design-system page showed home/away, score, STL and
+  // BLK for every recent game and it still must).
+  it('keeps the home/away marker, final score, and STL/BLK on every game row', async () => {
+    api.fetchPlayerDetail.mockResolvedValue({
+      id: '4701230',
+      name: 'Jalen Johnson',
+      team: 'Atlanta Hawks',
+      team_abbrev: 'ATL',
+      position: 'F',
+      jersey: '1',
+    })
+    api.fetchPlayerStats.mockResolvedValue({ ppg: '22.5', rpg: '10.3', apg: '7.9', gp: 72 })
+    api.fetchPlayerGameLog.mockResolvedValue([
+      {
+        date: '2026-04-30',
+        team: 'ATL',
+        opponent: 'NY',
+        home_away: 'vs',
+        pts: 21,
+        reb: 8,
+        ast: 6,
+        stl: 2,
+        blk: 1,
+        fg: '7-15',
+        three: '2-5',
+        min: '32',
+        result: 'L',
+        score: '140-89',
+      },
+    ])
+
+    renderWithRouter(<PlayerProfilePage />, { route: '/player/123', path: '/player/:id' })
+
+    // opponent cell combines home/away + opponent, e.g. "vs NY" (was dropped
+    // entirely in a prior pass of this rollout)
+    await screen.findByText('vs NY')
+
+    expect(screen.getByRole('columnheader', { name: 'Score' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'STL' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'BLK' })).toBeInTheDocument()
+
+    const score = screen.getByText('140-89')
+    expect(score).toHaveClass('tnum')
+    const stl = screen.getByText('2')
+    expect(stl).toHaveClass('tnum')
+    const blk = screen.getByText('1')
+    expect(blk).toHaveClass('tnum')
+  })
 })
 
 describe('design guardrails', () => {
