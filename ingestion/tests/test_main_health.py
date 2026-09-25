@@ -23,10 +23,11 @@ def _free_port() -> int:
 
 @pytest.mark.asyncio
 async def test_health_server_answers_200_on_configured_port(monkeypatch):
-    """health_server() (lines 142-154) binds PORT and answers any request with
-    a bare HTTP/1.1 200 OK — the Cloud Run health check contract."""
+    """health_server() binds PORT (on the default loopback host) and answers
+    any request with a bare HTTP/1.1 200 OK."""
     port = _free_port()
     monkeypatch.setenv("PORT", str(port))
+    monkeypatch.delenv("HEALTH_HOST", raising=False)
 
     task = asyncio.create_task(health_server())
     try:
@@ -51,10 +52,12 @@ async def test_health_server_answers_200_on_configured_port(monkeypatch):
             await task
 
 
-@pytest.mark.asyncio
-async def test_health_server_defaults_to_port_8080(monkeypatch):
-    """No PORT env var → defaults to 8080 (line 144)."""
-    monkeypatch.delenv("PORT", raising=False)
+async def _bind_args(monkeypatch, **env):
+    """Run health_server() against a stubbed start_server; return (host, port)."""
+    for k in ("PORT", "HEALTH_HOST"):
+        monkeypatch.delenv(k, raising=False)
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
     with patch("src.__main__.asyncio.start_server", new_callable=AsyncMock) as mock_start:
         mock_server = AsyncMock()
         mock_server.serve_forever = AsyncMock()
@@ -63,9 +66,24 @@ async def test_health_server_defaults_to_port_8080(monkeypatch):
         mock_start.return_value = mock_server
         await health_server()
     mock_start.assert_awaited_once()
+    mock_server.serve_forever.assert_awaited_once()
     _, host, port = mock_start.await_args.args
-    assert host == "0.0.0.0"
-    assert port == 8080
+    return host, port
+
+
+@pytest.mark.asyncio
+async def test_health_server_defaults_to_loopback_port_8080(monkeypatch):
+    """No PORT / HEALTH_HOST → 127.0.0.1:8080 (R21: never 0.0.0.0 by default;
+    on sport-suite-main 8080 on all interfaces collides with Airflow)."""
+    assert await _bind_args(monkeypatch) == ("127.0.0.1", 8080)
+
+
+@pytest.mark.asyncio
+async def test_health_server_honours_health_host_and_port(monkeypatch):
+    """HEALTH_HOST / PORT override the bind (TEST-NET address; start_server
+    is stubbed because binding a non-local address would fail)."""
+    got = await _bind_args(monkeypatch, HEALTH_HOST="192.0.2.1", PORT="9123")
+    assert got == ("192.0.2.1", 9123)
 
 
 def test_module_guard_runs_main_which_gathers_health_server_and_run():

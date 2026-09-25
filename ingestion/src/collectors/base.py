@@ -22,9 +22,9 @@ class BaseCollector(ABC):
 
     @abstractmethod
     async def poll(self) -> None:
-        """Run a single poll cycle: collect data and publish to Kafka.
+        """Run a single poll cycle: collect data and hand it to the sink.
 
         This method should call ``collect``, validate/transform results,
-        and hand them off to the configured Kafka producer.
+        ``produce`` them to the shared event sink and ``await`` its flush.
         """
         ...

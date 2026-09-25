@@ -7,8 +7,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pydantic import ValidationError
 
-pytestmark = pytest.mark.xfail(strict=True, reason="pending Task 10")
-
 
 def test_settings_require_database_url(monkeypatch):
     from src.config import Settings

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import runpy
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -10,63 +11,111 @@ import pytest
 from src.backfill import main
 
 
+def _args(**kw):
+    base = {"game": None, "start": None, "end": None}
+    base.update(kw)
+    return MagicMock(**base)
+
+
+def _io():
+    sink = MagicMock()
+    sink.flush = AsyncMock()
+    sink.close = AsyncMock()
+    http = AsyncMock()
+    return sink, http
+
+
 @pytest.mark.asyncio
 class TestBackfillMain:
-    async def test_no_args_prints_help(self):
+    async def test_no_args_prints_help_without_opening_io(self):
         with patch("src.backfill.argparse.ArgumentParser") as MockParser:
             parser_instance = MagicMock()
-            parser_instance.parse_args.return_value = MagicMock(game=None, start=None, end=None)
+            parser_instance.parse_args.return_value = _args()
             MockParser.return_value = parser_instance
             with (
-                patch("src.backfill.KafkaProducer") as MockProducer,
+                patch("src.backfill.build_io", new_callable=AsyncMock) as mock_build_io,
                 patch("src.backfill.HistoricalLoader") as MockLoader,
             ):
-                MockProducer.return_value = MagicMock()
-                MockLoader.return_value = MagicMock()
                 await main()
-                parser_instance.print_help.assert_called()
+        parser_instance.print_help.assert_called()
+        mock_build_io.assert_not_awaited()  # no DB pool / HTTP clients for --help
+        MockLoader.assert_not_called()
 
     async def test_single_game(self):
+        sink, http = _io()
         with patch("src.backfill.argparse.ArgumentParser") as MockParser:
             parser_instance = MagicMock()
-            parser_instance.parse_args.return_value = MagicMock(
-                game="401810001", start=None, end=None
-            )
+            parser_instance.parse_args.return_value = _args(game="401810001")
             MockParser.return_value = parser_instance
 
             mock_loader = AsyncMock()
             with (
-                patch("src.backfill.KafkaProducer") as MockProducer,
-                patch("src.backfill.HistoricalLoader", return_value=mock_loader),
+                patch("src.backfill.Settings") as MockSettings,
+                patch("src.backfill.build_io", new_callable=AsyncMock, return_value=(sink, http)),
+                patch("src.backfill.HistoricalLoader", return_value=mock_loader) as MockLoader,
             ):
-                mock_producer = MagicMock()
-                MockProducer.return_value = mock_producer
                 await main()
-                mock_loader.load_game.assert_called_once_with("401810001")
-                mock_producer.flush.assert_called()
+        MockLoader.assert_called_once_with(MockSettings.return_value, sink, http)
+        mock_loader.load_game.assert_awaited_once_with("401810001")
+        sink.close.assert_awaited_once()
+        http.aclose.assert_awaited_once()
 
     async def test_date_range(self):
+        sink, http = _io()
         with patch("src.backfill.argparse.ArgumentParser") as MockParser:
             parser_instance = MagicMock()
-            parser_instance.parse_args.return_value = MagicMock(
-                game=None, start="2026-02-01", end="2026-02-02"
-            )
+            parser_instance.parse_args.return_value = _args(start="2026-02-01", end="2026-02-02")
             MockParser.return_value = parser_instance
 
             mock_loader = AsyncMock()
             with (
-                patch("src.backfill.KafkaProducer") as MockProducer,
+                patch("src.backfill.Settings"),
+                patch("src.backfill.build_io", new_callable=AsyncMock, return_value=(sink, http)),
                 patch("src.backfill.HistoricalLoader", return_value=mock_loader),
             ):
-                mock_producer = MagicMock()
-                MockProducer.return_value = mock_producer
                 await main()
-                mock_loader.load_date_range.assert_called_once()
-                mock_producer.flush.assert_called()
+        mock_loader.load_date_range.assert_awaited_once_with(date(2026, 2, 1), date(2026, 2, 2))
+        sink.close.assert_awaited_once()
+        http.aclose.assert_awaited_once()
+
+    async def test_loader_failure_still_closes_sink_and_http(self):
+        sink, http = _io()
+        with patch("src.backfill.argparse.ArgumentParser") as MockParser:
+            parser_instance = MagicMock()
+            parser_instance.parse_args.return_value = _args(game="401810001")
+            MockParser.return_value = parser_instance
+
+            mock_loader = AsyncMock()
+            mock_loader.load_game.side_effect = RuntimeError("espn down")
+            with (
+                patch("src.backfill.Settings"),
+                patch("src.backfill.build_io", new_callable=AsyncMock, return_value=(sink, http)),
+                patch("src.backfill.HistoricalLoader", return_value=mock_loader),
+                pytest.raises(RuntimeError, match="espn down"),
+            ):
+                await main()
+        sink.close.assert_awaited_once()
+        http.aclose.assert_awaited_once()
+
+    async def test_sink_close_failure_still_closes_http(self):
+        sink, http = _io()
+        sink.close.side_effect = RuntimeError("db down")
+        with patch("src.backfill.argparse.ArgumentParser") as MockParser:
+            parser_instance = MagicMock()
+            parser_instance.parse_args.return_value = _args(game="401810001")
+            MockParser.return_value = parser_instance
+            with (
+                patch("src.backfill.Settings"),
+                patch("src.backfill.build_io", new_callable=AsyncMock, return_value=(sink, http)),
+                patch("src.backfill.HistoricalLoader", return_value=AsyncMock()),
+                pytest.raises(RuntimeError, match="db down"),
+            ):
+                await main()
+        http.aclose.assert_awaited_once()
 
 
 def test_module_guard_invokes_asyncio_run_with_main():
-    """`if __name__ == "__main__": asyncio.run(main())` (backfill.py:51).
+    """`if __name__ == "__main__": asyncio.run(main())`.
 
     asyncio.run is mocked so the coroutine it receives is never actually
     driven — main()'s own behavior is already fully characterized above by

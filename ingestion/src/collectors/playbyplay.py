@@ -1,8 +1,10 @@
 """ESPN play-by-play collector.
 
-Polls the ESPN game summary endpoint for individual play events and publishes
-each play to the ``raw.plays`` Kafka topic. Deduplicates against previously
-seen sequence numbers so only new plays are produced on each poll cycle.
+Polls the ESPN game summary endpoint for individual play events and produces
+each play to the shared event sink under the ``raw.plays`` topic. Deduplicates
+against previously seen sequence numbers so only new plays are produced on each
+poll cycle (a restarted collector starts at -1 and resends; the sink's
+``ON CONFLICT DO NOTHING`` absorbs the duplicates).
 """
 
 from __future__ import annotations
@@ -15,10 +17,11 @@ import structlog
 
 from src.collectors.base import BaseCollector
 from src.config import Settings
-from src.producers.kafka_producer import KafkaProducer
+from src.http.espn import EspnHttp
 from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
 from src.resilience.retry import espn_retry
 from src.schemas.events import PlayEvent
+from src.sinks.base import EventSink
 
 logger = structlog.get_logger(__name__)
 
@@ -182,15 +185,16 @@ class PlayByPlayCollector(BaseCollector):
 
     Parameters:
         settings: Application configuration.
-        producer: Kafka producer used to publish events.
+        sink: Shared event sink the plays are produced to.
         game_id: ESPN game identifier to poll.
+        http: Shared ESPN HTTP client (owned — and closed — by the caller).
     """
 
-    def __init__(self, settings: Settings, producer: KafkaProducer, game_id: str) -> None:
+    def __init__(self, settings: Settings, sink: EventSink, game_id: str, http: EspnHttp) -> None:
         self.settings = settings
-        self.producer = producer
+        self.sink = sink
         self.game_id = game_id
-        self.client = httpx.AsyncClient(timeout=10.0)
+        self.http = http
         self._max_sequence: int = -1  # highest sequence number seen so far
         self._circuit_breaker = CircuitBreaker()
 
@@ -206,7 +210,7 @@ class PlayByPlayCollector(BaseCollector):
         params = {"event": self.game_id}
         logger.debug("playbyplay.fetching", game_id=self.game_id)
 
-        resp = await self.client.get(url, params=params)
+        resp = await self.http.get(url, params=params)
         resp.raise_for_status()
         return resp.json()
 
@@ -249,7 +253,11 @@ class PlayByPlayCollector(BaseCollector):
         return new_plays
 
     async def poll(self) -> None:
-        """Run one poll cycle: collect plays and produce new ones to Kafka."""
+        """Run one poll cycle: produce new plays to the sink and flush it.
+
+        ESPN errors skip the cycle; a sink flush error propagates to the caller
+        (the plays stay in the sink's buffer for its next flush).
+        """
         try:
             plays = await self.collect()
         except CircuitOpenError:
@@ -275,7 +283,7 @@ class PlayByPlayCollector(BaseCollector):
             return
 
         for play in plays:
-            self.producer.produce(topic=TOPIC, key=self.game_id, value=play)
+            self.sink.produce(topic=TOPIC, key=self.game_id, value=play)
             logger.debug(
                 "playbyplay.produced",
                 game_id=self.game_id,
@@ -285,7 +293,7 @@ class PlayByPlayCollector(BaseCollector):
             )
 
         if plays:
-            self.producer.flush()
+            await self.sink.flush()
             logger.info(
                 "playbyplay.poll_complete",
                 game_id=self.game_id,
@@ -293,6 +301,5 @@ class PlayByPlayCollector(BaseCollector):
             )
 
     async def close(self) -> None:
-        """Shut down the HTTP client and flush the producer."""
-        await self.client.aclose()
-        self.producer.flush()
+        """Flush the sink. The shared http and sink are closed by their owner."""
+        await self.sink.flush()

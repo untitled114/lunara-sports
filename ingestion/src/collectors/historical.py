@@ -1,7 +1,7 @@
 """Historical data loader for backfilling past games.
 
-Fetches completed game data from ESPN for a given date range and publishes
-events to Kafka so downstream consumers can rebuild state.
+Fetches completed game data from ESPN for a given date range and produces the
+events to the shared event sink (Postgres) so the stored state is rebuilt.
 """
 
 from __future__ import annotations
@@ -14,7 +14,8 @@ import structlog
 from src.collectors.playbyplay import PlayByPlayCollector
 from src.collectors.scoreboard import ScoreboardCollector
 from src.config import Settings
-from src.producers.kafka_producer import KafkaProducer
+from src.http.espn import EspnHttp
+from src.sinks.base import EventSink
 
 logger = structlog.get_logger(__name__)
 
@@ -24,19 +25,21 @@ class HistoricalLoader:
 
     Parameters:
         settings: Application configuration.
-        producer: Kafka producer used to publish events.
+        sink: Shared event sink the events are produced to.
+        http: Shared ESPN HTTP client (owned — and closed — by the caller).
     """
 
-    def __init__(self, settings: Settings, producer: KafkaProducer) -> None:
+    def __init__(self, settings: Settings, sink: EventSink, http: EspnHttp) -> None:
         self.settings = settings
-        self.producer = producer
+        self.sink = sink
+        self.http = http
 
     async def load_date_range(self, start: date, end: date) -> None:
         """Load all games and plays for every date in [start, end].
 
         For each date:
-        1. Fetch the scoreboard (game states) and publish to raw.scoreboard
-        2. For each completed game, fetch play-by-play and publish to raw.plays
+        1. Fetch the scoreboard (game states) and produce to raw.scoreboard
+        2. For each completed game, fetch play-by-play and produce to raw.plays
         3. Sleep between dates to respect ESPN rate limits
         """
         current = start
@@ -53,16 +56,16 @@ class HistoricalLoader:
 
             try:
                 # Fetch and publish scoreboard
-                collector = ScoreboardCollector(self.settings, self.producer)
+                collector = ScoreboardCollector(self.settings, self.sink, self.http)
                 try:
                     games = await collector.collect()
                     for game in games:
-                        self.producer.produce(
+                        self.sink.produce(
                             topic="raw.scoreboard",
                             key=game["game_id"],
                             value=game,
                         )
-                    self.producer.flush()
+                    await self.sink.flush()
                     total_games += len(games)
                     logger.info("historical.scoreboard_done", date=str(current), games=len(games))
                 except Exception as e:
@@ -106,15 +109,17 @@ class HistoricalLoader:
     async def load_game(self, game_id: str) -> None:
         """Load a single historical game by its ESPN game ID.
 
-        Fetches play-by-play data and publishes to Kafka.
+        Fetches play-by-play data and produces it to the sink.
         """
         logger.info("historical.loading_game", game_id=game_id)
         plays_loaded = await self._load_single_game_pbp(game_id)
         logger.info("historical.game_complete", game_id=game_id, plays=plays_loaded)
 
     async def _load_single_game_pbp(self, game_id: str) -> int:
-        """Fetch and publish play-by-play for a single game. Returns play count."""
-        pbp_collector = PlayByPlayCollector(self.settings, self.producer, game_id)
+        """Fetch and produce play-by-play for a single game. Returns play count."""
+        pbp_collector = PlayByPlayCollector(
+            self.settings, self.sink, game_id=game_id, http=self.http
+        )
         try:
             await pbp_collector.poll()
             return pbp_collector.new_play_count
