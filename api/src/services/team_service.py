@@ -27,6 +27,8 @@ async def get_teams(session: AsyncSession) -> list[dict]:
     # The DB may carry alias rows (e.g. "UTAH" alongside "UTA") seeded so raw
     # ingestion FKs never failed before normalization existed — exclude any row
     # whose abbrev maps to a *different* canonical abbrev, so each team lists once.
+    # Relies on from_espn_abbrev being idempotent for already-canonical codes
+    # (from_espn_abbrev("UTA") == "UTA"), or this filter would drop everything.
     teams = [t for t in result.scalars().all() if from_espn_abbrev(t.abbrev) == t.abbrev]
 
     items = []
