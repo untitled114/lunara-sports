@@ -27,6 +27,7 @@ readonly MIN_FREE_KB=2000000
 
 REL=""
 ARMED=0
+RB_FAILED=()
 declare -A PREV_TARGET=() WAS_ENABLED=() WAS_ACTIVE=()
 ADMIN_BASE=""
 BARE_BASE=""
@@ -60,41 +61,64 @@ rollback_stop() {
 # Automatic rollback after a failed deploy: restore exactly what was there before.
 rollback_release() {
     step "ROLLBACK to the state before release $REL"
+    # Best effort: every step runs even if an earlier one fails; failures are collected
+    # and summarized, and the caller exits non-zero either way.
+    set +e
     local svc u f
+    RB_FAILED=()
     for svc in "${CODE_SVCS[@]}"; do
         if [[ -n "${PREV_TARGET[$svc]}" ]]; then
-            ln -sfn "${PREV_TARGET[$svc]}" "$LUNARA_ROOT/.$svc.tmp"
-            mv -Tf "$LUNARA_ROOT/.$svc.tmp" "$LUNARA_ROOT/$svc"
-            info "$LUNARA_ROOT/$svc -> ${PREV_TARGET[$svc]}"
+            rb ln -sfn "${PREV_TARGET[$svc]}" "$LUNARA_ROOT/.$svc.tmp" &&
+                rb mv -Tf "$LUNARA_ROOT/.$svc.tmp" "$LUNARA_ROOT/$svc" &&
+                info "$LUNARA_ROOT/$svc -> ${PREV_TARGET[$svc]}"
         else
-            rm -f "$LUNARA_ROOT/$svc"
+            rb rm -f "$LUNARA_ROOT/$svc"
         fi
     done
     for u in "${SERVICES[@]}"; do
         if [[ -f "$REL/.rollback/$u.service" ]]; then
-            install -m 0644 "$REL/.rollback/$u.service" "/etc/systemd/system/$u.service"
+            rb install -m 0644 "$REL/.rollback/$u.service" "/etc/systemd/system/$u.service"
         fi
     done
     for f in "$NGINX_SITE" "$CATCHALL"; do
         if [[ -f "$REL/.rollback/nginx-$f" ]]; then
-            install -m 0644 "$REL/.rollback/nginx-$f" "/etc/nginx/sites-available/$f"
-            ln -sfn "/etc/nginx/sites-available/$f" "/etc/nginx/sites-enabled/$f"
+            rb install -m 0644 "$REL/.rollback/nginx-$f" "/etc/nginx/sites-available/$f"
+            rb ln -sfn "/etc/nginx/sites-available/$f" "/etc/nginx/sites-enabled/$f"
         else
-            rm -f "/etc/nginx/sites-enabled/$f" "/etc/nginx/sites-available/$f"
+            rb rm -f "/etc/nginx/sites-enabled/$f" "/etc/nginx/sites-available/$f"
         fi
     done
-    systemctl daemon-reload
+    rb systemctl daemon-reload
     for u in "${SERVICES[@]}"; do
         if [[ "${WAS_ACTIVE[$u]}" == active ]]; then
-            systemctl restart "$u" || true
+            rb systemctl restart "$u"
         else
-            systemctl stop "$u" 2>/dev/null || true
+            rb systemctl stop "$u"
         fi
         if [[ "${WAS_ENABLED[$u]}" != enabled ]]; then
-            systemctl disable "$u" 2>/dev/null || true
+            rb systemctl disable "$u"
         fi
     done
-    reload_nginx_if_valid
+    if nginx -t 2>/dev/null; then
+        rb systemctl reload nginx
+    else
+        RB_FAILED+=("nginx -t (nginx NOT reloaded)")
+    fi
+    if ((${#RB_FAILED[@]})); then
+        printf '\nROLLBACK INCOMPLETE: %d step(s) failed:\n' "${#RB_FAILED[@]}" >&2
+        printf '  - %s\n' "${RB_FAILED[@]}" >&2
+        return 1
+    fi
+    info "rollback complete: every step succeeded"
+    return 0
+}
+
+# Run one rollback step; record a failure instead of aborting.
+rb() {
+    "$@" && return 0
+    RB_FAILED+=("$*")
+    printf '    ROLLBACK STEP FAILED: %s\n' "$*" >&2
+    return 1
 }
 
 on_error() {
@@ -106,7 +130,7 @@ on_error() {
     printf '\nDEPLOY FAILED (exit %s)\n' "$rc" >&2
     if ((ARMED)); then
         print_logs
-        rollback_release
+        rollback_release || printf 'rollback needs manual follow-up (see above)\n' >&2
     else
         info "nothing live was changed; the release dir $REL is left for inspection"
     fi
@@ -181,9 +205,18 @@ build_venvs() {
 
 http_code() { curl -s -m 5 -o /dev/null -w '%{http_code}' "$@" || true; }
 
+# A real HTTP status is three digits, 1xx-5xx. curl prints 000 when it cannot connect.
+is_http_code() { [[ "$1" =~ ^[1-5][0-9][0-9]$ ]]; }
+
 capture_baseline() {
     ADMIN_BASE="$(http_code -H 'Host: admin.lunara-app.com' http://127.0.0.1/grafana/)"
     BARE_BASE="$(http_code http://127.0.0.1/)"
+    # Pre-arm: an unreachable baseline fails the deploy before anything live changes;
+    # two error states must never compare as "unchanged".
+    is_http_code "$ADMIN_BASE" ||
+        die "baseline unreachable: admin /grafana/ via 127.0.0.1:80 gave '${ADMIN_BASE}'"
+    is_http_code "$BARE_BASE" ||
+        die "baseline unreachable: bare-IP / via 127.0.0.1:80 gave '${BARE_BASE}'"
     info "baseline before nginx change: admin /grafana/ = $ADMIN_BASE, bare-IP / = $BARE_BASE"
 }
 
@@ -263,6 +296,9 @@ health_gates() {
     local admin bare
     admin="$(http_code -H 'Host: admin.lunara-app.com' http://127.0.0.1/grafana/)"
     bare="$(http_code http://127.0.0.1/)"
+    if ! is_http_code "$admin" || ! is_http_code "$bare"; then
+        gate_fail "admin unreachable after the change: /grafana/ '$admin', bare-IP / '$bare'"
+    fi
     [[ "$admin" == "$ADMIN_BASE" && "$bare" == "$BARE_BASE" ]] ||
         gate_fail "admin regression: /grafana/ $ADMIN_BASE -> $admin, bare-IP / $BARE_BASE -> $bare"
     info "gate 3 admin unchanged: /grafana/ = $admin, bare-IP / = $bare"
@@ -295,16 +331,26 @@ SQL
     info "gate 6 all units active, no crash-restarts"
 }
 
+# Runs after every gate passed and the ERR rollback is disarmed: a hiccup here is a
+# warning, never a reason to roll back a healthy release.
 finish_release() {
     step "7. record release $REL"
-    rsync -a --delete "$REL/deploy/" "$LUNARA_ROOT/deploy/"
-    rsync -a --delete "$REL/migrations/" "$LUNARA_ROOT/migrations/"
-    local n
-    n="$(find "$RELEASES" -mindepth 1 -maxdepth 1 -type d | wc -l)"
+    local warn=0 n
+    rsync -a --delete "$REL/deploy/" "$LUNARA_ROOT/deploy/" || {
+        info "WARNING: could not refresh $LUNARA_ROOT/deploy from the release"
+        warn=1
+    }
+    rsync -a --delete "$REL/migrations/" "$LUNARA_ROOT/migrations/" || {
+        info "WARNING: could not refresh $LUNARA_ROOT/migrations from the release"
+        warn=1
+    }
+    n="$(find "$RELEASES" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)" || n=0
     if ((n > 5)); then
         info "NOTE: $n releases under $RELEASES; old ones are not pruned automatically"
         info "      (README: 'Releases'). Current: $REL"
     fi
+    ((warn == 0)) || info "WARNING: release is live and healthy; fix the warnings above by hand"
+    return 0
 }
 
 do_deploy() {
@@ -332,8 +378,11 @@ do_deploy() {
     since="$(date +%s)"
     systemctl restart "${SERVICES[@]}"
     health_gates "$since"
-    finish_release
+    # All gates passed: disarm before any bookkeeping.
     trap - ERR
+    set +o errtrace
+    ARMED=0
+    finish_release || info "WARNING: recording the release failed; the release stays live"
     step "deploy OK: release $release is live"
 }
 
@@ -368,8 +417,12 @@ describe() {
                 "   journalctl -u lunara-ingestion --since @<restart> has ingestion.starting;" \
                 "   after 5 s: cephalon-lumen active and NRestarts unchanged for all three units" \
                 "   any failure after the swap: journalctl -n 50 per unit, then roll back to the" \
-                "   previous release (symlinks, unit files, nginx files, enabled/active state)" \
-                "7. refresh $LUNARA_ROOT/{deploy,migrations} from the release"
+                "   previous release (symlinks, unit files, nginx files, enabled/active state);" \
+                "   rollback is best effort: every step runs, failures are summarized, exit non-zero" \
+                "   (the baseline itself must be real HTTP codes, else fail before any change;" \
+                "    000 after the change always fails)" \
+                "7. gates passed: disarm rollback, then refresh $LUNARA_ROOT/{deploy,migrations}" \
+                "   from the release (a failure here is a warning, never a rollback)"
             ;;
         rollback)
             printf '%s\n' \

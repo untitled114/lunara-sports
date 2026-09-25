@@ -185,7 +185,9 @@ deploy/oci/deploy.sh
    here leaves the live release running.
 5. **Record a baseline and arm rollback.**
    - Baseline: the HTTP codes of `Host: admin.lunara-app.com http://127.0.0.1/grafana/`
-     and bare-IP `http://127.0.0.1/`.
+     and bare-IP `http://127.0.0.1/`. Both must be real 3-digit codes. `000` (no
+     connection) or empty fails the deploy here, before anything live changes, because two
+     error states must never compare as "unchanged".
    - Rollback state: the previous symlink targets, each unit's enabled/active state, and
      copies of the unit files and both nginx files in `<release>/.rollback`.
 6. **Swap and install.** Swap the `/opt/lunara/<svc>` symlinks atomically (`mv -T`),
@@ -195,12 +197,14 @@ deploy/oci/deploy.sh
    - `127.0.0.1:8010/health` returns `"status":"ok"`;
    - `curl -skf --resolve api.lunara-app.com:443:127.0.0.1 https://api.lunara-app.com/health`;
    - `curl -sf -H 'Host: api.lunara-app.com' http://127.0.0.1/health`;
-   - the admin `/grafana/` and bare-IP `/` codes are **unchanged** from the baseline;
+   - the admin `/grafana/` and bare-IP `/` codes are **unchanged** from the baseline. A
+     `000` after the change always fails;
    - `SELECT count(*) FROM teams` as `lunara_app` is at least 30;
    - `journalctl -u lunara-ingestion --since @<restart>` contains `ingestion.starting`;
    - after 5 s, `cephalon-lumen` is active and `NRestarts` has not grown for any unit.
-8. **Refresh `/opt/lunara/{deploy,migrations}`** from the release. `live_slate_check.py`
-   runs from there.
+8. **Disarm rollback, then refresh `/opt/lunara/{deploy,migrations}`** from the release;
+   `live_slate_check.py` runs from there. Once every gate has passed, a failure at this
+   point is only a warning and never rolls back the healthy release.
 
 **Automatic rollback** covers any failure after the swap. The script prints
 `journalctl -n 50` for each unit, then:
@@ -210,6 +214,9 @@ deploy/oci/deploy.sh
 - restarts the units that were active before and stops the others;
 - disables the units that this run enabled;
 - reloads nginx if `nginx -t` passes.
+
+Rollback is **best effort**: every step runs even if an earlier one fails, the failed
+steps are listed under `ROLLBACK INCOMPLETE`, and the deploy exits non-zero either way.
 
 Sport-suite services, Airflow, `sportsuite_db` and `lunara_redis` are never touched.
 
