@@ -202,6 +202,18 @@ async def test_long_event_type_is_passed_through_untruncated():
     assert conn.calls[0][1][0][4] == "x" * 45
 
 
+async def test_four_letter_team_abbrev_is_passed_through_untruncated():
+    # ESPN's Utah abbrev is "UTAH": migration 013 widens plays.team to VARCHAR(5)
+    conn = FakeConn()
+    sink = PostgresSink("postgresql://x", pool=FakePool(conn))
+    sink.produce("raw.scoreboard", "401", {**GAME, "home_team": "UTAH"})
+    sink.produce("raw.plays", "401", {**PLAY, "team": "UTAH"})
+    await sink.flush()
+    assert conn.calls[0][1][0][1] == "UTAH"
+    assert conn.calls[1][1][0][6] == "UTAH"
+    assert sink.pending == 0
+
+
 async def test_fk_violation_skips_only_the_bad_game():
     # Review Focus #2: unknown team abbrev fails one row, not the batch
     conn = FakeConn(fk_rows={"999"})

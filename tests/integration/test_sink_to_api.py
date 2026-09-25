@@ -38,7 +38,9 @@ def _game(game_id: str, home: str = "BOS", away: str = "NY") -> dict:
     }
 
 
-def _play(game_id: str, seq: int, event_type: str = "Jump Shot") -> dict:
+def _play(
+    game_id: str, seq: int, event_type: str = "Jump Shot", team: str = "BOS"
+) -> dict:
     return {
         "game_id": game_id,
         "sequence_number": seq,
@@ -46,7 +48,7 @@ def _play(game_id: str, seq: int, event_type: str = "Jump Shot") -> dict:
         "clock": "11:40",
         "event_type": event_type,
         "description": "Tatum makes 2-foot jumper",
-        "team": "BOS",
+        "team": team,
         "player_name": "Jayson Tatum",
         "home_score": 2,
         "away_score": 0,
@@ -99,6 +101,25 @@ async def test_play_flows_to_websocket(db, sink, session_factory, ws):
     # the watermark holds: a second cycle with nothing new sends nothing
     await play_poller.poll_once(session_factory)
     assert len(sent) == 1
+
+
+async def test_four_letter_espn_abbrev_play_lands_and_broadcasts(
+    db, sink, session_factory, ws
+):
+    """ESPN's Utah abbrev is "UTAH" (seeded in teams by 007): a Jazz play must land
+    in plays.team and broadcast, not be skipped as a DataError (VARCHAR(3))."""
+    subscribed, sent = ws
+    sink.produce(TOPIC_SCOREBOARD, "403", _game("403", home="UTAH", away="NY"))
+    sink.produce(TOPIC_PLAYS, "403", _play("403", 1, team="UTAH"))
+    await sink.flush()
+
+    assert sink.pending == 0
+    assert await db.fetchval("SELECT team FROM plays WHERE game_id='403'") == "UTAH"
+    assert await db.fetchval("SELECT home_team FROM games WHERE id='403'") == "UTAH"
+
+    subscribed.append("403")
+    await play_poller.poll_once(session_factory)
+    assert [(gid, m["data"]["team"]) for gid, m in sent] == [("403", "UTAH")]
 
 
 async def test_unknown_team_skips_only_that_game_and_its_play(

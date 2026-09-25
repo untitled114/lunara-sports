@@ -85,7 +85,7 @@ class Play(Base):
     clock: Mapped[str | None] = mapped_column(String(10))
     event_type: Mapped[str | None] = mapped_column(String(50))
     description: Mapped[str | None] = mapped_column(Text)
-    team: Mapped[str | None] = mapped_column(String(3))
+    team: Mapped[str | None] = mapped_column(String(5))
     player_name: Mapped[str | None] = mapped_column(String(100))
     home_score: Mapped[int | None] = mapped_column(Integer)
     away_score: Mapped[int | None] = mapped_column(Integer)
