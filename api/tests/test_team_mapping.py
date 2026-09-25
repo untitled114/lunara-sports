@@ -67,6 +67,21 @@ class TestFromEspnAbbrev:
     def test_unknown_passthrough(self):
         assert from_espn_abbrev("BOS") == "BOS"
 
+    def test_gsw_to_gs(self):
+        assert from_espn_abbrev("GSW") == "GS"
+
+    def test_was_to_wsh(self):
+        assert from_espn_abbrev("WAS") == "WSH"
+
+    def test_nyk_to_ny(self):
+        assert from_espn_abbrev("NYK") == "NY"
+
+    def test_nop_to_no(self):
+        assert from_espn_abbrev("NOP") == "NO"
+
+    def test_sas_to_sa(self):
+        assert from_espn_abbrev("SAS") == "SA"
+
 
 class TestTeamIds:
     def test_30_teams(self):
