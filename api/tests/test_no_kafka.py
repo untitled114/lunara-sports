@@ -31,7 +31,6 @@ def test_kafka_package_is_gone():
         importlib.import_module("src.kafka")
 
 
-@pytest.mark.xfail(strict=True, reason="pending Task 11")
 def test_settings_have_no_kafka_or_gcs():
     from src.config import Settings
 

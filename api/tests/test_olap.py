@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 from datetime import date, datetime, timezone
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pyarrow.parquet as pq
 import pytest
 
 from src.services.olap_exporter import _pick_to_row, export_picks_for_date
@@ -76,39 +78,32 @@ def test_pick_to_row_nulls():
 
 
 @pytest.mark.asyncio
-async def test_export_picks_no_resolved():
+async def test_export_picks_no_resolved(tmp_path: Path):
     session = AsyncMock()
     result = MagicMock()
     result.scalars.return_value.all.return_value = []
     session.execute = AsyncMock(return_value=result)
 
-    count = await export_picks_for_date(session, date(2026, 3, 8), "lunara-olap")
+    count = await export_picks_for_date(session, date(2026, 3, 8), tmp_path)
     assert count == 0
+    assert not (tmp_path / "model_picks").exists()
 
 
 @pytest.mark.asyncio
-async def test_export_picks_uploads_parquet():
+async def test_export_picks_writes_local_parquet(tmp_path: Path):
     session = AsyncMock()
     result = MagicMock()
     result.scalars.return_value.all.return_value = [_make_pick()]
     session.execute = AsyncMock(return_value=result)
 
-    mock_blob = MagicMock()
-    mock_bucket = MagicMock()
-    mock_bucket.blob.return_value = mock_blob
-    mock_client = MagicMock()
-    mock_client.bucket.return_value = mock_bucket
-
-    mock_gcs_module = MagicMock()
-    mock_gcs_module.Client.return_value = mock_client
-    with patch.dict("sys.modules", {"google.cloud.storage": mock_gcs_module}):
-        count = await export_picks_for_date(session, date(2026, 3, 8), "lunara-olap")
+    count = await export_picks_for_date(session, date(2026, 3, 8), tmp_path)
 
     assert count == 1
-    mock_blob.upload_from_file.assert_called_once()
-    blob_path = mock_bucket.blob.call_args[0][0]
-    assert "game_date=2026-03-08" in blob_path
-    assert blob_path.endswith(".parquet")
+    out = tmp_path / "model_picks" / "game_date=2026-03-08" / "picks.parquet"
+    assert out.exists()
+    table = pq.read_table(out)
+    assert table.num_rows == 1
+    assert table.column("player_name")[0].as_py() == "LeBron James"
 
 
 # ---------------------------------------------------------------------------
@@ -123,15 +118,15 @@ def test_seconds_until_midnight_positive():
 
 
 @pytest.mark.asyncio
-async def test_run_olap_poller_skipped_no_bucket():
-    """Poller exits immediately when no bucket configured."""
+async def test_run_olap_poller_skipped_no_settings():
+    """Poller exits immediately when no settings/export dir configured."""
     with patch("src.services.olap_poller.get_session_factory", return_value=None):
         # Should return quickly, not loop
         await asyncio.wait_for(run_olap_poller(settings=None), timeout=1.0)
 
 
 @pytest.mark.asyncio
-async def test_run_olap_poller_skipped_empty_bucket():
+async def test_run_olap_poller_skipped_empty_export_dir():
     settings = MagicMock()
-    settings.gcs_olap_bucket = ""
+    settings.olap_export_dir = ""
     await asyncio.wait_for(run_olap_poller(settings=settings), timeout=1.0)

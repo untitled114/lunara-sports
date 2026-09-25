@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     sport_suite_api_url: str = ""
     sport_suite_api_key: str = ""
 
-    # GCS OLAP export (Parquet for V4 model retraining)
-    gcs_olap_bucket: str = ""
+    # Local-directory OLAP export (Parquet for V4 model retraining). Empty disables the poller.
+    olap_export_dir: str = ""
 
     # JWT auth
     jwt_secret: str = "change-me-in-production"
