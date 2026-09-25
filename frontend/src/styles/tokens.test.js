@@ -17,3 +17,14 @@ describe('tokens.css', () => {
     expect(tracked).toEqual(['0.06'])
   })
 })
+
+describe('legacy styles.css', () => {
+  const legacyCss = readFileSync(resolve(__dirname, '../styles.css'), 'utf8')
+  const tokenNames = Object.keys(expected)
+
+  it('declares none of the token custom properties (would shadow/cycle tokens.css)', () => {
+    const declared = [...legacyCss.matchAll(/^\s*(--[a-zA-Z0-9-]+)\s*:/gm)].map((m) => m[1])
+    const collisions = declared.filter((name) => tokenNames.includes(name))
+    expect(collisions).toEqual([])
+  })
+})
