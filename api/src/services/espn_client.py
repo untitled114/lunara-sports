@@ -21,6 +21,7 @@ ROSTER_TTL = 86400  # 24 hr
 LEADERS_TTL = 3600  # 1 hr
 SUMMARY_TTL = 300  # 5 min
 SCOREBOARD_TTL = 8  # 8s — sub-poller interval for fast live updates
+CALENDAR_TTL = 21600  # 6 hr — the season schedule barely changes intra-day
 
 _client: httpx.AsyncClient | None = None
 
@@ -169,8 +170,13 @@ async def get_scoreboard(date_str: str | None = None) -> dict | None:
 
 
 async def get_scoreboard_calendar() -> list[date]:
-    """Dates (ET) that have NBA games in the current ESPN season calendar."""
-    data = await get_scoreboard(None)
+    """Dates (ET) that have NBA games in the current ESPN season calendar.
+
+    Uses its own cache key/TTL (not `get_scoreboard`'s 8s live-score TTL) — the
+    season calendar barely changes intra-day, so a long TTL avoids re-hitting ESPN
+    on essentially every call to the `/games/next` fallback path.
+    """
+    data = await _cached_get("espn:scoreboard:calendar", f"{BASE_URL}/scoreboard", CALENDAR_TTL)
     raw = ((data or {}).get("leagues") or [{}])[0].get("calendar") or []
     out = set()
     for item in raw:

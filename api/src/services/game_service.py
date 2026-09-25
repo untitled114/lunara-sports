@@ -96,6 +96,10 @@ async def next_game_date(session: AsyncSession, after: date) -> date | None:
     row = await session.execute(select(func.min(Game.start_time)).where(Game.start_time >= start))
     first = row.scalar()
     if first is not None:
+        # SQLite drops the UTC offset on read (Postgres, our real DB, does not),
+        # so a naive value here is UTC, not host-local — pin it before converting.
+        if first.tzinfo is None:
+            first = first.replace(tzinfo=timezone.utc)
         return first.astimezone(ET).date()
     for d in await espn_client.get_scoreboard_calendar():
         if d > after:

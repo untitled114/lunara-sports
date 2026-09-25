@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 
 from src.services.espn_client import (
+    CALENDAR_TTL,
     SCOREBOARD_TTL,
     STANDINGS_TTL,
     SUMMARY_LIVE_TTL,
@@ -21,6 +23,7 @@ from src.services.espn_client import (
     get_game_summary,
     get_game_summary_live,
     get_scoreboard,
+    get_scoreboard_calendar,
     get_standings,
     get_team_roster,
     init_espn_client,
@@ -95,6 +98,45 @@ class TestGetScoreboard:
         resp.json.return_value = {"events": []}
         result = await get_scoreboard()
         assert result is not None
+
+
+class TestGetScoreboardCalendar:
+    @pytest.mark.asyncio
+    async def test_uses_own_cache_key_and_long_ttl(self, mock_redis, mock_http):
+        """Must not reuse get_scoreboard's 8s live-score cache — the calendar barely
+        changes intra-day, so the /games/next fallback path gets its own key and a
+        long TTL instead of re-hitting ESPN on essentially every request."""
+        _, resp = mock_http
+        resp.json.return_value = {"leagues": [{"calendar": ["2026-10-03T07:00Z"]}]}
+        days = await get_scoreboard_calendar()
+        assert days == [date(2026, 10, 3)]
+        mock_redis.get.assert_awaited_once_with("espn:scoreboard:calendar")
+        mock_redis.set.assert_awaited_once()
+        assert mock_redis.set.call_args.args[0] == "espn:scoreboard:calendar"
+        assert mock_redis.set.call_args.kwargs["ex"] == CALENDAR_TTL == 21600
+
+    @pytest.mark.asyncio
+    async def test_dict_shaped_calendar_entries(self, mock_redis, mock_http):
+        """Some ESPN responses give calendar items as {"startDate": ...} objects
+        rather than bare strings — both shapes must parse to the same ET date."""
+        _, resp = mock_http
+        resp.json.return_value = {"leagues": [{"calendar": [{"startDate": "2026-10-03T07:00Z"}]}]}
+        assert await get_scoreboard_calendar() == [date(2026, 10, 3)]
+
+    @pytest.mark.asyncio
+    async def test_skips_blank_entries(self, mock_redis, mock_http):
+        """A calendar item with no usable date string is skipped, not raised on."""
+        _, resp = mock_http
+        resp.json.return_value = {
+            "leagues": [{"calendar": ["", {"startDate": ""}, "2026-10-03T07:00Z"]}]
+        }
+        assert await get_scoreboard_calendar() == [date(2026, 10, 3)]
+
+    @pytest.mark.asyncio
+    async def test_no_data_returns_empty(self, mock_redis, mock_http):
+        client, _ = mock_http
+        client.get = AsyncMock(side_effect=httpx.HTTPError("timeout"))
+        assert await get_scoreboard_calendar() == []
 
 
 class TestGetStandings:
