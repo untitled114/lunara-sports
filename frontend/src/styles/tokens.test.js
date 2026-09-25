@@ -5,8 +5,9 @@ const css = readFileSync(resolve(__dirname, 'tokens.css'), 'utf8')
 const expected = {
   '--surface-0': '#0B0D12', '--surface-1': '#12151C', '--surface-2': '#1A1E27',
   '--border': '#262B36', '--border-strong': '#323846', '--text-1': '#E8EAF0',
-  '--text-2': '#A3A9B7', '--text-3': '#6B7280', '--accent': '#6366F1',
-  '--accent-hover': '#7C7FF3', '--live': '#22C55E', '--loss': '#EF4444', '--warn': '#F59E0B',
+  '--text-2': '#A3A9B7', '--text-3': '#838A97', '--accent': '#818CF8',
+  '--accent-hover': '#A5B4FC', '--accent-fill': '#4F46E5', '--accent-fill-hover': '#4338CA',
+  '--live': '#22C55E', '--loss': '#EF4444', '--warn': '#F59E0B',
 }
 describe('tokens.css', () => {
   it.each(Object.entries(expected))('%s is %s', (name, value) => {

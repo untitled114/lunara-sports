@@ -24,17 +24,30 @@ const LEGACY_VARIANT_ALIAS = {
   dark: 'neutral',
 }
 
-export function Badge({ variant = 'neutral', className, children, ...rest }) {
+export function Badge({
+  variant = 'neutral',
+  dot = false,
+  // Legacy props from the pre-redesign API. Destructured (not spread) purely to drop
+  // them here so they never leak onto the DOM node as unknown attributes/handlers.
+  // TODO(Task 14): delete once every consumer drops these too.
+  size: _legacySize,
+  removable: _legacyRemovable,
+  onRemove: _legacyOnRemove,
+  className,
+  children,
+  ...rest
+}) {
   const resolved = LEGACY_VARIANT_ALIAS[variant] ?? variant
   return (
     <span
       className={clsx(
-        't-label inline-flex items-center rounded-sm px-2 py-0.5',
+        't-label inline-flex items-center gap-1 rounded-sm px-2 py-0.5',
         V[resolved] ?? V.neutral,
         className
       )}
       {...rest}
     >
+      {dot && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}
       {children}
     </span>
   )

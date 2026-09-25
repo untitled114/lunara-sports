@@ -5,7 +5,8 @@ export function Stat({ label, value, delta }) {
       <span className="t-section tnum text-text-1">{value}</span>
       {delta != null && delta !== 0 && (
         <span className={`t-small tnum ${delta > 0 ? 'text-live' : 'text-loss'}`}>
-          {delta > 0 ? '▲' : '▼'} {Math.abs(delta)}
+          <span aria-hidden="true">{delta > 0 ? '▲' : '▼'}</span> {Math.abs(delta)}
+          <span className="sr-only">{delta > 0 ? `up ${Math.abs(delta)}` : `down ${Math.abs(delta)}`}</span>
         </span>
       )}
     </div>

@@ -4,7 +4,7 @@ export function DataTable({ columns, rows, getKey, className }) {
   return (
     <div className={clsx('overflow-x-auto rounded-lg border border-border', className)}>
       <table className="w-full t-small">
-        <thead className="sticky top-0 bg-surface-2">
+        <thead className="bg-surface-2">
           <tr>
             {columns.map((c) => (
               <th

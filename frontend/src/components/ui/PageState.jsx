@@ -16,7 +16,7 @@ export function PageState({ kind, title, message, onRetry, action }) {
       {kind === 'error' && onRetry && (
         <button
           onClick={onRetry}
-          className="t-small rounded-md bg-accent px-4 py-2 text-white hover:bg-accent-hover"
+          className="t-small rounded-md bg-accent-fill px-4 py-2 text-white hover:bg-accent-fill-hover"
         >
           Try again
         </button>
