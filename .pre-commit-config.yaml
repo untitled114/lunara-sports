@@ -36,3 +36,9 @@ repos:
         language: system
         pass_filenames: false
         files: ^lumen-bot/
+      - id: design-check
+        name: frontend design check
+        entry: bash -c 'cd frontend && node scripts/check-design.mjs && npx vitest run'
+        language: system
+        pass_filenames: false
+        files: ^frontend/

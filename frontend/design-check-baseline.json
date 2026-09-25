@@ -1,0 +1,324 @@
+{
+  "src/components/dashboard/shared/ActionMenu.jsx": {
+    "palette": 14
+  },
+  "src/components/dashboard/shared/ConfirmDialog.jsx": {
+    "palette": 27,
+    "effect": 1,
+    "radius": 2
+  },
+  "src/components/dashboard/shared/DataTable.jsx": {
+    "effect": 2,
+    "palette": 15,
+    "tracking": 1
+  },
+  "src/components/dashboard/shared/FilterBar.jsx": {
+    "radius": 2,
+    "effect": 4,
+    "palette": 34
+  },
+  "src/components/dashboard/shared/StatCard.jsx": {
+    "palette": 39,
+    "radius": 2,
+    "effect": 3
+  },
+  "src/components/dashboard/shared/StatusBadge.jsx": {
+    "palette": 60,
+    "radius": 1
+  },
+  "src/components/layout/AppLayout.jsx": {
+    "palette": 148,
+    "heavy": 23,
+    "tracking": 24,
+    "banned": 7,
+    "hex": 8,
+    "colorFn": 1,
+    "radius": 22,
+    "italic": 6
+  },
+  "src/components/sport/BetTracker.jsx": {
+    "palette": 8,
+    "tracking": 1
+  },
+  "src/components/sport/BottomNav.jsx": {
+    "effect": 1
+  },
+  "src/components/sport/BoxScore.jsx": {
+    "heavy": 17,
+    "palette": 52,
+    "hex": 6,
+    "radius": 12,
+    "italic": 1,
+    "tracking": 8
+  },
+  "src/components/sport/CourtView.jsx": {
+    "radius": 10,
+    "effect": 3,
+    "palette": 29,
+    "heavy": 7,
+    "tracking": 7,
+    "banned": 2,
+    "hex": 1
+  },
+  "src/components/sport/DateNav.jsx": {
+    "heavy": 6,
+    "tracking": 7,
+    "palette": 21,
+    "radius": 7,
+    "hex": 1,
+    "effect": 1
+  },
+  "src/components/sport/GameCard.jsx": {
+    "radius": 12,
+    "heavy": 15,
+    "tracking": 11,
+    "palette": 35,
+    "hex": 1
+  },
+  "src/components/sport/JumbotronAlert.jsx": {
+    "radius": 2,
+    "effect": 1,
+    "palette": 14,
+    "heavy": 2,
+    "tracking": 2
+  },
+  "src/components/sport/Leaderboard.jsx": {
+    "tracking": 3,
+    "palette": 2
+  },
+  "src/components/sport/LiveFeed.jsx": {
+    "palette": 33,
+    "hex": 8,
+    "effect": 6,
+    "heavy": 11,
+    "radius": 10,
+    "colorFn": 3,
+    "tracking": 6
+  },
+  "src/components/sport/MomentumMeter.jsx": {
+    "hex": 1,
+    "radius": 5,
+    "palette": 18,
+    "heavy": 8,
+    "tracking": 6,
+    "banned": 1,
+    "effect": 1
+  },
+  "src/components/sport/PickCard.jsx": {
+    "palette": 50,
+    "hex": 5,
+    "radius": 3
+  },
+  "src/components/sport/PickTracker.jsx": {
+    "hex": 2,
+    "radius": 4,
+    "palette": 21,
+    "effect": 2,
+    "heavy": 7,
+    "tracking": 3
+  },
+  "src/components/sport/PredictionSlip.jsx": {
+    "radius": 8,
+    "palette": 31,
+    "heavy": 10,
+    "tracking": 8,
+    "hex": 2
+  },
+  "src/components/sport/ReactionOverlay.jsx": {
+    "colorFn": 1,
+    "radius": 1,
+    "palette": 1
+  },
+  "src/components/sport/ScoreTicker.jsx": {
+    "palette": 76,
+    "effect": 3,
+    "banned": 8,
+    "hex": 4,
+    "heavy": 18,
+    "tracking": 13,
+    "italic": 3,
+    "radius": 6
+  },
+  "src/components/ui/Alert.jsx": {
+    "palette": 20
+  },
+  "src/components/ui/Badge.jsx": {
+    "palette": 49,
+    "radius": 2
+  },
+  "src/components/ui/Checkbox.jsx": {
+    "palette": 13
+  },
+  "src/components/ui/CommandBar.jsx": {
+    "palette": 35,
+    "hex": 1,
+    "heavy": 5,
+    "tracking": 6,
+    "effect": 2,
+    "radius": 1,
+    "banned": 1
+  },
+  "src/components/ui/Dropdown.jsx": {
+    "palette": 14
+  },
+  "src/components/ui/EmptyState.jsx": {
+    "palette": 12
+  },
+  "src/components/ui/ErrorBoundary.jsx": {
+    "banned": 1,
+    "palette": 19,
+    "radius": 1
+  },
+  "src/components/ui/Pagination.jsx": {
+    "palette": 14
+  },
+  "src/components/ui/Select.jsx": {
+    "palette": 24
+  },
+  "src/components/ui/Skeleton.jsx": {
+    "palette": 4,
+    "radius": 1
+  },
+  "src/components/ui/Table.jsx": {
+    "palette": 23,
+    "tracking": 1
+  },
+  "src/components/ui/Tabs.jsx": {
+    "palette": 18,
+    "radius": 1
+  },
+  "src/components/ui/Toggle.jsx": {
+    "palette": 7,
+    "radius": 2
+  },
+  "src/context/ThemeContext.jsx": {
+    "hex": 4
+  },
+  "src/pages/AdminPage.jsx": {
+    "palette": 9,
+    "tracking": 1,
+    "radius": 1,
+    "effect": 1,
+    "hex": 1
+  },
+  "src/pages/GameDetailPage.jsx": {
+    "radius": 20,
+    "hex": 1,
+    "palette": 51,
+    "effect": 8,
+    "heavy": 21,
+    "italic": 3,
+    "tracking": 19,
+    "banned": 3
+  },
+  "src/pages/GamesPage.jsx": {
+    "hex": 1,
+    "radius": 5,
+    "effect": 3,
+    "palette": 18,
+    "heavy": 6,
+    "tracking": 6,
+    "banned": 3
+  },
+  "src/pages/LandingPage.jsx": {
+    "radius": 12,
+    "palette": 44,
+    "effect": 8,
+    "hex": 4,
+    "heavy": 10,
+    "tracking": 10,
+    "italic": 2
+  },
+  "src/pages/PicksPage.jsx": {
+    "radius": 5,
+    "effect": 1,
+    "palette": 25,
+    "heavy": 10,
+    "tracking": 6,
+    "italic": 1
+  },
+  "src/pages/PlayerProfilePage.jsx": {
+    "radius": 14,
+    "heavy": 36,
+    "tracking": 14,
+    "palette": 97,
+    "effect": 7,
+    "hex": 1,
+    "banned": 3
+  },
+  "src/pages/PlayersPage.jsx": {
+    "palette": 25,
+    "italic": 1,
+    "heavy": 9,
+    "tracking": 6,
+    "radius": 3,
+    "banned": 1,
+    "hex": 2
+  },
+  "src/pages/PrivacyPage.jsx": {
+    "banned": 1,
+    "radius": 3,
+    "effect": 2,
+    "palette": 7,
+    "heavy": 2,
+    "tracking": 1
+  },
+  "src/pages/SchedulePage.jsx": {
+    "palette": 24,
+    "heavy": 7,
+    "tracking": 6,
+    "radius": 1,
+    "effect": 1,
+    "italic": 1
+  },
+  "src/pages/StandingsPage.jsx": {
+    "banned": 20,
+    "radius": 19,
+    "effect": 9,
+    "palette": 91,
+    "hex": 3,
+    "heavy": 24,
+    "tracking": 24,
+    "italic": 3
+  },
+  "src/pages/StatsPage.jsx": {
+    "radius": 10,
+    "effect": 5,
+    "palette": 75,
+    "hex": 3,
+    "heavy": 24,
+    "tracking": 14,
+    "banned": 7
+  },
+  "src/pages/TeamDetailPage.jsx": {
+    "radius": 22,
+    "effect": 19,
+    "palette": 89,
+    "heavy": 36,
+    "tracking": 25,
+    "hex": 3
+  },
+  "src/pages/TeamsPage.jsx": {
+    "palette": 42,
+    "hex": 2,
+    "effect": 6,
+    "heavy": 6,
+    "tracking": 7,
+    "radius": 7,
+    "italic": 3,
+    "banned": 2
+  },
+  "src/pages/TermsPage.jsx": {
+    "radius": 3,
+    "effect": 2,
+    "palette": 7,
+    "heavy": 2,
+    "tracking": 1
+  },
+  "src/styles.css": {
+    "banned": 5,
+    "colorFn": 55,
+    "hex": 6,
+    "effect": 20
+  }
+}
