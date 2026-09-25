@@ -80,6 +80,6 @@ source = ["src"]
 concurrency = ["greenlet", "thread"]
 
 [tool.coverage.report]
-fail_under = 0      # raised to 99.1 in Task 16 once met
+fail_under = 99.1
 show_missing = true
 skip_covered = true
