@@ -1,14 +1,35 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, DataTable, PageState, SectionHeader, TeamMark } from '@/components/ui';
-import { fetchStandings } from '@/services/api';
+import { Badge, DataTable, PageState, SectionHeader, Segmented, TeamMark } from '@/components/ui';
+import { fetchStandings, fetchTeams } from '@/services/api';
 import { useTheme } from '@/context/ThemeContext';
 
 const PLAY_IN_CUTOFF = 10;
 
+const DIVISION_ORDER = {
+  Eastern: ['Atlantic', 'Central', 'Southeast'],
+  Western: ['Northwest', 'Pacific', 'Southwest'],
+};
+
+const VIEW_OPTIONS = [
+  { id: 'conference', label: 'Conference' },
+  { id: 'division', label: 'Division' },
+];
+
 function strkBadge(strk) {
   if (!strk) return <span className="text-text-3">—</span>;
   return <Badge variant={strk.startsWith('W') ? 'win' : 'loss'}>{strk}</Badge>;
+}
+
+function buildDivisionGroups(confTeams, confName, divisionMap) {
+  const groups = {};
+  for (const team of confTeams) {
+    const div = divisionMap[team.abbrev] || 'Unknown';
+    if (!groups[div]) groups[div] = [];
+    groups[div].push(team);
+  }
+  const order = DIVISION_ORDER[confName] || Object.keys(groups);
+  return order.filter((d) => groups[d]).map((d) => ({ name: d, teams: groups[d] }));
 }
 
 function ConferenceStandings({ title, teams, columns }) {
@@ -32,19 +53,37 @@ function ConferenceStandings({ title, teams, columns }) {
   );
 }
 
+function DivisionStandings({ conferenceName, teams, columns, divisionMap }) {
+  const divisions = buildDivisionGroups(teams, conferenceName, divisionMap);
+  return (
+    <div className="flex flex-col gap-8">
+      {divisions.map((div) => (
+        <div key={div.name} className="flex flex-col gap-3" data-testid={`division-${div.name.toLowerCase()}`}>
+          <SectionHeader title={div.name} />
+          <DataTable columns={columns} rows={div.teams} getKey={(t) => t.abbrev} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function StandingsPage() {
   const [standings, setStandings] = useState(null);
+  const [teamsData, setTeamsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [view, setView] = useState('conference');
   const { playGlassClick } = useTheme();
 
   const reload = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchStandings()
-      .then((data) => {
-        if (!cancelled) setStandings(data);
+    Promise.all([fetchStandings(), fetchTeams().catch(() => [])])
+      .then(([standingsData, teams]) => {
+        if (cancelled) return;
+        setStandings(standingsData);
+        setTeamsData(teams);
       })
       .catch((e) => {
         if (!cancelled) setError(e.message);
@@ -58,6 +97,13 @@ export default function StandingsPage() {
   }, []);
 
   useEffect(() => reload(), [reload]);
+
+  const handleViewChange = (id) => {
+    if (id !== view) {
+      playGlassClick();
+      setView(id);
+    }
+  };
 
   const columns = [
     {
@@ -105,14 +151,29 @@ export default function StandingsPage() {
   const western = standings?.western || [];
   const seasonLabel = standings?.season_label || standings?.season || '';
 
+  const divisionMap = {};
+  for (const t of teamsData) {
+    divisionMap[t.abbrev] = t.division || 'Unknown';
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
-      <SectionHeader title="Standings" aside={seasonLabel} />
-
-      <div className="flex flex-col gap-10">
-        <ConferenceStandings title="Eastern Conference" teams={eastern} columns={columns} />
-        <ConferenceStandings title="Western Conference" teams={western} columns={columns} />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <SectionHeader title="Standings" aside={seasonLabel} />
+        <Segmented options={VIEW_OPTIONS} value={view} onChange={handleViewChange} />
       </div>
+
+      {view === 'conference' ? (
+        <div className="flex flex-col gap-10">
+          <ConferenceStandings title="Eastern Conference" teams={eastern} columns={columns} />
+          <ConferenceStandings title="Western Conference" teams={western} columns={columns} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
+          <DivisionStandings conferenceName="Eastern" teams={eastern} columns={columns} divisionMap={divisionMap} />
+          <DivisionStandings conferenceName="Western" teams={western} columns={columns} divisionMap={divisionMap} />
+        </div>
+      )}
 
       <Link to="/stats" className="t-small inline-flex items-center gap-1 text-accent hover:text-accent-hover">
         Stats

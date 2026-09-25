@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import StandingsPage from './StandingsPage'
-import { fetchStandings } from '@/services/api'
+import { fetchStandings, fetchTeams } from '@/services/api'
 
 vi.mock('@/services/api', () => ({
   fetchStandings: vi.fn(),
+  fetchTeams: vi.fn(() => Promise.resolve([])),
 }))
 
 vi.mock('@/context/ThemeContext', () => ({
@@ -55,6 +57,44 @@ const FIXTURE = {
   is_previous_season: true,
 }
 
+// Real response captured from GET https://api.lunara-app.com/teams (2026-09-25),
+// trimmed to name/abbrev/conference/division. Includes the live "UTAH"/"UTA" duplicate
+// Utah Jazz entries as returned by the API (pre-existing API data quirk, not introduced
+// here) — the standings fixture above uses "UTAH", which is present in this list.
+const TEAMS_FIXTURE = [
+  { name: 'Boston Celtics', abbrev: 'BOS', conference: 'Eastern', division: 'Atlantic' },
+  { name: 'Brooklyn Nets', abbrev: 'BKN', conference: 'Eastern', division: 'Atlantic' },
+  { name: 'New York Knicks', abbrev: 'NY', conference: 'Eastern', division: 'Atlantic' },
+  { name: 'Philadelphia 76ers', abbrev: 'PHI', conference: 'Eastern', division: 'Atlantic' },
+  { name: 'Toronto Raptors', abbrev: 'TOR', conference: 'Eastern', division: 'Atlantic' },
+  { name: 'Chicago Bulls', abbrev: 'CHI', conference: 'Eastern', division: 'Central' },
+  { name: 'Cleveland Cavaliers', abbrev: 'CLE', conference: 'Eastern', division: 'Central' },
+  { name: 'Detroit Pistons', abbrev: 'DET', conference: 'Eastern', division: 'Central' },
+  { name: 'Indiana Pacers', abbrev: 'IND', conference: 'Eastern', division: 'Central' },
+  { name: 'Milwaukee Bucks', abbrev: 'MIL', conference: 'Eastern', division: 'Central' },
+  { name: 'Atlanta Hawks', abbrev: 'ATL', conference: 'Eastern', division: 'Southeast' },
+  { name: 'Charlotte Hornets', abbrev: 'CHA', conference: 'Eastern', division: 'Southeast' },
+  { name: 'Miami Heat', abbrev: 'MIA', conference: 'Eastern', division: 'Southeast' },
+  { name: 'Orlando Magic', abbrev: 'ORL', conference: 'Eastern', division: 'Southeast' },
+  { name: 'Washington Wizards', abbrev: 'WSH', conference: 'Eastern', division: 'Southeast' },
+  { name: 'Denver Nuggets', abbrev: 'DEN', conference: 'Western', division: 'Northwest' },
+  { name: 'Minnesota Timberwolves', abbrev: 'MIN', conference: 'Western', division: 'Northwest' },
+  { name: 'Oklahoma City Thunder', abbrev: 'OKC', conference: 'Western', division: 'Northwest' },
+  { name: 'Portland Trail Blazers', abbrev: 'POR', conference: 'Western', division: 'Northwest' },
+  { name: 'Utah Jazz', abbrev: 'UTAH', conference: 'Western', division: 'Northwest' },
+  { name: 'Utah Jazz', abbrev: 'UTA', conference: 'Western', division: 'Northwest' },
+  { name: 'Golden State Warriors', abbrev: 'GS', conference: 'Western', division: 'Pacific' },
+  { name: 'LA Clippers', abbrev: 'LAC', conference: 'Western', division: 'Pacific' },
+  { name: 'Los Angeles Lakers', abbrev: 'LAL', conference: 'Western', division: 'Pacific' },
+  { name: 'Phoenix Suns', abbrev: 'PHX', conference: 'Western', division: 'Pacific' },
+  { name: 'Sacramento Kings', abbrev: 'SAC', conference: 'Western', division: 'Pacific' },
+  { name: 'Dallas Mavericks', abbrev: 'DAL', conference: 'Western', division: 'Southwest' },
+  { name: 'Houston Rockets', abbrev: 'HOU', conference: 'Western', division: 'Southwest' },
+  { name: 'Memphis Grizzlies', abbrev: 'MEM', conference: 'Western', division: 'Southwest' },
+  { name: 'New Orleans Pelicans', abbrev: 'NO', conference: 'Western', division: 'Southwest' },
+  { name: 'San Antonio Spurs', abbrev: 'SA', conference: 'Western', division: 'Southwest' },
+]
+
 // Every banned term from global-constraints.md (case-insensitive), plus the
 // case-sensitive capitalized "Node"/"Nodes" form.
 const BANNED_WORDS = [
@@ -74,6 +114,8 @@ function renderPage() {
 describe('StandingsPage', () => {
   beforeEach(() => {
     fetchStandings.mockReset()
+    fetchTeams.mockReset()
+    fetchTeams.mockResolvedValue(TEAMS_FIXTURE)
   })
 
   it('renders both conference headings, the last-season label, 15 rows per conference and a play-in line after row 10', async () => {
@@ -149,5 +191,23 @@ describe('StandingsPage', () => {
 
     await screen.findByText('Eastern Conference')
     expect(screen.getByRole('link', { name: 'Stats' })).toHaveAttribute('href', '/stats')
+  })
+
+  it('toggling to Division shows the 6 division headings and 5 rows each, with no play-in line', async () => {
+    fetchStandings.mockResolvedValue(FIXTURE)
+    renderPage()
+
+    await screen.findByText('Eastern Conference')
+    await userEvent.click(screen.getByRole('tab', { name: 'Division' }))
+
+    const divisions = ['Atlantic', 'Central', 'Southeast', 'Northwest', 'Pacific', 'Southwest']
+    for (const name of divisions) {
+      expect(await screen.findByText(name)).toBeInTheDocument()
+      const container = screen.getByTestId(`division-${name.toLowerCase()}`)
+      expect(within(container).getAllByRole('img').length).toBe(5)
+    }
+
+    expect(screen.queryByText('Play-in line')).not.toBeInTheDocument()
+    expect(screen.queryByText('Eastern Conference')).not.toBeInTheDocument()
   })
 })
