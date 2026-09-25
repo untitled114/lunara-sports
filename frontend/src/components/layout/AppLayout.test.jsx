@@ -124,8 +124,13 @@ describe('AppLayout', () => {
     const user = userEvent.setup()
     renderLayout()
     await user.click(screen.getByRole('button', { name: 'Open settings' }))
-    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Settings' })
+    expect(dialog).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull()
+    // ruling D17 (label-in-name): the drawer's visible heading matches its accessible
+    // name — "Settings" — rather than the mobile nav overlay's "Menu".
+    expect(within(dialog).getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+    expect(within(dialog).queryByText('Menu')).toBeNull()
   })
 
   it('the settings-gear icon keeps its hover rotate motion', () => {

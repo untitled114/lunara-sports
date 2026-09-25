@@ -212,7 +212,7 @@ const AppLayout = () => {
                   <div className="h-8 w-8 rounded-md bg-accent/10 flex items-center justify-center">
                     <Settings className="h-4 w-4 text-accent" />
                   </div>
-                  <h2 className="t-section text-text-1">Menu</h2>
+                  <h2 className="t-section text-text-1">Settings</h2>
                 </div>
                 <button onClick={() => setSettingsOpen(false)} aria-label="Close menu" className="p-2 hover:bg-surface-2 rounded-md transition-colors">
                   <CloseIcon className="h-5 w-5 text-text-3" />
