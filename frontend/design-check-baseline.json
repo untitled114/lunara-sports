@@ -237,24 +237,6 @@
     "tracking": 6,
     "italic": 1
   },
-  "src/pages/PlayerProfilePage.jsx": {
-    "radius": 14,
-    "heavy": 36,
-    "tracking": 14,
-    "palette": 97,
-    "effect": 7,
-    "hex": 1,
-    "banned": 3
-  },
-  "src/pages/PlayersPage.jsx": {
-    "palette": 25,
-    "italic": 1,
-    "heavy": 9,
-    "tracking": 6,
-    "radius": 3,
-    "banned": 1,
-    "hex": 2
-  },
   "src/pages/PrivacyPage.jsx": {
     "banned": 1,
     "radius": 3,
