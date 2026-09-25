@@ -4,13 +4,23 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { todayET, addDaysISO, stripDays, formatDayLabel, formatLongDay } from '@/lib/et';
 
+// Whole calendar days from ISO date `a` to ISO date `b` (negative when b is earlier).
+function daysBetween(a, b) {
+  const utc = (iso) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((utc(b) - utc(a)) / 86400000);
+}
+
 export function DateNav({ current }) {
   const { playGlassClick, playThud } = useTheme();
 
-  // The strip starts on today (ET) and runs forward a week. Only when browsing the past
-  // does it start on the selected day instead, so earlier results stay reachable.
+  // The strip pages through 7-day windows anchored on today (ET): page 0 is
+  // today..today+6, and the page is chosen so the selected day is always visible.
   const today = todayET();
-  const start = current && current < today ? current : today;
+  const offset = current ? Math.floor(daysBetween(today, current) / 7) : 0;
+  const start = addDaysISO(today, 7 * offset);
   const dates = stripDays(start);
 
   return (
