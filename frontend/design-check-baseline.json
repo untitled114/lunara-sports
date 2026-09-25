@@ -271,16 +271,6 @@
     "effect": 1,
     "italic": 1
   },
-  "src/pages/StandingsPage.jsx": {
-    "banned": 20,
-    "radius": 19,
-    "effect": 9,
-    "palette": 91,
-    "hex": 3,
-    "heavy": 24,
-    "tracking": 24,
-    "italic": 3
-  },
   "src/pages/StatsPage.jsx": {
     "radius": 10,
     "effect": 5,
