@@ -1,8 +1,8 @@
 """Safety guard for the destructive integration-test database fixture.
 
 The fixture runs ``DROP SCHEMA public CASCADE``. It must never reach a real
-database, so it refuses any DSN that is not a local host plus a dedicated,
-non-production database name.
+database, so it refuses any DSN that is not a local host plus a dedicated
+database whose name ends in ``_it`` or ``_test``.
 """
 
 from __future__ import annotations
@@ -11,6 +11,8 @@ from urllib.parse import parse_qs, urlsplit
 
 ALLOWED_HOSTS = frozenset({"localhost", "127.0.0.1"})
 FORBIDDEN_DATABASES = frozenset({"lunara", "sportsuite", "postgres"})
+# Only a name that says it is throwaway, e.g. "lunara_it" or "lunara_test".
+REQUIRED_SUFFIXES = ("_it", "_test")
 
 
 class UnsafeTestDatabaseError(RuntimeError):
@@ -40,4 +42,10 @@ def assert_safe_test_dsn(dsn: str) -> None:
     if database.lower() in FORBIDDEN_DATABASES:
         raise UnsafeTestDatabaseError(
             f"refusing to wipe database {database!r}; use a dedicated one such as 'lunara_it'"
+        )
+    lowered = database.lower()
+    if not lowered.endswith(REQUIRED_SUFFIXES) or lowered in REQUIRED_SUFFIXES:
+        raise UnsafeTestDatabaseError(
+            f"refusing to wipe database {database!r}: a throwaway test database name "
+            f"must end in {' or '.join(REQUIRED_SUFFIXES)} (e.g. 'lunara_it')"
         )

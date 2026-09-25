@@ -12,7 +12,8 @@ from tests.integration.db_guard import UnsafeTestDatabaseError, assert_safe_test
     [
         "postgresql://postgres:postgres@localhost:55433/lunara_it",
         "postgresql://u:p@127.0.0.1:5432/lunara_it",
-        "postgres://u@localhost/some_scratch_db",
+        "postgres://u@localhost/some_scratch_test",
+        "postgresql://u:p@localhost:55434/LUNARA_IT",
     ],
 )
 def test_accepts_local_dedicated_database(dsn):
@@ -34,6 +35,11 @@ def test_accepts_local_dedicated_database(dsn):
         ("postgresql://u:p@localhost:1,10.0.0.5:2/lunara_it", "multi-host"),
         ("postgresql://u:p@localhost:5432/", "dedicated"),
         ("postgresql://u:p@localhost:5432", "dedicated"),
+        # a local name without the _it/_test suffix is not provably throwaway
+        ("postgresql://u:p@localhost:5432/some_scratch_db", "_it"),
+        ("postgresql://u:p@localhost:5432/lunara_dev", "_it"),
+        ("postgresql://u:p@localhost:5432/playbyplay", "_it"),
+        ("postgresql://u:p@localhost:5432/_it", "_it"),
         ("mysql://u:p@localhost/lunara_it", "scheme"),
         ("", "scheme"),
     ],
