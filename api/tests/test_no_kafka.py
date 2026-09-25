@@ -44,7 +44,10 @@ def test_settings_have_no_kafka_or_gcs():
 
 @pytest.mark.xfail(strict=True, reason="pending Task 11")
 async def test_add_reaction_broadcasts_to_game_room(client, seeded_session):
-    with patch("src.routers.reactions.manager.broadcast", new_callable=AsyncMock) as bc:
+    # Patch the ws.live_feed singleton itself (not a name in src.routers.reactions),
+    # so this is robust whether Task 11 binds `manager` at module scope in
+    # reactions.py or imports it locally inside the handler.
+    with patch("src.ws.live_feed.manager.broadcast", new_callable=AsyncMock) as bc:
         r = await client.post(
             f"/plays/{PLAY_ID}/reactions",
             json={"emoji": "🔥"},
@@ -54,7 +57,7 @@ async def test_add_reaction_broadcasts_to_game_room(client, seeded_session):
     bc.assert_awaited_once()
     room, msg = bc.await_args.args
     assert room == GAME_ID and msg["type"] == "reaction"
-    assert msg["data"] | {} == {
+    assert msg["data"] == {
         "play_id": PLAY_ID,
         "game_id": GAME_ID,
         "user_id": USER_ID,
@@ -70,7 +73,7 @@ async def test_remove_reaction_broadcasts_remove(client, seeded_session):
         json={"emoji": "🔥"},
         headers={"X-User-Id": USER_ID},
     )
-    with patch("src.routers.reactions.manager.broadcast", new_callable=AsyncMock) as bc:
+    with patch("src.ws.live_feed.manager.broadcast", new_callable=AsyncMock) as bc:
         r = await client.delete(f"/plays/{PLAY_ID}/reactions", headers={"X-User-Id": USER_ID})
     assert r.status_code == 204
     assert bc.await_args.args[1]["data"]["action"] == "remove"
