@@ -3,8 +3,8 @@
     "palette": 14
   },
   "src/components/dashboard/shared/ConfirmDialog.jsx": {
-    "palette": 27,
     "effect": 1,
+    "palette": 27,
     "radius": 2
   },
   "src/components/dashboard/shared/DataTable.jsx": {
@@ -13,14 +13,14 @@
     "tracking": 1
   },
   "src/components/dashboard/shared/FilterBar.jsx": {
-    "radius": 2,
     "effect": 4,
-    "palette": 34
+    "palette": 34,
+    "radius": 2
   },
   "src/components/dashboard/shared/StatCard.jsx": {
+    "effect": 3,
     "palette": 39,
-    "radius": 2,
-    "effect": 3
+    "radius": 2
   },
   "src/components/dashboard/shared/StatusBadge.jsx": {
     "palette": 60,
@@ -33,86 +33,43 @@
   "src/components/sport/BottomNav.jsx": {
     "effect": 1
   },
-  "src/components/sport/BoxScore.jsx": {
-    "heavy": 17,
-    "palette": 52,
-    "hex": 6,
-    "radius": 12,
-    "italic": 1,
-    "tracking": 8
-  },
-  "src/components/sport/CourtView.jsx": {
-    "radius": 10,
-    "effect": 3,
-    "palette": 29,
-    "heavy": 7,
-    "tracking": 7,
-    "banned": 2,
-    "hex": 1
-  },
   "src/components/sport/JumbotronAlert.jsx": {
-    "radius": 2,
     "effect": 1,
-    "palette": 14,
     "heavy": 2,
+    "palette": 14,
+    "radius": 2,
     "tracking": 2
   },
   "src/components/sport/Leaderboard.jsx": {
-    "tracking": 3,
-    "palette": 2
-  },
-  "src/components/sport/LiveFeed.jsx": {
-    "palette": 33,
-    "hex": 8,
-    "effect": 6,
-    "heavy": 11,
-    "radius": 10,
-    "colorFn": 3,
-    "tracking": 6
-  },
-  "src/components/sport/MomentumMeter.jsx": {
-    "hex": 1,
-    "radius": 5,
-    "palette": 18,
-    "heavy": 8,
-    "tracking": 6,
-    "banned": 1,
-    "effect": 1
-  },
-  "src/components/sport/PickCard.jsx": {
-    "palette": 50,
-    "hex": 5,
-    "radius": 3
-  },
-  "src/components/sport/PickTracker.jsx": {
-    "hex": 2,
-    "radius": 4,
-    "palette": 21,
-    "effect": 2,
-    "heavy": 7,
+    "palette": 2,
     "tracking": 3
   },
+  "src/components/sport/PickCard.jsx": {
+    "hex": 5,
+    "palette": 50,
+    "radius": 3
+  },
   "src/components/sport/PredictionSlip.jsx": {
-    "radius": 8,
-    "palette": 31,
     "heavy": 10,
-    "tracking": 8,
-    "hex": 2
+    "hex": 2,
+    "palette": 31,
+    "radius": 8,
+    "tracking": 8
   },
   "src/components/sport/ReactionOverlay.jsx": {
     "colorFn": 1,
-    "radius": 1,
-    "palette": 1
+    "palette": 1,
+    "radius": 1
   },
   "src/components/sport/ScoreTicker.jsx": {
-    "palette": 76,
-    "effect": 3,
     "banned": 8,
-    "hex": 4,
+    "effect": 3,
     "heavy": 18,
-    "tracking": 13,
+    "hex": 4,
     "italic": 3,
-    "radius": 6
+    "palette": 76,
+    "radius": 6,
+    "tracking": 13
   },
   "src/components/ui/Alert.jsx": {
     "palette": 20
@@ -125,13 +82,13 @@
     "palette": 13
   },
   "src/components/ui/CommandBar.jsx": {
-    "palette": 35,
-    "hex": 1,
-    "heavy": 5,
-    "tracking": 6,
+    "banned": 1,
     "effect": 2,
+    "heavy": 5,
+    "hex": 1,
+    "palette": 35,
     "radius": 1,
-    "banned": 1
+    "tracking": 6
   },
   "src/components/ui/Dropdown.jsx": {
     "palette": 14
@@ -170,75 +127,65 @@
     "hex": 4
   },
   "src/pages/AdminPage.jsx": {
-    "palette": 9,
-    "tracking": 1,
-    "radius": 1,
     "effect": 1,
-    "hex": 1
-  },
-  "src/pages/GameDetailPage.jsx": {
-    "radius": 20,
     "hex": 1,
-    "palette": 51,
-    "effect": 8,
-    "heavy": 21,
-    "italic": 3,
-    "tracking": 19,
-    "banned": 3
+    "palette": 9,
+    "radius": 1,
+    "tracking": 1
   },
   "src/pages/LandingPage.jsx": {
-    "radius": 12,
-    "palette": 44,
     "effect": 8,
-    "hex": 4,
     "heavy": 10,
-    "tracking": 10,
-    "italic": 2
+    "hex": 4,
+    "italic": 2,
+    "palette": 44,
+    "radius": 12,
+    "tracking": 10
   },
   "src/pages/PicksPage.jsx": {
-    "radius": 5,
     "effect": 1,
-    "palette": 25,
     "heavy": 10,
-    "tracking": 6,
-    "italic": 1
+    "italic": 1,
+    "palette": 25,
+    "radius": 5,
+    "tracking": 6
   },
   "src/pages/PrivacyPage.jsx": {
     "banned": 1,
-    "radius": 3,
     "effect": 2,
-    "palette": 7,
     "heavy": 2,
+    "palette": 7,
+    "radius": 3,
     "tracking": 1
   },
   "src/pages/SchedulePage.jsx": {
-    "palette": 24,
-    "heavy": 7,
-    "tracking": 6,
-    "radius": 1,
     "effect": 1,
-    "italic": 1
+    "heavy": 7,
+    "italic": 1,
+    "palette": 24,
+    "radius": 1,
+    "tracking": 6
   },
   "src/pages/StatsPage.jsx": {
-    "radius": 10,
+    "banned": 7,
     "effect": 5,
-    "palette": 75,
-    "hex": 3,
     "heavy": 24,
-    "tracking": 14,
-    "banned": 7
+    "hex": 3,
+    "palette": 75,
+    "radius": 10,
+    "tracking": 14
   },
   "src/pages/TermsPage.jsx": {
-    "radius": 3,
     "effect": 2,
-    "palette": 7,
     "heavy": 2,
+    "palette": 7,
+    "radius": 3,
     "tracking": 1
   },
   "src/styles.css": {
     "banned": 5,
     "colorFn": 55,
-    "hex": 6,
-    "effect": 20
+    "effect": 20,
+    "hex": 6
   }
 }

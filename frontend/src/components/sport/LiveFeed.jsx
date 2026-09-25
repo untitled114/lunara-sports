@@ -1,9 +1,9 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useGameFeed } from "@/hooks/useGameFeed";
-import { addReaction, fetchBoxScore } from "@/services/api";
-import { Zap, Clock, MessageSquare } from "lucide-react";
+import { addReaction, fetchBoxScore, fetchPlays } from "@/services/api";
 import { useTheme } from "@/context/ThemeContext";
-import { getTeamColor, getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
+import { getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
+import { Card, Badge, PageState } from "@/components/ui";
 
 /* ─── Running Stats Snapshots ─── */
 
@@ -128,7 +128,7 @@ function buildTitle(description = "", ctx = "") {
   const d = description.toLowerCase();
 
   if (d.includes("enters the game")) return { t: "Substitution", c: "sub" };
-  if (d.includes("gains possession") || d.includes("vs.")) return { t: "Jump Ball", c: "sub" };
+  if (d.includes("gains possession") || d.includes("vs.")) return { t: "Jump ball", c: "sub" };
   if (d.includes("timeout")) return { t: "Timeout", c: "timeout" };
 
   const dm = d.match(/(\d+)-?foot/);
@@ -193,12 +193,10 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
   const ctx = getLeadCtx(play, prevPlay, homeTeam);
   const { t: title, c: cat } = buildTitle(play.description, ctx);
   const assist = parseAssist(play.description);
-  const tc = play.team ? getTeamColor(play.team) : null;
   const tl = play.team ? getLogoUrl(play.team) : null;
   const hLogo = homeTeam ? getLogoUrl(homeTeam) : null;
   const aLogo = awayTeam ? getLogoUrl(awayTeam) : null;
   const scoring = cat === "score" || cat === "three";
-  const isThree = cat === "three";
   const miss = cat === "miss";
   const muted = cat === "sub" || cat === "other" || cat === "rebound";
 
@@ -236,15 +234,12 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
     addReaction(play.id, e).catch(() => {});
   }, [play.id, myReaction, playGlassClick]);
 
-  // Compact but readable row for secondary events (subs, rebounds, jump balls)
+  // Compact row for secondary events (subs, rebounds, jump balls)
   if (muted) {
     return (
-      <div className="relative">
-        <div className="flex items-center gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8 lg:py-3.5">
-          {tl && <img src={tl} alt="" width={20} height={20} className="h-5 w-5 opacity-50" />}
-          <span className="text-[13px] sm:text-[14px] lg:text-[15px] font-bold text-white/70">{play.description}</span>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-white/[0.12]" />
+      <div className="flex items-center gap-3 py-2.5">
+        {tl && <img src={tl} alt="" width={20} height={20} className="h-5 w-5" />}
+        <span className="t-small text-text-2">{play.description}</span>
       </div>
     );
   }
@@ -252,141 +247,86 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
   const meta = playerMeta();
 
   return (
-    <div className="group/play relative">
-      {/* ── Team color ambient glow for scoring plays ── */}
-      {scoring && (
-        <div
-          className="absolute inset-0 opacity-[0.06] pointer-events-none transition-opacity duration-1000 group-hover/play:opacity-[0.1]"
-          style={{
-            background: `radial-gradient(circle at 15% 50%, ${tc?.primary || "#6366f1"} 0%, transparent 55%)`
-          }}
-        />
-      )}
+    <div className="py-4">
+      {/* Score row */}
+      <div className="flex items-center mb-3">
+        <div className="flex items-center gap-2">
+          {aLogo && <img src={aLogo} alt="" width={20} height={20} className="h-5 w-5 object-contain" />}
+          <span className={`t-small tnum font-semibold ${aWin ? "text-live" : "text-text-2"}`}>{as_}</span>
+          <span className="t-small text-text-3">&ndash;</span>
+          <span className={`t-small tnum font-semibold ${hWin ? "text-live" : "text-text-2"}`}>{hs}</span>
+          {hLogo && <img src={hLogo} alt="" width={20} height={20} className="h-5 w-5 object-contain" />}
+          <span className="t-small tnum text-text-3 ml-2">Q{play.quarter} {play.clock ?? ""}</span>
+        </div>
 
-      {/* ── Team color accent line on scoring plays ── */}
-      {scoring && (
-        <div
-          className="absolute top-0 left-0 w-[3px] h-full rounded-r"
-          style={{ backgroundColor: tc?.primary || "#6366f1", opacity: 0.4 }}
-        />
-      )}
+        {diff > 0 && <span className="t-small tnum text-text-3 ml-auto">{'▼'} {diff}</span>}
+      </div>
 
-      <div className="relative px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
-        {/* ── Score Row ── */}
-        <div className="flex items-center mb-4">
-          <div className="flex items-center gap-2.5">
-            {aLogo && <img src={aLogo} alt="" width={24} height={24} className="h-6 w-6 object-contain drop-shadow-md" />}
-            <span className={`text-lg tabular-nums font-black ${aWin ? "text-[var(--green)]" : "text-white/70"}`}>
-              {as_}
-            </span>
-            <span className="text-[12px] text-white/30 font-black">–</span>
-            <span className={`text-lg tabular-nums font-black ${hWin ? "text-[var(--green)]" : "text-white/70"}`}>
-              {hs}
-            </span>
-            {hLogo && <img src={hLogo} alt="" width={24} height={24} className="h-6 w-6 object-contain drop-shadow-md" />}
-
-            <span className="text-[14px] tabular-nums text-white/60 ml-3 font-bold">
-              Q{play.quarter} {play.clock ?? ""}
-            </span>
+      {/* Main content */}
+      <div className="flex items-start gap-3">
+        {/* Outer wrapper stays un-clipped so the corner badge (negative-offset) isn't cut
+            off by the avatar's own overflow-hidden — the base structured it the same way. */}
+        <div className="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+          <div className="h-full w-full rounded-md overflow-hidden bg-surface-2 border border-border">
+            {headshot ? (
+              <img src={headshot} alt="" width={48} height={48} loading="lazy" className="w-full h-full object-cover" />
+            ) : tl ? (
+              <img src={tl} alt="" width={48} height={48} loading="lazy" className="w-full h-full object-contain p-2" />
+            ) : null}
           </div>
-
-          {diff > 0 && (
-            <span className="text-[14px] tabular-nums font-black text-white/40 ml-auto tracking-wide">
-              &#x25BC; {diff}
-            </span>
+          {/* Team logo corner badge — only needed when the headshot is already occupying the avatar */}
+          {headshot && tl && (
+            <img
+              src={tl}
+              alt=""
+              width={16}
+              height={16}
+              className="absolute -bottom-1 -right-1 h-4 w-4 rounded-sm border border-border bg-surface-1"
+            />
           )}
         </div>
 
-        {/* ── Main Content ── */}
-        <div className="flex items-start gap-5">
-          {/* Avatar with ambient glow */}
-          <div className="relative shrink-0">
-            {/* Glow behind avatar */}
-            <div
-              className="absolute -inset-2 sm:-inset-3 rounded-full blur-xl opacity-20 group-hover/play:opacity-35 transition-opacity duration-500"
-              style={{ backgroundColor: tc?.primary || "#6366f1" }}
-            />
-            <div
-              className="relative h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 rounded-full overflow-hidden border-2 bg-[#080c18] shadow-xl"
-              style={{
-                borderColor: `${tc?.primary || "#444"}50`,
-                boxShadow: `0 8px 24px -8px rgba(0,0,0,0.6), inset 0 1px 0 0 rgba(255,255,255,0.1)`
-              }}
-            >
-              {headshot ? (
-                <img src={headshot} alt="" width={64} height={64} loading="lazy" className="w-full h-full object-cover scale-110" />
-              ) : tl ? (
-                <img src={tl} alt="" width={64} height={64} loading="lazy" className="w-full h-full object-contain p-3 drop-shadow-lg" />
-              ) : null}
-            </div>
-            {/* Team logo badge */}
-            {tl && (
-              <div className="absolute -bottom-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-[#080c18] shadow-md flex items-center justify-center"
-                style={{ boxShadow: `0 0 0 2px #080c18, 0 2px 6px rgba(0,0,0,0.4)` }}>
-                <img src={tl} alt="" width={16} height={16} className="h-4 w-4 object-contain" />
-              </div>
-            )}
-          </div>
+        <div className="flex-1 min-w-0">
+          <p className="t-body font-semibold text-text-1">{title}</p>
 
-          {/* Play info */}
-          <div className="flex-1 min-w-0 pt-1">
-            <h3 className={`text-lg sm:text-xl lg:text-2xl font-black leading-tight tracking-[-0.02em] ${
-              scoring ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-white/80"
-            }`}>
-              {title}
-            </h3>
-
-            {/* Player + running stats */}
-            {play.player_name && (
-              <p className="text-[14px] sm:text-[15px] lg:text-[16px] text-white/90 mt-2 font-bold">
+          {play.player_name && (
+            <p className="t-small text-text-2 mt-1 flex items-center gap-1.5">
+              {tl && <img src={tl} alt="" width={16} height={16} className="h-4 w-4 shrink-0" />}
+              <span>
                 {abbr(play.player_name)}
-                {meta && (
-                  <span className="text-white/55 font-medium"> &middot; {meta}</span>
-                )}
-              </p>
-            )}
+                {meta && <span className="text-text-3"> &middot; {meta}</span>}
+              </span>
+            </p>
+          )}
 
-            {/* Assist line */}
-            {assist && (
-              <p className="text-[15px] text-white/55 mt-1 flex items-center gap-2 font-bold">
-                {tl && <img src={tl} alt="" width={16} height={16} className="h-4 w-4 object-contain opacity-70" />}
+          {assist && (
+            <p className="t-small text-text-3 mt-0.5 flex items-center gap-1.5">
+              {tl && <img src={tl} alt="" width={16} height={16} className="h-4 w-4 shrink-0" />}
+              <span>
                 {abbr(assist)}
-                {aStats && aStats.ast > 0 && (
-                  <span className="text-white/40 font-medium"> &middot; {aStats.ast} ast</span>
-                )}
-              </p>
-            )}
-          </div>
+                {aStats && aStats.ast > 0 && <span> &middot; {aStats.ast} ast</span>}
+              </span>
+            </p>
+          )}
         </div>
-
-        {/* ── Reactions ── */}
-        {(scoring || miss) && (
-          <div className="flex items-center gap-4 mt-4 ml-[52px] sm:ml-[64px] lg:ml-[84px]">
-            <button
-              aria-label="React with fire"
-              onClick={() => onReact("fire")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors duration-300 ${
-                myReaction === "fire"
-                  ? "bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.05)]"
-                  : "opacity-30 hover:opacity-60 hover:bg-white/5"
-              }`}
-            >
-              <span className="text-[16px]">&#128293;</span>
-              {(reactions.fire || 0) > 0 && (
-                <span className="text-[12px] tabular-nums font-black text-white/60">{reactions.fire}</span>
-              )}
-            </button>
-            <button aria-label="0 comments" className="flex items-center gap-1.5 opacity-20 hover:opacity-40 transition-opacity px-2.5 py-1.5 rounded-xl hover:bg-white/5">
-              <MessageSquare className="h-4 w-4" />
-              <span className="text-[12px] tabular-nums font-bold text-white/40">0</span>
-            </button>
-            <button aria-label="Share play" className="text-white/15 hover:text-white/30 transition-colors ml-auto text-base">&#10148;</button>
-          </div>
-        )}
       </div>
 
-      {/* ── Hard divider ── */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-white/[0.12]" />
+      {/* Reaction */}
+      {(scoring || miss) && (
+        <div className="flex items-center gap-2 mt-3 ml-[52px] sm:ml-[60px]">
+          <button
+            type="button"
+            aria-label="React with fire"
+            onClick={() => onReact("fire")}
+            className={`t-small rounded-md px-2 py-1 transition-colors duration-300 ${
+              myReaction === "fire" ? "bg-surface-2 text-text-1" : "text-text-3 hover:bg-surface-2"
+            }`}
+          >
+            {'\u{1F525}'}
+            {(reactions.fire || 0) > 0 && <span className="tnum ml-1">{reactions.fire}</span>}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -396,11 +336,11 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
 function TimeoutDivider({ play }) {
   const tl = play.team ? getLogoUrl(play.team) : null;
   return (
-    <div className="flex items-center justify-center gap-3 py-3.5 px-8">
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10" />
-      {tl && <img src={tl} alt="" width={16} height={16} className="h-4 w-4 opacity-40" />}
-      <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">Timeout</span>
-      <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10" />
+    <div className="flex items-center justify-center gap-3 py-3">
+      <span className="flex-1 h-px bg-border" />
+      {tl && <img src={tl} alt="" width={16} height={16} className="h-4 w-4" />}
+      <span className="t-label text-text-3">Timeout</span>
+      <span className="flex-1 h-px bg-border" />
     </div>
   );
 }
@@ -439,59 +379,36 @@ export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam, pla
 
   if (error) {
     return (
-      <div className="liquid-mirror rounded-[2.5rem] p-8 text-center text-sm font-black text-[var(--red)]/60 uppercase tracking-widest">
-        {error}
-      </div>
+      <PageState
+        kind="error"
+        title="Couldn't load the feed."
+        message={error}
+        onRetry={() => { fetchPlays(gameId).catch(() => {}); }}
+      />
     );
   }
 
+  const title = status === "final" ? "Recap" : status === "scheduled" ? "Feed" : "Live feed";
+
   return (
-    <div className="liquid-mirror rounded-[2.5rem] overflow-hidden luxury-edge relative">
-      {/* Scanline overlay for depth */}
-      <div className="scanline opacity-5 pointer-events-none" />
-
-      {/* Live accent bar */}
-      {status !== "final" && status !== "scheduled" && (
-        <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[var(--green)] to-transparent opacity-60" />
-      )}
-
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 lg:px-8 border-b border-white/[0.08]">
-        <div className="flex items-center gap-3">
-          <Zap className="h-4 w-4 text-[var(--accent)]" />
-          <span className="text-sm font-black uppercase tracking-[0.2em] text-white">
-            {status === "final" ? "Recap" : status === "scheduled" ? "Feed" : "Live Feed"}
-          </span>
-          <span className="text-[11px] font-bold text-white/20 tabular-nums">{plays.length} plays</span>
+    <Card>
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <span className="t-section text-text-1">{title}</span>
+          <span className="t-small tnum text-text-3">{plays.length} plays</span>
         </div>
         {status !== "final" && status !== "scheduled" && (
-          connected ? (
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--green)]/10 border border-[var(--green)]/20">
-              <div className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--green)] opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--green)]" />
-              </div>
-              <span className="text-[10px] font-black text-[var(--green)] uppercase tracking-widest">Live</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/5">
-              <div className="h-1.5 w-1.5 rounded-full bg-white/30 animate-pulse" />
-              <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Sync</span>
-            </div>
-          )
+          connected ? <Badge variant="live" dot>Live</Badge> : <Badge variant="neutral">Reconnecting</Badge>
         )}
       </div>
 
-      {/* ── Feed ── plays already sorted newest-first from hook */}
+      {/* Feed — plays already sorted newest-first from hook */}
       {plays.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 px-8">
-          <Clock className="h-6 w-6 text-white/10 mb-3" />
-          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-white/20">
-            {status === "scheduled" ? "Game Has Not Started" : connected ? "Waiting for Tip-Off..." : "Syncing..."}
-          </p>
-        </div>
+        <p className="py-16 text-center t-small text-text-3">
+          {status === "scheduled" ? "This game hasn't started." : connected ? "Waiting for tip-off." : "Connecting."}
+        </p>
       ) : (
-        <div ref={feedRef} className="overflow-y-auto scrollbar-hide max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-280px)] lg:max-h-[calc(100vh-340px)]">
+        <div ref={feedRef} className="overflow-y-auto max-h-[calc(100vh-260px)] divide-y divide-border">
           {plays.map((play, i) => {
             const desc = (play.description ?? "").toLowerCase();
             if (desc.includes("timeout") && !desc.includes("shot clock")) {
@@ -513,6 +430,6 @@ export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam, pla
           })}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
