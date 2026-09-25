@@ -2,7 +2,7 @@
 name = "playbyplay-api"
 version = "0.1.0"
 description = "FastAPI service for the Play-by-Play real-time sports app"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",

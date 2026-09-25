@@ -34,6 +34,9 @@ jobs:
             ingestion/pyproject.toml
             api/pyproject.toml
             lumen-bot/pyproject.toml
+            ingestion/constraints.txt
+            api/constraints.txt
+            lumen-bot/constraints.txt
 
       # api/ and ingestion/ each declare a top-level package literally named `src`
       # (Task 15's packaging fix). Installing both into one interpreter makes the
@@ -43,19 +46,19 @@ jobs:
         run: |
           python3 -m venv .venv-ingestion
           .venv-ingestion/bin/pip install -q --upgrade pip
-          cd ingestion && ../.venv-ingestion/bin/pip install -q ".[dev]"
+          cd ingestion && ../.venv-ingestion/bin/pip install -q -c constraints.txt ".[dev]"
 
       - name: Set up api venv
         run: |
           python3 -m venv .venv-api
           .venv-api/bin/pip install -q --upgrade pip
-          cd api && ../.venv-api/bin/pip install -q ".[dev]"
+          cd api && ../.venv-api/bin/pip install -q -c constraints.txt ".[dev]"
 
       - name: Set up lumen-bot venv
         run: |
           python3 -m venv .venv-lumen
           .venv-lumen/bin/pip install -q --upgrade pip
-          cd lumen-bot && ../.venv-lumen/bin/pip install -q -e ".[dev]"
+          cd lumen-bot && ../.venv-lumen/bin/pip install -q -c constraints.txt -e ".[dev]"
 
       - name: Lint ingestion
         run: cd ingestion && ../.venv-ingestion/bin/ruff check src/ tests/
@@ -99,7 +102,16 @@ jobs:
               deps += project.get("dependencies", [])
               deps += project.get("optional-dependencies", {}).get("dev", [])
 
-          subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *deps])
+          # The same pins the services deploy with (deploy/tests checks they agree).
+          constraints = [
+              "-c", "ingestion/constraints.txt",
+              "-c", "api/constraints.txt",
+              "-c", "lumen-bot/constraints.txt",
+          ]
+
+          subprocess.check_call(
+              [sys.executable, "-m", "pip", "install", "-q", *constraints, *deps]
+          )
           PYEOF
 
       - name: Integration tests (real Postgres)

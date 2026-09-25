@@ -2,7 +2,7 @@
 name = "playbyplay-ingestion"
 version = "0.1.0"
 description = "ESPN API poller for the Play-by-Play app, writing directly to Postgres"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.27",
     "pydantic>=2.10",

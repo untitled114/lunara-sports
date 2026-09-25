@@ -132,11 +132,13 @@ def box(tmp_path):
     return root
 
 
-def make_release(box, ts):
+def make_release(box, ts, constraints=True):
     rel = box / "opt/releases" / ts
     for svc in ("api", "ingestion", "lumen-bot"):
         (rel / svc).mkdir(parents=True)
         (rel / svc / "pyproject.toml").write_text("")
+        if constraints:
+            (rel / svc / "constraints.txt").write_text("")
     (rel / "deploy").mkdir()
     (rel / "migrations").mkdir()
     for f in list(OCI.glob("*.service")) + list(OCI.glob("nginx-*.conf")):
@@ -146,13 +148,13 @@ def make_release(box, ts):
     return rel
 
 
-def deploy(box, ts, *flags):
+def deploy(box, ts, *flags, constraints=True):
     state = box / "state"
     for name in ("gc", "deploy_restarted", "log", "sudo_log"):
         (state / name).unlink(missing_ok=True)
     for flag in flags:
         (state / flag).touch()
-    make_release(box, ts)
+    make_release(box, ts, constraints=constraints)
     proc = subprocess.run(
         ["bash", str(box / "run.sh"), "deploy", ts],
         capture_output=True,
@@ -255,9 +257,29 @@ def test_venv_builds_run_as_lunara_with_its_own_home_and_cwd(box):
         assert call.startswith(f"sudo cwd={box}/opt -u lunara -H env -i ")
         assert f" HOME={box}/opt " in call and " UV_NO_CONFIG=1 " in call
         assert f" PIP_CACHE_DIR={box}/opt/.cache/pip " in call
-    assert any(
-        c.endswith(f"install -q {box}/opt/releases/20260101T000000/api") for c in calls
-    )
+    rel = f"{box}/opt/releases/20260101T000000"
+    for svc in ("api", "ingestion", "lumen-bot"):
+        # pinned: every service installs against its committed constraints file
+        assert any(
+            c.endswith(f"pip install -q -c {rel}/{svc}/constraints.txt {rel}/{svc}")
+            for c in calls
+        ), calls
+
+
+def test_missing_constraints_file_fails_before_any_live_change(box):
+    second_deploy_setup(box)
+    rc, out = deploy(box, "20260107T000000", constraints=False)
+    assert rc != 0 and "constraints.txt missing" in out
+    assert "armed" not in out and "ROLLBACK" not in out
+    assert live(box) == "20260101T000000"
+
+
+def test_laptop_rsync_ships_the_constraints_files():
+    text = (OCI / "deploy.sh").read_text()
+    excludes = re.findall(r"--exclude='([^']+)'", text)
+    for pattern in excludes:
+        assert not Path("constraints.txt").match(pattern), pattern
+    assert "uv.lock" in excludes  # still excluded: pip installs from constraints.txt
 
 
 def test_every_lunara_user_command_goes_through_as_lunara():

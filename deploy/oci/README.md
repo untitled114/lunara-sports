@@ -178,8 +178,10 @@ deploy/oci/deploy.sh
    `ingestion/`, `lumen-bot/`, `deploy/oci` and the migrations into
    `/opt/lunara/releases/<YYYYmmddTHHMMSS>` (America/New_York). Tests, `.venv`, `logs/` and
    `.env` are excluded. Nothing live changes.
-3. **Build fresh venvs in the release,** as `lunara`: `python3.12 -m venv .venv && pip install .`
-   (the pip cache is `/opt/lunara/.cache/pip`). `lumen-bot/logs` is linked to the shared
+3. **Build fresh venvs in the release,** as `lunara`: `python3.12 -m venv .venv && pip install -c constraints.txt .`
+   (the pip cache is `/opt/lunara/.cache/pip`). The pins are each service's committed
+   `constraints.txt`, the versions its test suite passes with (CI installs the same); regenerate
+   with `uv pip compile pyproject.toml --extra dev --python-version 3.12 --no-annotate -o constraints.txt`. `lumen-bot/logs` is linked to the shared
    log directory. The live venvs are untouched.
 4. **Apply new migrations** from the release. Migrations are forward-only; a failure up to
    here leaves the live release running.
