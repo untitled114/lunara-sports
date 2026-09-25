@@ -39,14 +39,40 @@ describe('seedBadge', () => {
 })
 
 describe('winProbability', () => {
-  it('ratio of win pcts, integer percents summing to 100', () => {
+  it('ratio of Laplace-smoothed win strength, integer percents summing to 100', () => {
+    // (45+1)/(84) = 46/84 vs (37+1)/(84) = 38/84 → round(100*46/84) = 55.
     expect(winProbability(t(45, 37, 5), t(37, 45, 9))).toEqual({ home: 55, away: 45 })
   })
 
-  it('hidden without data — never 100/0', () => {
+  it('never an extreme split, even for a winless team vs a .500 team', () => {
+    // Regression for the bug: a raw-pct ratio made 0-10 vs 5-5 come out {home:0, away:100}.
+    const result = winProbability(t(0, 10, 15), t(5, 5, 3))
+    expect(result).not.toBeNull()
+    expect(result.home).toBeGreaterThanOrEqual(1)
+    expect(result.home).toBeLessThanOrEqual(99)
+    expect(result.away).toBeGreaterThanOrEqual(1)
+    expect(result.away).toBeLessThanOrEqual(99)
+    expect(result.home + result.away).toBe(100)
+  })
+
+  it('null when either team has no games played', () => {
     expect(winProbability(t(0, 0, null), t(10, 5, 3))).toBeNull()
     expect(winProbability(undefined, t(10, 5, 3))).toBeNull()
-    expect(winProbability(t(0, 10, 15), t(0, 10, 15))).toBeNull() // both 0% → no basis
+  })
+
+  it('property: every record pair over an 82-game season yields an integer split in 1..99 summing to 100', () => {
+    for (let hw = 0; hw <= 82; hw++) {
+      for (let aw = 0; aw <= 82; aw++) {
+        const result = winProbability(t(hw, 82 - hw, 1), t(aw, 82 - aw, 1))
+        expect(Number.isInteger(result.home)).toBe(true)
+        expect(Number.isInteger(result.away)).toBe(true)
+        expect(result.home).toBeGreaterThanOrEqual(1)
+        expect(result.home).toBeLessThanOrEqual(99)
+        expect(result.away).toBeGreaterThanOrEqual(1)
+        expect(result.away).toBeLessThanOrEqual(99)
+        expect(result.home + result.away).toBe(100)
+      }
+    }
   })
 })
 
@@ -55,5 +81,11 @@ describe('recordLine', () => {
     expect(recordLine(t(37, 45, 9), '2025–26 final', true)).toBe('2025–26: 37-45')
     expect(recordLine(t(3, 1, 2), '2026–27', false)).toBe('3-1')
     expect(recordLine(undefined, '', false)).toBeNull()
+  })
+
+  it('tolerates a missing season label when isPrev is true — falls back to the record', () => {
+    expect(recordLine(t(3, 1, 2), null, true)).toBe('3-1')
+    expect(recordLine(t(3, 1, 2), undefined, true)).toBe('3-1')
+    expect(recordLine(t(3, 1, 2), '', true)).toBe('3-1')
   })
 })

@@ -39,26 +39,37 @@ export function seedBadge(team, isPrev) {
   return null
 }
 
+// Laplace-smoothed win pct: (w + 1) / (w + l + 2). Always strictly between 0
+// and 1, so the ratio below never collapses to an exact 0 or 1 — a 0-10 team
+// still has *some* modeled chance, it's just heavily discounted. Uses raw
+// w/l, not the pct string (which is itself unsmoothed and can be exactly
+// "0.000").
+const strength = (t) => (Number(t.w) + 1) / (Number(t.w) + Number(t.l) + 2)
+
 /**
- * `{ home, away }` integer percents (summing to 100) from each team's win
- * pct, or `null` when either team hasn't played or both are at 0% (no basis
- * for a ratio) — never renders a misleading 100/0.
+ * `{ home, away }` integer percents (summing to 100) from each team's
+ * Laplace-smoothed win strength, or `null` when either team hasn't played
+ * any games. Clamped to 1..99 so it never renders a misleading 100/0, even
+ * for extreme records.
  */
 export function winProbability(home, away) {
   if (!played(home) || !played(away)) return null
-  const h = parseFloat(home.pct)
-  const a = parseFloat(away.pct)
-  if (!(h + a > 0)) return null
-  const hp = Math.round((h / (h + a)) * 100)
+  const pH = strength(home)
+  const pA = strength(away)
+  const hp = Math.min(99, Math.max(1, Math.round((100 * pH) / (pH + pA))))
   return { home: hp, away: 100 - hp }
 }
 
 /**
  * `'W-L'` record line, prefixed with the season label when `isPrev` is true
- * (e.g. `'2025–26: 37-45'`). `null` when there's no team.
+ * (e.g. `'2025–26: 37-45'`). `null` when there's no team. Tolerates a
+ * missing/null/undefined `seasonLabel` — falls back to just the record
+ * rather than throwing or printing "undefined:".
  */
 export function recordLine(team, seasonLabel, isPrev) {
   if (!team) return null
   const rec = `${team.w}-${team.l}`
-  return isPrev ? `${seasonLabel.replace(/ final$/, '')}: ${rec}` : rec
+  if (!isPrev) return rec
+  const label = String(seasonLabel ?? '').replace(/ final$/, '')
+  return label ? `${label}: ${rec}` : rec
 }
