@@ -2,11 +2,20 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # e2e fixtures are byte-for-byte captures of real responses: never rewrite them.
       - id: trailing-whitespace
+        exclude: ^frontend/e2e/fixtures/
       - id: end-of-file-fixer
+        exclude: ^frontend/e2e/fixtures/
       - id: check-yaml
       - id: check-added-large-files
         args: ['--maxkb=500']
+        exclude: ^frontend/e2e/pages\.spec\.js-snapshots/
+      # Full-page screenshot baselines (the home page's photos run ~600 KB at 1280px).
+      - id: check-added-large-files
+        name: check for added large files (e2e screenshot baselines)
+        args: ['--maxkb=1000']
+        files: ^frontend/e2e/pages\.spec\.js-snapshots/
       - id: check-merge-conflict
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
