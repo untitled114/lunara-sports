@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
+import clsx from 'clsx';
 
 /**
  * Alert Component
@@ -21,9 +22,16 @@ import { CheckCircle, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
  *   variant="warning"
  *   title="Warning"
  *   description="Your session will expire in 5 minutes"
- *   action={<button className="text-sm underline">Extend Session</button>}
+ *   action={<button className="text-sm underline">Extend session</button>}
  * />
  */
+const VARIANTS = {
+  success: { icon: CheckCircle, tone: 'bg-live/10 border-live/30 text-live' },
+  error: { icon: AlertCircle, tone: 'bg-loss/10 border-loss/30 text-loss' },
+  warning: { icon: AlertTriangle, tone: 'bg-warn/10 border-warn/30 text-warn' },
+  info: { icon: Info, tone: 'bg-accent/10 border-accent/30 text-accent' },
+};
+
 const Alert = ({
   variant = 'info',
   title,
@@ -45,96 +53,37 @@ const Alert = ({
 
   if (!isVisible) return null;
 
-  // Variant configurations
-  const variants = {
-    success: {
-      icon: CheckCircle,
-      bgColor: 'bg-green-900/20',
-      borderColor: 'border-green-500/50',
-      iconColor: 'text-green-500',
-      titleColor: 'text-green-400',
-      textColor: 'text-green-300',
-    },
-    error: {
-      icon: AlertCircle,
-      bgColor: 'bg-red-900/20',
-      borderColor: 'border-red-500/50',
-      iconColor: 'text-red-500',
-      titleColor: 'text-red-400',
-      textColor: 'text-red-300',
-    },
-    warning: {
-      icon: AlertTriangle,
-      bgColor: 'bg-yellow-900/20',
-      borderColor: 'border-yellow-500/50',
-      iconColor: 'text-yellow-500',
-      titleColor: 'text-yellow-400',
-      textColor: 'text-yellow-300',
-    },
-    info: {
-      icon: Info,
-      bgColor: 'bg-blue-900/20',
-      borderColor: 'border-blue-500/50',
-      iconColor: 'text-blue-500',
-      titleColor: 'text-blue-400',
-      textColor: 'text-blue-300',
-    },
-  };
-
-  const config = variants[variant];
+  const config = VARIANTS[variant] ?? VARIANTS.info;
   const Icon = config.icon;
+  const [toneBg, toneBorder, toneText] = config.tone.split(' ');
 
   return (
-    <div
-      className={`
-        flex gap-3 p-4 rounded-lg border
-        ${config.bgColor}
-        ${config.borderColor}
-        ${className}
-      `}
-      role="alert"
-    >
+    <div className={clsx('flex gap-3 rounded-lg border p-4', toneBg, toneBorder, className)} role="alert">
       {/* Icon */}
       <div className="flex-shrink-0">
-        <Icon className={`w-5 h-5 ${config.iconColor}`} />
+        <Icon className={clsx('h-5 w-5', toneText)} />
       </div>
 
       {/* Content */}
       <div className="flex-1">
-        {title && (
-          <h4 className={`text-sm font-semibold mb-1 ${config.titleColor}`}>
-            {title}
-          </h4>
-        )}
+        {title && <h4 className="t-body font-semibold text-text-1 mb-1">{title}</h4>}
 
-        {description && (
-          <p className={`text-sm ${config.textColor}`}>
-            {description}
-          </p>
-        )}
+        {description && <p className="t-small text-text-2">{description}</p>}
 
-        {children && (
-          <div className={`text-sm ${config.textColor} mt-2`}>
-            {children}
-          </div>
-        )}
+        {children && <div className="t-small text-text-2 mt-2">{children}</div>}
 
         {/* Action */}
-        {action && (
-          <div className="mt-3">
-            {action}
-          </div>
-        )}
+        {action && <div className="mt-3">{action}</div>}
       </div>
 
       {/* Dismiss Button */}
       {dismissible && (
         <button
           onClick={handleDismiss}
-          className={`flex-shrink-0 ${config.iconColor} hover:opacity-70 transition-opacity`}
+          className={clsx('flex-shrink-0 hover:opacity-70 transition-opacity', toneText)}
           aria-label="Dismiss"
         >
-          <X className="w-5 h-5" />
+          <X className="h-5 w-5" />
         </button>
       )}
     </div>

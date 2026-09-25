@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import clsx from 'clsx';
 
 /**
  * DataTable - Reusable table with sorting, pagination, and custom actions
@@ -13,15 +14,7 @@ import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
  * @param {boolean} [striped] - Striped row styling
  * @param {boolean} [hoverable] - Hoverable row styling
  */
-const DataTable = ({
-  columns = [],
-  data = [],
-  onRowClick,
-  loading = false,
-  emptyState,
-  striped = true,
-  hoverable = true,
-}) => {
+const DataTable = ({ columns = [], data = [], onRowClick, loading = false, emptyState, striped = true, hoverable = true }) => {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
 
@@ -54,11 +47,11 @@ const DataTable = ({
 
   if (loading) {
     return (
-      <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-surface-1 border border-border rounded-lg shadow-lg overflow-hidden">
         <div className="animate-pulse p-6">
-          <div className="h-10 bg-gray-700 rounded mb-4"></div>
+          <div className="h-10 bg-surface-2 rounded-sm mb-4" />
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-16 bg-gray-700/50 rounded mb-2"></div>
+            <div key={i} className="h-16 bg-surface-2 rounded-sm mb-2" />
           ))}
         </div>
       </div>
@@ -70,31 +63,26 @@ const DataTable = ({
   }
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg overflow-hidden">
+    <div className="bg-surface-1 border border-border rounded-lg shadow-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-900/50 border-b border-gray-700">
+          <thead className="bg-surface-2 border-b border-border">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   onClick={() => handleSort(column)}
-                  className={`px-6 py-4 text-left text-sm font-semibold text-gray-400 uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:bg-gray-800/50 select-none' : ''
-                  }`}
+                  className={clsx(
+                    't-label px-6 py-4 text-left text-text-3',
+                    column.sortable && 'cursor-pointer hover:bg-surface-1 select-none'
+                  )}
                   role={column.sortable ? 'button' : undefined}
-                  aria-sort={
-                    sortColumn === column.key
-                      ? sortDirection === 'asc'
-                        ? 'ascending'
-                        : 'descending'
-                      : undefined
-                  }
+                  aria-sort={sortColumn === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined}
                 >
                   <div className="flex items-center gap-2">
                     <span>{column.label}</span>
                     {column.sortable && (
-                      <span className="text-gray-500">
+                      <span className="text-text-3">
                         {sortColumn === column.key ? (
                           sortDirection === 'asc' ? (
                             <ChevronUp className="w-4 h-4" />
@@ -111,20 +99,19 @@ const DataTable = ({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-700">
+          <tbody className="divide-y divide-border">
             {sortedData.map((row, rowIndex) => (
               <tr
                 key={row.id || rowIndex}
                 onClick={() => onRowClick && onRowClick(row)}
-                className={`transition ${
-                  striped && rowIndex % 2 === 0 ? 'bg-gray-800/30' : ''
-                } ${hoverable ? 'hover:bg-gray-700/50 cursor-pointer' : ''}`}
+                className={clsx(
+                  'transition-colors',
+                  striped && rowIndex % 2 === 0 && 'bg-surface-2/30',
+                  hoverable && 'hover:bg-surface-2 cursor-pointer'
+                )}
               >
                 {columns.map((column) => (
-                  <td
-                    key={column.key}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-300"
-                  >
+                  <td key={column.key} className="t-small px-6 py-4 whitespace-nowrap text-text-2">
                     {column.render ? column.render(row[column.key], row) : row[column.key]}
                   </td>
                 ))}

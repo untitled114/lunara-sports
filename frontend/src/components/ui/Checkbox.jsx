@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check, Minus } from 'lucide-react';
+import clsx from 'clsx';
 
 /**
  * Checkbox Component
@@ -43,7 +44,7 @@ const Checkbox = ({
   };
 
   return (
-    <div className={`flex items-start ${className}`}>
+    <div className={clsx('flex items-start', className)}>
       {/* Checkbox */}
       <div className="flex items-center h-5">
         <button
@@ -53,25 +54,19 @@ const Checkbox = ({
           aria-labelledby={label ? `${checkboxId}-label` : undefined}
           onClick={handleChange}
           disabled={disabled}
-          className={`
-            w-5 h-5 rounded border flex items-center justify-center
-            transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
-            focus:ring-indigo-500 focus:ring-offset-gray-900
-            ${disabled
-              ? 'opacity-50 cursor-not-allowed'
-              : 'cursor-pointer'
-            }
-            ${checked || indeterminate
-              ? 'bg-indigo-600 border-indigo-600'
-              : 'bg-gray-700 border-gray-600 hover:border-gray-500'
-            }
-            ${error ? 'border-red-500' : ''}
-          `}
+          className={clsx(
+            'flex h-5 w-5 items-center justify-center rounded-sm border transition-colors focus-visible:outline-2 outline-accent',
+            disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+            checked || indeterminate
+              ? 'bg-accent-fill border-accent-fill'
+              : 'bg-surface-2 border-border hover:border-border-strong',
+            error && 'border-loss'
+          )}
         >
           {indeterminate ? (
-            <Minus className="w-3 h-3 text-white" />
+            <Minus className="h-3 w-3 text-text-1" />
           ) : checked ? (
-            <Check className="w-3 h-3 text-white" />
+            <Check className="h-3 w-3 text-text-1" />
           ) : null}
         </button>
       </div>
@@ -84,24 +79,16 @@ const Checkbox = ({
               id={`${checkboxId}-label`}
               htmlFor={checkboxId}
               onClick={!disabled ? handleChange : undefined}
-              className={`
-                text-sm font-medium
-                ${disabled ? 'text-gray-500 cursor-not-allowed' : 'text-gray-200 cursor-pointer'}
-              `}
+              className={clsx(
+                't-small font-medium',
+                disabled ? 'text-text-3 cursor-not-allowed' : 'text-text-1 cursor-pointer'
+              )}
             >
               {label}
             </label>
           )}
-          {description && (
-            <p className="text-sm text-gray-400 mt-1">
-              {description}
-            </p>
-          )}
-          {error && (
-            <p className="text-sm text-red-400 mt-1">
-              {error}
-            </p>
-          )}
+          {description && <p className="t-small text-text-2 mt-1">{description}</p>}
+          {error && <p className="t-small text-loss mt-1">{error}</p>}
         </div>
       )}
     </div>

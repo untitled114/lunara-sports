@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { MoreVertical } from 'lucide-react';
+import clsx from 'clsx';
 
 /**
  * ActionMenu - Three-dot dropdown menu for row actions
@@ -50,13 +51,13 @@ const ActionMenu = ({ actions = [], align = 'right' }) => {
   const getVariantClasses = (variant) => {
     switch (variant) {
       case 'danger':
-        return 'text-red-400 hover:bg-red-900/20';
+        return 'text-loss hover:bg-loss/10';
       case 'warning':
-        return 'text-yellow-400 hover:bg-yellow-900/20';
+        return 'text-warn hover:bg-warn/10';
       case 'success':
-        return 'text-green-400 hover:bg-green-900/20';
+        return 'text-live hover:bg-live/10';
       default:
-        return 'text-gray-300 hover:bg-gray-700/50';
+        return 'text-text-2 hover:bg-surface-2';
     }
   };
 
@@ -64,7 +65,7 @@ const ActionMenu = ({ actions = [], align = 'right' }) => {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-lg text-gray-400 hover:bg-gray-700/50 hover:text-white transition"
+        className="p-2 rounded-md text-text-3 hover:bg-surface-2 hover:text-text-1 transition-colors"
         aria-label="Open actions menu"
         aria-haspopup="true"
         aria-expanded={isOpen}
@@ -74,23 +75,23 @@ const ActionMenu = ({ actions = [], align = 'right' }) => {
 
       {isOpen && (
         <div
-          className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl z-50 py-1`}
+          className={clsx(
+            'absolute mt-2 w-48 bg-surface-1 border border-border rounded-md shadow-2xl z-50 py-1',
+            align === 'left' ? 'left-0' : 'right-0'
+          )}
           role="menu"
           aria-orientation="vertical"
         >
           {actions.map((action, index) => (
             <React.Fragment key={index}>
-              {action.divider && index > 0 && (
-                <div className="my-1 border-t border-gray-700" role="separator" />
-              )}
+              {action.divider && index > 0 && <div className="my-1 border-t border-border" role="separator" />}
               <button
                 onClick={() => handleAction(action)}
                 disabled={action.disabled}
-                className={`w-full px-4 py-2 text-sm text-left flex items-center gap-3 transition ${
-                  action.disabled
-                    ? 'opacity-50 cursor-not-allowed'
-                    : getVariantClasses(action.variant)
-                }`}
+                className={clsx(
+                  't-small w-full px-4 py-2 text-left flex items-center gap-3 transition-colors',
+                  action.disabled ? 'opacity-50 cursor-not-allowed' : getVariantClasses(action.variant)
+                )}
                 role="menuitem"
                 aria-disabled={action.disabled}
               >

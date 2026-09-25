@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import clsx from 'clsx';
 
 /**
  * Pagination - Page navigation component
@@ -25,7 +26,7 @@ const Pagination = ({
   onPageChange,
   showFirstLast = true,
   siblingCount = 1,
-  className = ''
+  className = '',
 }) => {
   // Generate page range with ellipsis
   const getPageNumbers = () => {
@@ -86,23 +87,21 @@ const Pagination = ({
   const isLastPage = currentPage === totalPages;
 
   // Button base classes
-  const buttonBaseClasses = 'px-3 py-2 min-w-[40px] flex items-center justify-center rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500';
-  const buttonEnabledClasses = 'bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700 hover:text-white';
-  const buttonDisabledClasses = 'bg-gray-900 text-gray-600 border border-gray-800 cursor-not-allowed';
-  const buttonActiveClasses = 'bg-indigo-600 text-white border border-indigo-500 hover:bg-indigo-700';
+  const buttonBaseClasses =
+    't-small px-3 py-2 min-w-[40px] flex items-center justify-center rounded-md transition-colors focus-visible:outline-2 outline-accent';
+  const buttonEnabledClasses = 'bg-surface-2 text-text-2 border border-border hover:bg-surface-1 hover:text-text-1';
+  const buttonDisabledClasses = 'bg-surface-1 text-text-3 border border-border cursor-not-allowed';
+  const buttonActiveClasses = 'bg-accent-fill text-white border border-accent-fill hover:bg-accent-fill-hover';
 
   return (
-    <nav
-      className={`flex items-center justify-center gap-1 flex-wrap ${className}`}
-      aria-label="Pagination"
-    >
+    <nav className={clsx('flex items-center justify-center gap-1 flex-wrap', className)} aria-label="Pagination">
       {/* First page button */}
       {showFirstLast && (
         <button
           type="button"
           onClick={() => handlePageChange(1)}
           disabled={isFirstPage}
-          className={`${buttonBaseClasses} ${isFirstPage ? buttonDisabledClasses : buttonEnabledClasses}`}
+          className={clsx(buttonBaseClasses, isFirstPage ? buttonDisabledClasses : buttonEnabledClasses)}
           aria-label="Go to first page"
         >
           <ChevronsLeft className="w-4 h-4" />
@@ -114,22 +113,18 @@ const Pagination = ({
         type="button"
         onClick={() => handlePageChange(currentPage - 1)}
         disabled={isFirstPage}
-        className={`${buttonBaseClasses} ${isFirstPage ? buttonDisabledClasses : buttonEnabledClasses}`}
+        className={clsx(buttonBaseClasses, isFirstPage ? buttonDisabledClasses : buttonEnabledClasses)}
         aria-label="Go to previous page"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
 
       {/* Page numbers */}
-      {pageNumbers.map((page, index) => {
+      {pageNumbers.map((page) => {
         // Render ellipsis
         if (typeof page === 'string' && page.startsWith('ellipsis')) {
           return (
-            <span
-              key={page}
-              className="px-3 py-2 text-gray-500"
-              aria-hidden="true"
-            >
+            <span key={page} className="t-small px-3 py-2 text-text-3" aria-hidden="true">
               ...
             </span>
           );
@@ -142,7 +137,7 @@ const Pagination = ({
             key={page}
             type="button"
             onClick={() => handlePageChange(page)}
-            className={`${buttonBaseClasses} ${isActive ? buttonActiveClasses : buttonEnabledClasses}`}
+            className={clsx(buttonBaseClasses, 'tnum', isActive ? buttonActiveClasses : buttonEnabledClasses)}
             aria-label={`Go to page ${page}`}
             aria-current={isActive ? 'page' : undefined}
           >
@@ -156,7 +151,7 @@ const Pagination = ({
         type="button"
         onClick={() => handlePageChange(currentPage + 1)}
         disabled={isLastPage}
-        className={`${buttonBaseClasses} ${isLastPage ? buttonDisabledClasses : buttonEnabledClasses}`}
+        className={clsx(buttonBaseClasses, isLastPage ? buttonDisabledClasses : buttonEnabledClasses)}
         aria-label="Go to next page"
       >
         <ChevronRight className="w-4 h-4" />
@@ -168,7 +163,7 @@ const Pagination = ({
           type="button"
           onClick={() => handlePageChange(totalPages)}
           disabled={isLastPage}
-          className={`${buttonBaseClasses} ${isLastPage ? buttonDisabledClasses : buttonEnabledClasses}`}
+          className={clsx(buttonBaseClasses, isLastPage ? buttonDisabledClasses : buttonEnabledClasses)}
           aria-label="Go to last page"
         >
           <ChevronsRight className="w-4 h-4" />

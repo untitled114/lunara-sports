@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import clsx from 'clsx';
 
 /**
  * Dropdown - Reusable dropdown menu component
@@ -21,26 +22,21 @@ import { ChevronDown } from 'lucide-react';
  *   position="bottom-right"
  * />
  */
-const Dropdown = ({
-  trigger,
-  items = [],
-  position = 'bottom-left',
-  className = ''
-}) => {
+const Dropdown = ({ trigger, items = [], position = 'bottom-left', className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const dropdownRef = useRef(null);
   const menuRef = useRef(null);
 
   // Filter out dividers to get focusable items
-  const focusableItems = items.filter(item => !item.divider && !item.disabled);
+  const focusableItems = items.filter((item) => !item.divider && !item.disabled);
 
   // Position classes mapping
   const positionClasses = {
     'bottom-left': 'top-full left-0 mt-2',
     'bottom-right': 'top-full right-0 mt-2',
     'top-left': 'bottom-full left-0 mb-2',
-    'top-right': 'bottom-full right-0 mb-2'
+    'top-right': 'bottom-full right-0 mb-2',
   };
 
   // Close dropdown when clicking outside
@@ -137,22 +133,18 @@ const Dropdown = ({
   };
 
   return (
-    <div
-      ref={dropdownRef}
-      className={`relative inline-block ${className}`}
-      onKeyDown={handleKeyDown}
-    >
+    <div ref={dropdownRef} className={clsx('relative inline-block', className)} onKeyDown={handleKeyDown}>
       {/* Trigger */}
       <div onClick={toggleDropdown}>
         {trigger || (
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface-2 px-4 py-2 text-text-1 transition-colors hover:bg-surface-1 focus-visible:outline-2 outline-accent"
             aria-haspopup="true"
             aria-expanded={isOpen}
           >
             Options
-            <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={clsx('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
           </button>
         )}
       </div>
@@ -161,26 +153,21 @@ const Dropdown = ({
       {isOpen && (
         <div
           ref={menuRef}
-          className={`absolute ${positionClasses[position]} z-50 min-w-[200px] py-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl`}
+          className={clsx(
+            'absolute z-50 min-w-[200px] rounded-md border border-border bg-surface-1 py-1 shadow-xl',
+            positionClasses[position]
+          )}
           role="menu"
           aria-orientation="vertical"
         >
           {items.map((item, index) => {
             // Render divider
             if (item.divider) {
-              return (
-                <div
-                  key={`divider-${index}`}
-                  className="my-1 border-t border-gray-700"
-                  role="separator"
-                />
-              );
+              return <div key={`divider-${index}`} className="my-1 border-t border-border" role="separator" />;
             }
 
             // Find focusable index
-            const focusableIndex = focusableItems.findIndex(fi =>
-              items.indexOf(fi) === index
-            );
+            const focusableIndex = focusableItems.findIndex((fi) => items.indexOf(fi) === index);
             const isFocused = focusableIndex === focusedIndex;
 
             const Icon = item.icon;
@@ -189,20 +176,17 @@ const Dropdown = ({
               <button
                 key={item.label || index}
                 type="button"
-                className={`
-                  w-full px-4 py-2 flex items-center gap-3 text-sm text-left transition-colors
-                  ${item.disabled
-                    ? 'text-gray-500 cursor-not-allowed'
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer'
-                  }
-                  ${isFocused && !item.disabled ? 'bg-gray-700 text-white' : ''}
-                `}
+                className={clsx(
+                  't-small flex w-full items-center gap-3 px-4 py-2 text-left transition-colors',
+                  item.disabled ? 'text-text-3 cursor-not-allowed' : 'text-text-2 hover:bg-surface-2 hover:text-text-1 cursor-pointer',
+                  isFocused && !item.disabled && 'bg-surface-2 text-text-1'
+                )}
                 onClick={() => handleItemClick(item)}
                 disabled={item.disabled}
                 role="menuitem"
                 tabIndex={isFocused ? 0 : -1}
               >
-                {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
+                {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
                 <span className="flex-1">{item.label}</span>
               </button>
             );

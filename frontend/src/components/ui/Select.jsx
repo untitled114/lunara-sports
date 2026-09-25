@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import clsx from 'clsx';
 
 /**
  * Select Component
@@ -43,14 +44,13 @@ const Select = ({
   const searchInputRef = useRef(null);
 
   // Find selected option
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find((opt) => opt.value === value);
 
   // Filter options based on search
-  const filteredOptions = searchable && searchTerm
-    ? options.filter(opt =>
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : options;
+  const filteredOptions =
+    searchable && searchTerm
+      ? options.filter((opt) => opt.label.toLowerCase().includes(searchTerm.toLowerCase()))
+      : options;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -81,52 +81,40 @@ const Select = ({
   };
 
   return (
-    <div ref={selectRef} className={`relative ${className}`}>
+    <div ref={selectRef} className={clsx('relative', className)}>
       {/* Select Button */}
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`
-          w-full flex items-center justify-between
-          px-4 py-2 rounded-lg
-          bg-gray-700 border text-white
-          transition-colors
-          ${error ? 'border-red-500' : 'border-gray-600'}
-          ${disabled
-            ? 'opacity-50 cursor-not-allowed'
-            : 'hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500'
-          }
-        `}
+        className={clsx(
+          't-small w-full flex items-center justify-between rounded-md border bg-surface-2 px-4 py-2 text-text-1 transition-colors',
+          error ? 'border-loss' : 'border-border',
+          disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-surface-1 focus-visible:outline-2 outline-accent'
+        )}
       >
-        <span className={selectedOption ? 'text-white' : 'text-gray-400'}>
+        <span className={selectedOption ? 'text-text-1' : 'text-text-3'}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform ${
-            isOpen ? 'transform rotate-180' : ''
-          }`}
-        />
+        <ChevronDown className={clsx('w-4 h-4 text-text-3 transition-transform', isOpen && 'rotate-180')} />
       </button>
 
       {/* Error Message */}
-      {error && (
-        <p className="mt-1 text-sm text-red-400">{error}</p>
-      )}
+      {error && <p className="mt-1 t-small text-loss">{error}</p>}
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-2 max-h-60 overflow-auto rounded-md border border-border bg-surface-1 shadow-xl">
           {/* Search Input */}
           {searchable && (
-            <div className="p-2 border-b border-gray-700">
+            <div className="p-2 border-b border-border">
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search..."
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="t-small w-full rounded-sm border border-border bg-surface-2 px-3 py-2 text-text-1 placeholder-text-3 focus-visible:outline-2 outline-accent"
               />
             </div>
           )}
@@ -140,26 +128,18 @@ const Select = ({
                   type="button"
                   onClick={() => handleSelect(option)}
                   disabled={option.disabled}
-                  className={`
-                    w-full flex items-center justify-between
-                    px-4 py-2 text-left transition-colors
-                    ${option.disabled
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:bg-gray-700 cursor-pointer'
-                    }
-                    ${option.value === value ? 'bg-gray-700 text-white' : 'text-gray-300'}
-                  `}
+                  className={clsx(
+                    't-small w-full flex items-center justify-between px-4 py-2 text-left transition-colors',
+                    option.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-surface-2 cursor-pointer',
+                    option.value === value ? 'bg-surface-2 text-text-1' : 'text-text-2'
+                  )}
                 >
                   <span>{option.label}</span>
-                  {option.value === value && (
-                    <Check className="w-4 h-4 text-indigo-500" />
-                  )}
+                  {option.value === value && <Check className="w-4 h-4 text-accent" />}
                 </button>
               ))
             ) : (
-              <div className="px-4 py-6 text-center text-gray-400">
-                No options found
-              </div>
+              <div className="px-4 py-6 text-center t-small text-text-2">No options found</div>
             )}
           </div>
         </div>
