@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchGames } from "@/services/api";
 import { todayET } from "@/lib/et";
 
@@ -26,18 +26,24 @@ const socket = {
   pingTimer: null,
 };
 
-/** date -> { games, loading, refs, listeners:Set, pollTimer } */
+/**
+ * date -> { games, loading, error, pushed, refs, listeners:Set, pollTimer }
+ * `error` is true only when the REST fetch failed and no data has arrived from any
+ * source; `pushed` is true once a WS update has landed (fresher than any REST reply).
+ */
 const stores = new Map();
 
+const snapshot = (store) => ({ games: store.games, loading: store.loading, error: store.error });
+
 function notify(store) {
-  const snap = { games: store.games, loading: store.loading };
+  const snap = snapshot(store);
   for (const fn of store.listeners) fn(snap);
 }
 
 function setConnected(value) {
   socket.connected = value;
   for (const [date, store] of stores) {
-    for (const fn of store.listeners) fn({ games: store.games, loading: store.loading, connected: value });
+    for (const fn of store.listeners) fn({ ...snapshot(store), connected: value });
     syncPoll(date, store);
   }
 }
@@ -52,6 +58,7 @@ function syncPoll(date, store) {
         .then((data) => {
           if (stores.get(date) === store && Array.isArray(data)) {
             store.games = data;
+            store.error = false;
             notify(store);
           }
         })
@@ -103,6 +110,8 @@ function openSocket() {
         if (store) {
           store.games = msg.data;
           store.loading = false;
+          store.error = false;
+          store.pushed = true;
           notify(store);
         }
       }
@@ -153,22 +162,55 @@ function releaseSocket() {
   if (ws) ws.close();
 }
 
+// The REST fetch of a date's games, shared by every consumer of that date. A WS update
+// that landed first is fresher, so the REST reply never overwrites it. A failure sets
+// `error` only when nothing has arrived from any source.
+function loadStore(date, store) {
+  fetchGames(date)
+    .then((data) => {
+      if (stores.get(date) !== store || store.pushed) return;
+      if (Array.isArray(data)) {
+        store.games = data;
+        store.error = false;
+      } else {
+        store.error = true;
+      }
+    })
+    .catch(() => {
+      if (stores.get(date) === store && !store.pushed) store.error = true;
+    })
+    .finally(() => {
+      if (stores.get(date) !== store) return;
+      store.loading = false;
+      notify(store);
+    });
+}
+
+/** Refetch a date's games after an error (the "Try again" button). */
+function retryStore(date) {
+  const store = stores.get(date);
+  if (!store || store.loading) return;
+  store.loading = true;
+  store.error = false;
+  notify(store);
+  loadStore(date, store);
+}
+
 function acquireStore(date) {
   let store = stores.get(date);
   if (!store) {
-    store = { games: [], loading: true, refs: 0, listeners: new Set(), pollTimer: null };
+    store = {
+      games: [],
+      loading: true,
+      error: false,
+      pushed: false,
+      refs: 0,
+      listeners: new Set(),
+      pollTimer: null,
+    };
     stores.set(date, store);
     // One-shot initial REST fetch for immediate data, shared by every consumer.
-    fetchGames(date)
-      .then((data) => {
-        if (stores.get(date) === store && Array.isArray(data)) store.games = data;
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (stores.get(date) !== store) return;
-        store.loading = false;
-        notify(store);
-      });
+    loadStore(date, store);
   }
   store.refs++;
   syncPoll(date, store);
@@ -189,8 +231,11 @@ function releaseStore(date, store) {
  * Falls back to REST polling (30s) only when WS is disconnected.
  * All consumers share one socket and one REST fetch/poll per date.
  *
+ * `error` is true when the games couldn't be loaded and nothing has arrived since;
+ * `retry()` fetches them again.
+ *
  * @param {string} dateStr - YYYY-MM-DD date for REST fallback
- * @returns {{ games: Array, connected: boolean, loading: boolean }}
+ * @returns {{ games: Array, connected: boolean, loading: boolean, error: boolean, retry: Function }}
  */
 export function useScoreboard(dateStr) {
   const [state, setState] = useState(() => {
@@ -198,6 +243,7 @@ export function useScoreboard(dateStr) {
     return {
       games: store ? store.games : [],
       loading: store ? store.loading : true,
+      error: store ? store.error : false,
       connected: socket.connected,
     };
   });
@@ -214,12 +260,13 @@ export function useScoreboard(dateStr) {
     const listener = (snap) =>
       setState((s) => ({ ...s, ...snap, connected: snap.connected ?? socket.connected }));
     store.listeners.add(listener);
-    setState({ games: store.games, loading: store.loading, connected: socket.connected });
+    setState({ ...snapshot(store), connected: socket.connected });
     return () => {
       store.listeners.delete(listener);
       releaseStore(dateStr, store);
     };
   }, [dateStr]);
 
-  return state;
+  const retry = useCallback(() => retryStore(dateStr), [dateStr]);
+  return { ...state, retry };
 }

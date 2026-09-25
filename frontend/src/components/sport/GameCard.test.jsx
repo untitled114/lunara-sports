@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 vi.mock('@/context/ThemeContext', () => ({ useTheme: () => ({ playGlassClick: vi.fn(), playThud: vi.fn() }) }))
 import { GameCard } from './GameCard'
+import gamesJan15Final from '@/test/fixtures/gamesJan15Final.json'
 
 // Captured from the live API on 2026-09-25: game 401902644 (MIA at TOR, /games/?game_date=
 // 2026-10-03) and the 2025-26 final standings rows for MIA (43-39, seed 10) and TOR (46-36,
@@ -35,7 +36,13 @@ describe('GameCard', () => {
     expect(screen.queryByText(/win prob/i)).toBeNull()
   })
   it('live game uses the live card', () => {
-    const { container } = wrap(<GameCard game={{ ...game, status: 'live', home_score: 50, away_score: 48 }} standings={{}} standingsMeta={{ seasonLabel: '', isPrev: false }} />)
+    // A real completed game (MEM 111 at ORL 118, GET /games/?game_date=2026-01-15) with
+    // only its status overridden to 'live' (D21): no game is live at capture time, and
+    // its scores stay the real final scores.
+    const real = gamesJan15Final.data[0]
+    const { container } = wrap(<GameCard game={{ ...real, status: 'live' }} standings={{}} standingsMeta={{ seasonLabel: '', isPrev: false }} />)
     expect(container.querySelector('.card-live')).not.toBeNull()
+    expect(screen.getByText(String(real.home_score))).toBeInTheDocument()
+    expect(screen.getByText(String(real.away_score))).toBeInTheDocument()
   })
 })

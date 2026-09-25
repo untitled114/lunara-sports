@@ -11,8 +11,51 @@ import { useGameFeed } from '@/hooks/useGameFeed';
 import { useFormatTime } from '@/utils/formatTime';
 import { PickTracker } from '@/components/sport/PickTracker';
 import { ChevronLeft } from 'lucide-react';
-import { seedBadge, recordLine } from '@/lib/gameMath';
+import { seedBadge, recordLine, periodLabel } from '@/lib/gameMath';
 import { formatLongDay, todayET } from '@/lib/et';
+
+/* ─── Scheduled → live ─── */
+
+// How long before tip-off a scheduled game's page starts checking for the switch to live.
+export const PRE_TIP_WINDOW_MS = 30 * 60 * 1000;
+
+/**
+ * For a scheduled game: 0 when the page should poll for the switch to live now (tip-off
+ * is within PRE_TIP_WINDOW_MS, or has passed), else the ms until that window opens.
+ * null when there is nothing to wait for (not scheduled, or no tip-off time).
+ */
+export function tipOffPollDelay(game, nowMs) {
+  if (game?.status !== 'scheduled' || !game.start_time) return null;
+  const tip = Date.parse(game.start_time);
+  if (Number.isNaN(tip)) return null;
+  return Math.max(0, tip - PRE_TIP_WINDOW_MS - nowMs);
+}
+
+// True once a scheduled game is near (or past) tip-off. A game opened hours early flips
+// at the right moment through one timer, with no reload.
+function useNearTipOff(game) {
+  const [near, setNear] = useState(false);
+  const status = game?.status;
+  const start = game?.start_time;
+  useEffect(() => {
+    const delay = tipOffPollDelay({ status, start_time: start }, Date.now());
+    if (delay === null) {
+      setNear(false);
+      return undefined;
+    }
+    if (delay === 0) {
+      setNear(true);
+      return undefined;
+    }
+    setNear(false);
+    // setTimeout can't wait longer than 2^31-1 ms (~24.8 days); a tip-off that far out
+    // gets no timer (the page will have been reloaded long before).
+    if (delay > 2 ** 31 - 1) return undefined;
+    const id = setTimeout(() => setNear(true), delay);
+    return () => clearTimeout(id);
+  }, [status, start]);
+  return near;
+}
 
 /* ─── Team Header (inside Scoreboard) ─── */
 
@@ -98,9 +141,10 @@ function ScoreboardHeader({ game, standings, standingsMeta }) {
         {isLive ? (
           <div className="flex items-center gap-2">
             <Badge variant="live" dot>
-              {game.status === 'halftime' ? 'Halftime' : `Quarter ${game.quarter}`}
+              {game.status === 'halftime' ? 'Halftime' : periodLabel(game.quarter) || 'Live'}
             </Badge>
-            <span className="t-score tnum text-text-1">{game.clock || '12:00'}</span>
+            {/* Only the clock the API sent: no made-up 12:00 when it has none. */}
+            {game.clock && <span className="t-score tnum text-text-1">{game.clock}</span>}
           </div>
         ) : isFinal ? (
           <span className="t-label text-text-3">Final</span>
@@ -191,11 +235,14 @@ export default function GameDetailPage() {
   }, [gameUpdate]);
 
   const isLive = game?.status === 'live' || game?.status === 'halftime';
+  // A scheduled game polls too once tip-off is near, so the page flips to live (and
+  // useGameFeed opens the live feed) without a reload.
+  const nearTipOff = useNearTipOff(game);
   usePolling(() => {
     fetchGame(id).then(data => {
       setGame(prev => ({ ...prev, ...data }));
     }).catch(() => {});
-  }, { enabled: isLive, intervalOverride: 15 });
+  }, { enabled: isLive || nearTipOff, intervalOverride: 15 });
 
   if (loading) {
     return (

@@ -158,7 +158,7 @@ export default function PlayerProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Statistics */}
         <div className="lg:col-span-8 space-y-4">
-          <SectionHeader title="Statistics" />
+          <SectionHeader title="Stats" />
           <Card>
             <Tabs
               variant="underline"

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchPlays, fetchBoxScore } from "@/services/api";
 import { Skeleton, Card, DataTable, TeamMark, PageState } from "@/components/ui";
 import { useTheme } from "@/context/ThemeContext";
-import { getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
+import { getLogoUrl, getHeadshotUrl, playerIdFromHeadshot } from "@/utils/teamColors";
 
 /* ─── On-Court Tracking ─── */
 
@@ -47,6 +47,21 @@ function getOnCourtNames(plays, boxData, homeTeam, awayTeam) {
 
 /* ─── Components ─── */
 
+// A box-score player's name: a link to their profile when the row carries a real ESPN
+// id (from its headshot URL), otherwise plain text. Never a made-up id.
+function PlayerName({ player, className, linkClassName, onClick }) {
+  const id = player.id || playerIdFromHeadshot(player.headshot_url);
+  if (!id) return <span className={className}>{player.name}</span>;
+  return (
+    <Link to={`/player/${id}`} onClick={onClick} className={`${className} ${linkClassName}`}>
+      {player.name}
+    </Link>
+  );
+}
+
+// Stable row key: two players can share a name, not a name and a jersey number.
+const playerKey = (p) => `${p.name}#${p.jersey ?? ''}`;
+
 function StatBlock({ label, value, isPrimary = false }) {
   return (
     <div className="flex flex-col items-center min-w-0">
@@ -77,13 +92,12 @@ function PlayerRow({ player, teamAbbrev }) {
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1.5">
-          <Link
-            to={`/player/${player.id || '1'}`}
+          <PlayerName
+            player={player}
             onClick={playGlassClick}
-            className="t-small font-semibold text-text-1 truncate hover:text-accent transition-colors"
-          >
-            {player.name}
-          </Link>
+            className="t-small font-semibold text-text-1 truncate"
+            linkClassName="hover:text-accent transition-colors"
+          />
           {player.jersey && (
             <span className="t-label text-text-3">
               #{player.jersey}{player.position ? ` · ${player.position}` : ''}
@@ -142,7 +156,7 @@ function TeamSection({ teamAbbrev, players, status, label = "On court" }) {
       ) : (
         <div className="divide-y divide-border">
           {players.map((p, i) => (
-            <PlayerRow key={p.name || i} player={p} teamAbbrev={teamAbbrev} />
+            <PlayerRow key={p.name ? playerKey(p) : i} player={p} teamAbbrev={teamAbbrev} />
           ))}
         </div>
       )}
@@ -224,9 +238,12 @@ function playerColumnCell(row, playGlassClick) {
       <span className="h-6 w-6 rounded-sm overflow-hidden bg-surface-2 border border-border shrink-0">
         {headshot && <img src={headshot} alt="" width={24} height={24} loading="lazy" className="w-full h-full object-cover" />}
       </span>
-      <Link to={`/player/${row.id || '1'}`} onClick={playGlassClick} className="text-text-1 hover:text-accent transition-colors">
-        {row.name}
-      </Link>
+      <PlayerName
+        player={row}
+        onClick={playGlassClick}
+        className="text-text-1"
+        linkClassName="hover:text-accent transition-colors"
+      />
       {row.position && <span className="t-label text-text-3">{row.position}</span>}
     </span>
   );
@@ -253,7 +270,7 @@ function FullTeamTable({ teamAbbrev, players, totals }) {
       <div className="mb-3">
         <TeamMark abbrev={teamAbbrev} logoUrl={logo} size="sm" />
       </div>
-      <DataTable columns={columns} rows={rows} getKey={(r) => r.name} />
+      <DataTable columns={columns} rows={rows} getKey={(r) => (r.__kind === 'player' ? playerKey(r) : r.name)} />
     </Card>
   );
 }

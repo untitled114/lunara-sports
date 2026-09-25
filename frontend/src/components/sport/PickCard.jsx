@@ -1,6 +1,6 @@
 import { TrendingUp, TrendingDown, Check, X, Clock } from 'lucide-react';
 import clsx from 'clsx';
-import { Badge } from '@/components/ui';
+import { Badge, Card } from '@/components/ui';
 
 const MARKET_LABEL = {
   POINTS: 'PTS',
@@ -60,8 +60,10 @@ export function PickCard({ pick, delay = 0 }) {
   const book = formatBook(pick.book);
 
   return (
-    <div
-      className="rounded-lg border border-border bg-surface-1 overflow-hidden animate-fadeIn transition-all duration-300 hover:border-border-strong group relative"
+    // The shared Card chrome; `!` keeps this card's own flush padding and transition
+    // (Card's p-4 / transition-colors would otherwise win in the stylesheet order).
+    <Card
+      className="p-0! overflow-hidden animate-fadeIn transition-all! duration-300 group relative"
       style={{ animationDelay: `${delay}s` }}
     >
       {/* Top section */}
@@ -161,6 +163,6 @@ export function PickCard({ pick, delay = 0 }) {
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

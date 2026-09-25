@@ -249,6 +249,19 @@ describe('StatsPage', () => {
     assertNoBannedWords(document.body.textContent)
   })
 
+  it('titles the page "Stats" and takes its season label only from the data', async () => {
+    // The real capture carries no season_label (the API adds it from ESPN's payload), so
+    // the page names no season rather than a hard-coded one.
+    expect(statsLeaders.data.season_label).toBeUndefined()
+    api.fetchStatLeaders.mockResolvedValue(statsLeaders.data)
+    api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
+    wrap(<StatsPage />)
+    expect(await screen.findByRole('heading', { name: 'Stats', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByText('Statistics')).toBeNull()
+    expect(screen.getByText('League stats').textContent).toBe('League stats')
+    expect(document.body.textContent).not.toMatch(/20\d\d[-–]\d\d/)
+  })
+
   it('loads leader headshots through the combiner at 2x the 48px avatar', async () => {
     api.fetchStatLeaders.mockResolvedValue(statsLeaders.data)
     api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
@@ -263,7 +276,7 @@ describe('StatsPage', () => {
     api.fetchStatLeaders.mockResolvedValue(statsLeaders.data)
     api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
     wrap(<StatsPage />)
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Statistics' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Stats', level: 1 })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('tab', { name: 'Franchise' }))
     expect(await screen.findByText("Team stats aren't available yet.")).toBeInTheDocument()
   })
@@ -277,6 +290,6 @@ describe('StatsPage', () => {
     api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
     const retry = screen.getByRole('button', { name: 'Try again' })
     await userEvent.click(retry)
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Statistics' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Stats', level: 1 })).toBeInTheDocument())
   })
 })

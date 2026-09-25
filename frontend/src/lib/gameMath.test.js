@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { seedBadge, winProbability, recordLine } from './gameMath'
+import { seedBadge, winProbability, recordLine, periodLabel } from './gameMath'
 
 // Real standings-row shape: the API's own StandingsTeam.conf field is actually
 // the team's conference W-L record (see api/src/services/standings_service.py
@@ -18,6 +18,12 @@ describe('seedBadge', () => {
   it('missing team or seed → none', () => {
     expect(seedBadge(undefined, false)).toBeNull()
     expect(seedBadge(t(0, 0, null), false)).toBeNull()
+  })
+
+  it('a seed on a team with no games played → none', () => {
+    expect(seedBadge(t(0, 0, 4), false)).toBeNull()
+    expect(seedBadge(t(0, 0, 8, 'West'), false)).toBeNull()
+    expect(seedBadge(t(1, 0, 4), false)).toEqual({ text: 'East #4', variant: 'accent', prev: false })
   })
 
   it('normalizes real-world conf shapes to East/West', () => {
@@ -87,5 +93,18 @@ describe('recordLine', () => {
     expect(recordLine(t(3, 1, 2), null, true)).toBe('3-1')
     expect(recordLine(t(3, 1, 2), undefined, true)).toBe('3-1')
     expect(recordLine(t(3, 1, 2), '', true)).toBe('3-1')
+  })
+})
+
+describe('periodLabel', () => {
+  it('Q1-Q4, then OT, 2OT…; empty when unknown', () => {
+    expect(periodLabel(1)).toBe('Q1')
+    expect(periodLabel(4)).toBe('Q4')
+    expect(periodLabel(5)).toBe('OT')
+    expect(periodLabel(6)).toBe('2OT')
+    expect(periodLabel(7)).toBe('3OT')
+    expect(periodLabel(null)).toBe('')
+    expect(periodLabel(undefined)).toBe('')
+    expect(periodLabel(0)).toBe('')
   })
 })

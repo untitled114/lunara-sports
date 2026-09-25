@@ -230,7 +230,7 @@ const AppLayout = () => {
                   <div className="space-y-3">
                     <div>
                       <span className="t-label text-text-3 block mb-2">Font size</span>
-                      <Segmented options={FONT_SIZE_OPTIONS} value={fontSize} onChange={updateFontSize} />
+                      <Segmented aria-label="Font size" options={FONT_SIZE_OPTIONS} value={fontSize} onChange={updateFontSize} />
                     </div>
                     <button
                       onClick={toggleReducedMotion}
@@ -318,11 +318,11 @@ const AppLayout = () => {
                   <div className="space-y-3">
                     <div>
                       <span className="t-label text-text-3 block mb-2">Refresh interval</span>
-                      <Segmented options={REFRESH_OPTIONS} value={refreshInterval} onChange={updateRefreshInterval} />
+                      <Segmented aria-label="Refresh interval" options={REFRESH_OPTIONS} value={refreshInterval} onChange={updateRefreshInterval} />
                     </div>
                     <div>
                       <span className="t-label text-text-3 block mb-2">Timezone</span>
-                      <Segmented options={TIMEZONE_OPTIONS} value={timezone} onChange={updateTimezone} />
+                      <Segmented aria-label="Timezone" options={TIMEZONE_OPTIONS} value={timezone} onChange={updateTimezone} />
                     </div>
                   </div>
                 </section>

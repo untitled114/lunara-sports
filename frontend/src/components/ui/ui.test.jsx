@@ -58,8 +58,15 @@ describe('ui', () => {
     const onChange = vi.fn()
     render(<Segmented options={[{ id: 'all', label: 'All' }, { id: 'live', label: 'Live' }]} value="all" onChange={onChange} />)
     expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true')
+    // One selected look site-wide: the accent fill, as on the top nav and date strip.
+    expect(screen.getByRole('tab', { name: 'All' })).toHaveClass('bg-accent-fill', 'text-white')
+    expect(screen.getByRole('tab', { name: 'Live' })).not.toHaveClass('bg-accent-fill')
     await userEvent.click(screen.getByRole('tab', { name: 'Live' }))
     expect(onChange).toHaveBeenCalledWith('live')
+  })
+  it('Segmented names its tablist when given an aria-label', () => {
+    render(<Segmented aria-label="Filter games" options={[{ id: 'all', label: 'All' }]} value="all" onChange={() => {}} />)
+    expect(screen.getByRole('tablist', { name: 'Filter games' })).toBeInTheDocument()
   })
   it('Segmented uses roving tabindex and moves focus + selection with arrow keys', async () => {
     const onChange = vi.fn()

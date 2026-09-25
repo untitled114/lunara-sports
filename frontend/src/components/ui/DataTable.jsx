@@ -9,7 +9,9 @@ import clsx from 'clsx'
 // like 6' 9", an ISO date) sets `nowrap: true`.
 export function DataTable({ columns, rows, getKey, className, sort, onSortChange }) {
   return (
-    <div className={clsx('overflow-x-auto rounded-lg border border-border', className)}>
+    // tabIndex 0: a table wider than a phone scrolls sideways, and keyboard users need
+    // to be able to focus the scroller to do that (axe scrollable-region-focusable).
+    <div tabIndex={0} className={clsx('overflow-x-auto rounded-lg border border-border', className)}>
       <table className="w-full t-small">
         <thead className="bg-surface-2">
           <tr>

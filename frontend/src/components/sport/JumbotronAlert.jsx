@@ -39,8 +39,8 @@ export function JumbotronAlert({ message, subtext }) {
               <p className="t-label text-text-3 truncate">{subtext}</p>
             </div>
 
-            <button onClick={() => setIsVisible(false)} className="p-2 hover:bg-surface-2 rounded-md transition-colors ml-2">
-              <X className="h-4 w-4 text-text-3" />
+            <button onClick={() => setIsVisible(false)} aria-label="Dismiss" className="p-2 hover:bg-surface-2 rounded-md transition-colors ml-2">
+              <X className="h-4 w-4 text-text-3" aria-hidden="true" />
             </button>
           </div>
         </div>

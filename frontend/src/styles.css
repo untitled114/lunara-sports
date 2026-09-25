@@ -30,6 +30,16 @@
   left: 0;
 }
 
+/* Focus ring: the spec's accent ring on every keyboard-focused control, not only the
+   ones that set focus-visible:outline-2 outline-accent themselves. In the base layer
+   (zero-specificity :where) so a component's own utilities still win. */
+@layer base {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
 /* Font size setting (ThemeContext adds font-sm/md/lg to <html>) */
 html.font-sm { font-size: 12px; }
 html.font-md { font-size: 13px; }

@@ -133,7 +133,7 @@ export default function TeamsPage() {
           <h1 className="t-title text-text-1">Teams</h1>
           <p className="t-small text-text-2 mt-1">All 30 NBA teams.</p>
         </div>
-        <Segmented options={CONF_OPTIONS} value={activeConf} onChange={handleConfChange} />
+        <Segmented aria-label="Conference" options={CONF_OPTIONS} value={activeConf} onChange={handleConfChange} />
       </div>
 
       <div className={`grid grid-cols-1 gap-8 ${activeConf === 'all' ? 'lg:grid-cols-2' : ''}`}>

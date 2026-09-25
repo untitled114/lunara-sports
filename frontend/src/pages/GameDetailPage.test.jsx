@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, within, act } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import GameDetailPage, { tipOffLabel, teamNameLine } from './GameDetailPage'
+import GameDetailPage, { tipOffLabel, teamNameLine, tipOffPollDelay, PRE_TIP_WINDOW_MS } from './GameDetailPage'
 import { GameCard } from '@/components/sport/GameCard'
 import { LiveFeed, feedEmptyText } from '@/components/sport/LiveFeed'
 import { boxScoreEmptyText, onCourtLabel } from '@/components/sport/BoxScore'
@@ -103,7 +103,7 @@ describe('GameDetailPage', () => {
     api.fetchGame.mockResolvedValue({ ...REAL_GAME, status: 'live', quarter: 3, clock: '7:41' })
     renderPage()
     const header = within(await screen.findByTestId('scoreboard-header'))
-    const badge = header.getByText('Quarter 3')
+    const badge = header.getByText('Q3')
     expect(badge).toHaveClass('text-live')
     expect(badge.querySelector('[aria-hidden]')).toBeInTheDocument()
   })
@@ -144,6 +144,26 @@ describe('GameDetailPage', () => {
       expect(within(table).queryAllByText('++16')).toHaveLength(0)
     }
     expect(found).toBe(true)
+  })
+
+  it('links every box-score player to their real ESPN profile id (from the headshot), never /player/1', async () => {
+    renderPage()
+    await screen.findByTestId('scoreboard-header')
+    await screen.findAllByText('Jonas Valanciunas')
+    // GET /players/6477 on the live API is Jonas Valanciunas (checked 2026-09-25); his
+    // real box-score headshot is .../players/full/6477.png.
+    const links = screen.getAllByRole('link', { name: 'Jonas Valanciunas' })
+    expect(links.length).toBeGreaterThan(0)
+    for (const link of links) expect(link).toHaveAttribute('href', '/player/6477')
+    const hrefs = Array.from(document.querySelectorAll('a[href^="/player/"]')).map((a) => a.getAttribute('href'))
+    expect(hrefs.length).toBeGreaterThan(0)
+    expect(hrefs).not.toContain('/player/1')
+    const ids = new Set(
+      [...REAL_BOX_DATA.home.players, ...REAL_BOX_DATA.away.players].map((p) =>
+        p.headshot_url.match(/full\/(\d+)\.png/)[1]
+      )
+    )
+    for (const href of hrefs) expect(ids.has(href.slice('/player/'.length))).toBe(true)
   })
 
   it('shows real player headshots on the on-court and full box score cards', async () => {
@@ -248,6 +268,71 @@ describe('GameDetailPage', () => {
   })
 })
 
+describe('scheduled game flips to live without a reload', () => {
+  const sockets = []
+  class RecordingSocket {
+    constructor(url) {
+      this.url = url
+      sockets.push(url)
+    }
+    send() {}
+    close() {}
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    sockets.length = 0
+    vi.stubGlobal('WebSocket', RecordingSocket)
+    api.fetchStandings.mockResolvedValue(REAL_STANDINGS)
+    api.fetchModelPicks.mockResolvedValue([])
+    api.fetchBoxScore.mockRejectedValue(new Error('404'))
+    api.fetchPlays.mockResolvedValue([])
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('polls once tip-off is near, then shows the live state and opens the live feed', async () => {
+    // 40 minutes before the real MIA @ TOR tip-off (2026-10-03T23:00:00Z).
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-10-03T22:20:00Z'))
+    // The page first loads the real scheduled capture. The poll's answer is the D21
+    // rendering state: a real completed game (401811037) with only status/quarter/clock
+    // overridden, since no live capture exists yet.
+    api.fetchGame
+      .mockResolvedValueOnce(REAL_SCHEDULED_GAME)
+      .mockResolvedValue({ ...REAL_GAME, status: 'live', quarter: 1, clock: '11:40' })
+    renderPage()
+    await screen.findByTestId('tip-off')
+    expect(api.fetchGame).toHaveBeenCalledTimes(1)
+    expect(sockets).toHaveLength(0)
+
+    // 9 minutes later: still outside the 30-minute window, no polling.
+    await act(async () => vi.advanceTimersByTime(9 * 60 * 1000))
+    expect(api.fetchGame).toHaveBeenCalledTimes(1)
+
+    // Into the window: the next 15s poll picks up the live status.
+    await act(async () => vi.advanceTimersByTime(60 * 1000))
+    expect(api.fetchGame).toHaveBeenCalledTimes(1)
+    await act(async () => vi.advanceTimersByTime(15 * 1000))
+    expect(api.fetchGame).toHaveBeenCalledTimes(2)
+    const header = within(await screen.findByTestId('scoreboard-header'))
+    expect(await header.findByText('Q1')).toHaveClass('text-live')
+    expect(screen.queryByTestId('tip-off')).toBeNull()
+    expect(sockets.some((u) => /\/ws\//.test(u))).toBe(true)
+  })
+
+  it('tipOffPollDelay: only a scheduled game with a tip-off time, 0 inside the window', () => {
+    const tip = Date.parse(REAL_SCHEDULED_GAME.start_time)
+    expect(tipOffPollDelay(REAL_SCHEDULED_GAME, tip - PRE_TIP_WINDOW_MS - 1000)).toBe(1000)
+    expect(tipOffPollDelay(REAL_SCHEDULED_GAME, tip - PRE_TIP_WINDOW_MS)).toBe(0)
+    expect(tipOffPollDelay(REAL_SCHEDULED_GAME, tip + 60 * 60 * 1000)).toBe(0) // late tip-off
+    expect(tipOffPollDelay(REAL_GAME, tip)).toBeNull() // final
+    expect(tipOffPollDelay({ ...REAL_SCHEDULED_GAME, start_time: null }, tip)).toBeNull()
+  })
+})
+
 describe('LiveFeed play card', () => {
   // Real plays, verbatim from ESPN (see plays-401811037-espn.json for the source URL and
   // field mapping). LiveFeed renders newest-first, so [1] (Strawther's assisted layup,
@@ -295,6 +380,19 @@ describe('LiveFeed play card', () => {
     // "Julian Strawther makes layup (Bruce Brown assists)" — real ESPN text — should
     // surface the real assisting player on the assist line, with a team logo beside it.
     expect(screen.getByText('B. Brown')).toBeInTheDocument()
+  })
+})
+
+describe('playerIdFromHeadshot', () => {
+  it('reads the ESPN athlete id from a raw or combiner headshot URL, else null', async () => {
+    const { playerIdFromHeadshot } = await import('@/utils/teamColors')
+    const raw = REAL_BOX_DATA.home.players[0].headshot_url
+    expect(playerIdFromHeadshot(raw)).toBe('6477')
+    const { getHeadshotUrl } = await import('@/utils/teamColors')
+    expect(playerIdFromHeadshot(getHeadshotUrl(raw, 96))).toBe('6477')
+    // The API's schema default for a player with no headshot is "".
+    expect(playerIdFromHeadshot('')).toBeNull()
+    expect(playerIdFromHeadshot(undefined)).toBeNull()
   })
 })
 

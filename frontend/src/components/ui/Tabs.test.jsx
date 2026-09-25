@@ -21,7 +21,7 @@ describe('Tabs', () => {
     expect(tablist).toHaveClass('bg-surface-1', 'border-border', 'rounded-md')
     const active = screen.getByRole('tab', { name: 'Overview' })
     const inactive = screen.getByRole('tab', { name: 'Stats' })
-    expect(active).toHaveClass('bg-surface-2', 'text-text-1')
+    expect(active).toHaveClass('bg-accent-fill', 'text-white')
     expect(inactive).toHaveClass('text-text-2')
     // icons still render
     expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(2)

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { readFileSync } from 'node:fs'
@@ -22,8 +22,9 @@ vi.mock('@/services/api', async () => {
   }
 })
 
+const sound = vi.hoisted(() => ({ playGlassClick: vi.fn(), playThud: vi.fn() }))
 vi.mock('@/context/ThemeContext', () => ({
-  useTheme: () => ({ playGlassClick: vi.fn(), playThud: vi.fn() }),
+  useTheme: () => sound,
 }))
 
 // 30 real NBA teams (structural fixture only — no stats/predictions).
@@ -186,6 +187,11 @@ describe('TeamDetailPage', () => {
     expect(await screen.findByRole('columnheader', { name: 'Player' })).toBeInTheDocument()
     expect(screen.getByRole('table')).toBeInTheDocument()
     expect(await screen.findByText('Jimmy Butler')).toBeInTheDocument()
+
+    // Tap sound on the roster player link, exactly as in base (fb7b2d1).
+    sound.playGlassClick.mockClear()
+    fireEvent.click(screen.getByRole('link', { name: /Jimmy Butler/ }))
+    expect(sound.playGlassClick).toHaveBeenCalledTimes(1)
   })
 
   it('shows PageState on a fetch error, with a working retry', async () => {

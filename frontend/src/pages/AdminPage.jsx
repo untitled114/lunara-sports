@@ -31,6 +31,7 @@ export default function AdminPage() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
+        <h1 className="sr-only">Admin</h1>
         <PageState kind="empty" title="Sign in required" message="Sign in to access the admin dashboard." />
       </div>
     );
@@ -38,9 +39,10 @@ export default function AdminPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4 max-w-[1600px] mx-auto w-full">
+      <h1 className="t-title text-text-1">Admin</h1>
       {/* Tab bar */}
       <div className="flex gap-2 items-center">
-        <Segmented options={TABS.map((tab) => ({ id: tab.key, label: tab.label }))} value={activeTab} onChange={setActiveTab} />
+        <Segmented aria-label="Admin section" options={TABS.map((tab) => ({ id: tab.key, label: tab.label }))} value={activeTab} onChange={setActiveTab} />
         <a
           href={ADMIN_BASE}
           target="_blank"

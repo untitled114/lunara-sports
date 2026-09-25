@@ -3,6 +3,7 @@ import { useGameFeed } from "@/hooks/useGameFeed";
 import { addReaction, fetchBoxScore, fetchPlays } from "@/services/api";
 import { useTheme } from "@/context/ThemeContext";
 import { getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
+import { periodLabel } from "@/lib/gameMath";
 import { Card, Badge, PageState } from "@/components/ui";
 
 /* ─── Running Stats Snapshots ─── */
@@ -256,7 +257,7 @@ function PlayCard({ play, prevPlay, homeTeam, awayTeam, statsSnap, headshotMap, 
           <span className="t-small text-text-3">&ndash;</span>
           <span className={`t-small tnum font-semibold ${hWin ? "text-live" : "text-text-2"}`}>{hs}</span>
           {hLogo && <img src={hLogo} alt="" width={20} height={20} className="h-5 w-5 object-contain" />}
-          <span className="t-small tnum text-text-3 ml-2">Q{play.quarter} {play.clock ?? ""}</span>
+          <span className="t-small tnum text-text-3 ml-2">{periodLabel(play.quarter)} {play.clock ?? ""}</span>
         </div>
 
         {diff > 0 && <span className="t-small tnum text-text-3 ml-auto">{'▼'} {diff}</span>}

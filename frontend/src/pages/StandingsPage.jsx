@@ -233,8 +233,11 @@ export default function StandingsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeader title="Standings" aside={seasonLabel} />
-        <Segmented options={VIEW_OPTIONS} value={view} onChange={handleViewChange} />
+        <div>
+          <h1 className="t-title text-text-1">Standings</h1>
+          {seasonLabel && <p className="t-label text-text-3 mt-1">{seasonLabel}</p>}
+        </div>
+        <Segmented aria-label="Standings view" options={VIEW_OPTIONS} value={view} onChange={handleViewChange} />
       </div>
 
       {view === 'conference' ? (

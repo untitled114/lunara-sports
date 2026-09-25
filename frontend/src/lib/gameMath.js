@@ -26,10 +26,12 @@ function normConf(raw) {
  * seed to show. Seeds 1-6 get the conference tag ('East #3'); 7-10 are
  * play-in territory ('Play-in'); anything else (11+) renders nothing.
  * When the conference can't be determined, the text omits it ('#3') rather
- * than guessing.
+ * than guessing. A team that hasn't played gets no badge.
  */
 export function seedBadge(team, isPrev) {
-  if (!team || !team.seed) return null
+  // A seed on a team with no games (ESPN can assign playoffSeed at 0-0) isn't backed
+  // by any result, so no badge (spec goal 5), the same rule as winProbability.
+  if (!team || !team.seed || !played(team)) return null
   if (team.seed <= 6) {
     const conf = normConf(team.conf)
     const text = conf ? `${conf} #${team.seed}` : `#${team.seed}`
@@ -72,4 +74,16 @@ export function recordLine(team, seasonLabel, isPrev) {
   if (!isPrev) return rec
   const label = String(seasonLabel ?? '').replace(/ final$/, '')
   return label ? `${label}: ${rec}` : rec
+}
+
+/**
+ * The period a game (or play) is in, the same short form everywhere: 'Q1'..'Q4', then
+ * 'OT', '2OT', '3OT'… for overtimes (the API counts them on as quarter 5, 6…).
+ * '' when the quarter is unknown.
+ */
+export function periodLabel(quarter) {
+  const q = Number(quarter)
+  if (!Number.isInteger(q) || q < 1) return ''
+  if (q <= 4) return `Q${q}`
+  return q === 5 ? 'OT' : `${q - 4}OT`
 }
