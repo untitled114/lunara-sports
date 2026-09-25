@@ -138,47 +138,50 @@ async def _run_loops(settings: Settings, sink: PostgresSink, http: EspnHttp) -> 
         scoreboard_interval=SCOREBOARD_INTERVAL,
     )
 
+    async def sync_collectors(games: list[dict]) -> None:
+        """Start collectors for live games; retire those whose game went final."""
+        nonlocal active_game_ids
+        new_active: set[str] = set()
+        retiring: dict[str, PlayByPlayCollector] = {}
+        async with collector_lock:
+            for game in games:
+                gid = game["game_id"]
+                status = game["status"]
+
+                if status in LIVE_STATUSES:
+                    new_active.add(gid)
+                    if gid not in pbp_collectors:
+                        logger.info("ingestion.pbp_start", game_id=gid, status=status)
+                        pbp_collectors[gid] = PlayByPlayCollector(
+                            settings, sink, game_id=gid, http=http
+                        )
+
+            # Finished games leave the active set now; their final
+            # poll + close run below, outside the lock, so an ESPN
+            # retry never stalls PBP polling for the other games.
+            for gid in set(pbp_collectors.keys()) - new_active:
+                retiring[gid] = pbp_collectors.pop(gid)
+
+            active_game_ids = new_active
+
+        # Errors are logged inside retire(); the collector is dropped
+        # either way (unflushed plays stay in the shared sink).
+        await asyncio.gather(*(retire(gid, c) for gid, c in retiring.items()))
+
+        logger.info(
+            "ingestion.scoreboard_cycle",
+            games=len(games),
+            live_games=len(new_active),
+            pbp_collectors=len(pbp_collectors),
+        )
+
     async def scoreboard_loop() -> None:
         """Discover games and manage PBP collectors."""
-        nonlocal active_game_ids
         while not shutdown.is_set():
             try:
-                await scoreboard.poll()
-                games = await scoreboard.collect()
-
-                new_active: set[str] = set()
-                retiring: dict[str, PlayByPlayCollector] = {}
-                async with collector_lock:
-                    for game in games:
-                        gid = game["game_id"]
-                        status = game["status"]
-
-                        if status in LIVE_STATUSES:
-                            new_active.add(gid)
-                            if gid not in pbp_collectors:
-                                logger.info("ingestion.pbp_start", game_id=gid, status=status)
-                                pbp_collectors[gid] = PlayByPlayCollector(
-                                    settings, sink, game_id=gid, http=http
-                                )
-
-                    # Finished games leave the active set now; their final
-                    # poll + close run below, outside the lock, so an ESPN
-                    # retry never stalls PBP polling for the other games.
-                    for gid in set(pbp_collectors.keys()) - new_active:
-                        retiring[gid] = pbp_collectors.pop(gid)
-
-                    active_game_ids = new_active
-
-                # Errors are logged inside retire(); the collector is dropped
-                # either way (unflushed plays stay in the shared sink).
-                await asyncio.gather(*(retire(gid, c) for gid, c in retiring.items()))
-
-                logger.info(
-                    "ingestion.scoreboard_cycle",
-                    games=len(games),
-                    live_games=len(new_active),
-                    pbp_collectors=len(pbp_collectors),
-                )
+                games = await scoreboard.poll()  # the one ESPN scoreboard fetch this cycle
+                if games is not None:  # None: ESPN error, keep every collector as it is
+                    await sync_collectors(games)
             except Exception as e:
                 logger.warning("ingestion.scoreboard_error", error=str(e))
 

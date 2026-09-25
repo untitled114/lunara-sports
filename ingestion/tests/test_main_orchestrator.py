@@ -41,8 +41,13 @@ def _io(order: list[str] | None = None):
 
 
 def _scoreboard(games=None):
+    """Scoreboard fake: poll() returns what collect() gives (the real poll's contract)."""
     sb = AsyncMock()
-    sb.poll = AsyncMock()
+
+    async def poll():
+        return await sb.collect()
+
+    sb.poll = AsyncMock(side_effect=poll)
     sb.collect = AsyncMock(return_value=games if games is not None else [])
     sb.close = AsyncMock()
     return sb
@@ -626,3 +631,82 @@ def test_pbp_poll_timeout_is_short_but_positive():
     from src.__main__ import PBP_POLL_TIMEOUT
 
     assert 0 < PBP_POLL_TIMEOUT <= 5
+
+
+# --- Final fix wave #9: the scoreboard is fetched ONCE per cycle; the loop uses
+# the games poll() produced. An ESPN error cycle retires nothing. ---
+
+
+@pytest.mark.asyncio
+async def test_scoreboard_is_fetched_once_per_cycle():
+    from src.collectors.scoreboard import ScoreboardCollector
+
+    settings = MagicMock()
+    settings.espn_base_url = "https://espn.test"
+    settings.espn_date = None
+    sink, http = _io()
+    event = {
+        "id": "g1",
+        "competitions": [
+            {
+                "competitors": [
+                    {"homeAway": "home", "team": {"abbreviation": "BOS"}, "score": "2"},
+                    {"homeAway": "away", "team": {"abbreviation": "NY"}, "score": "0"},
+                ],
+                "status": {"type": {"name": "STATUS_IN_PROGRESS", "state": "in"}},
+            }
+        ],
+    }
+
+    async def fake_get(url, params=None):
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.json = MagicMock(return_value={"events": [event]} if "scoreboard" in url else {})
+        return resp
+
+    http.get = AsyncMock(side_effect=fake_get)
+    pbp = _pbp()
+
+    with ExitStack() as stack:
+        m = _patch_run(
+            stack,
+            settings=settings,
+            sink=sink,
+            http=http,
+            scoreboard=None,
+            pbp=pbp,
+            wait_for=_split_wait_for(pbp_cycles=1, scoreboard_cycles=2),
+        )
+        m["ScoreboardCollector"].side_effect = lambda s, k, h: ScoreboardCollector(s, k, h)
+        with pytest.raises(asyncio.CancelledError):
+            await run()
+
+    scoreboard_gets = [c for c in http.get.await_args_list if "scoreboard" in c.args[0]]
+    assert len(scoreboard_gets) == 2  # 2 cycles, one fetch each (was two per cycle)
+    m["PlayByPlayCollector"].assert_called_once()  # the live game got its collector
+
+
+@pytest.mark.asyncio
+async def test_skipped_scoreboard_cycle_keeps_live_collectors(capsys):
+    """poll() returns None when ESPN failed: that is no news, not 'no games'."""
+    sink, http = _io()
+    scoreboard = _scoreboard()
+    scoreboard.poll = AsyncMock(side_effect=[[{"game_id": "g1", "status": "live"}], None])
+    pbp = _pbp()
+
+    with ExitStack() as stack:
+        _patch_run(
+            stack,
+            settings=MagicMock(),
+            sink=sink,
+            http=http,
+            scoreboard=scoreboard,
+            pbp=pbp,
+            wait_for=_split_wait_for(pbp_cycles=1, scoreboard_cycles=2),
+        )
+        with pytest.raises(asyncio.CancelledError):
+            await run()
+
+    assert scoreboard.poll.await_count == 2
+    pbp.close.assert_awaited_once()  # only at shutdown, never retired by the failed cycle
+    assert "ingestion.pbp_stop" not in capsys.readouterr().out

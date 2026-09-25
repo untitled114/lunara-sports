@@ -25,6 +25,18 @@ logger = structlog.get_logger(__name__)
 
 TOPIC = "raw.scoreboard"
 
+# ESPN status.type.state is the coarse, stable phase; it drives our status.
+_STATE_STATUS = {"pre": "scheduled", "in": "live", "post": "final"}
+
+# Detailed status.type.name values that refine a phase — only accepted when they
+# agree with it, so an unknown or odd name (e.g. DELAYED mid-game) can never flap
+# a live game back to scheduled and retire its play-by-play collector.
+_STATE_REFINEMENTS = {
+    "pre": {"scheduled", "postponed", "canceled", "delayed"},
+    "in": {"live", "halftime"},
+    "post": {"final", "postponed", "canceled"},
+}
+
 # ESPN status.type.name → our status string
 _STATUS_MAP = {
     "STATUS_SCHEDULED": "scheduled",
@@ -36,6 +48,17 @@ _STATUS_MAP = {
     "STATUS_CANCELED": "canceled",
     "STATUS_DELAYED": "delayed",
 }
+
+
+def _derive_status(status_type: dict) -> str:
+    """Our status from ESPN's phase (``state``), refined by the detailed ``name``."""
+    named = _STATUS_MAP.get(status_type.get("name", "STATUS_SCHEDULED"))
+    state = status_type.get("state")
+    if state not in _STATE_STATUS:
+        return named or "scheduled"  # no usable phase: the name is all we have
+    if named in _STATE_REFINEMENTS[state]:
+        return named
+    return _STATE_STATUS[state]
 
 
 def _parse_competitor(competitors: list[dict], home_away: str) -> dict:
@@ -65,8 +88,7 @@ def _parse_game(event: dict, polled_at: datetime) -> ScoreboardEvent | None:
     home = _parse_competitor(competitors, "home")
     away = _parse_competitor(competitors, "away")
 
-    espn_status = status_type.get("name", "STATUS_SCHEDULED")
-    status = _STATUS_MAP.get(espn_status, "scheduled")
+    status = _derive_status(status_type)
     status_detail = status_type.get("shortDetail", status_type.get("detail", ""))
 
     period = status_obj.get("period")
@@ -143,22 +165,25 @@ class ScoreboardCollector(BaseCollector):
         logger.info("scoreboard.collected", games=len(results))
         return results
 
-    async def poll(self) -> None:
+    async def poll(self) -> list[dict] | None:
         """Run one poll cycle: collect scoreboard data, produce it and flush the sink.
 
-        ESPN errors skip the cycle; a sink flush error propagates to the caller.
+        Returns the games produced — the orchestrator manages play-by-play from
+        them, so the scoreboard is fetched once per cycle — or ``None`` when an
+        ESPN error skipped the cycle (no news, not "no games"). A sink flush
+        error propagates to the caller.
         """
         try:
             games = await self.collect()
         except CircuitOpenError:
             logger.warning("scoreboard.circuit_open", action="skipping_cycle")
-            return
+            return None
         except httpx.HTTPStatusError as exc:
             logger.error("scoreboard.http_error", status=exc.response.status_code)
-            return
+            return None
         except httpx.RequestError as exc:
             logger.error("scoreboard.request_error", error=str(exc))
-            return
+            return None
 
         for game in games:
             game_id = game["game_id"]
@@ -173,6 +198,7 @@ class ScoreboardCollector(BaseCollector):
 
         await self.sink.flush()
         logger.info("scoreboard.poll_complete", games_published=len(games))
+        return games
 
     async def close(self) -> None:
         """Flush the sink. The shared http and sink are closed by their owner."""
