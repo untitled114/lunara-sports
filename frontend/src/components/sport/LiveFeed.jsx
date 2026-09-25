@@ -59,7 +59,7 @@ function buildHeadshotMap(boxData) {
         const parts = p.name.split(" ");
         if (parts.length >= 2) {
           const key = `_L_${parts.slice(1).join(" ").toLowerCase()}`;
-          if (!map[key]) map[key] = p.headshot_url;
+          if (!map[key]) map[key] = getHeadshotUrl(p.headshot_url);
         }
       }
     }
@@ -347,6 +347,14 @@ function TimeoutDivider({ play }) {
 
 /* ─── Live Feed ─── */
 
+// What the feed says when it has no plays. "Waiting for tip-off" is only for a game that
+// hasn't started; a final game with no stored plays says so plainly.
+export function feedEmptyText(status, connected) {
+  if (status === "scheduled") return "Waiting for tip-off.";
+  if (status === "final") return "Play-by-play isn't available for this game.";
+  return connected ? "No plays yet." : "Connecting.";
+}
+
 export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam, plays: playsProp, connected: connectedProp, boxData: boxDataProp }) {
   // When props provided (from GameDetailPage), use them directly — no second WS connection
   const internal = useGameFeed(playsProp ? null : gameId, playsProp ? "scheduled" : status);
@@ -395,7 +403,11 @@ export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam, pla
       <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
         <div className="flex items-center gap-2">
           <span className="t-section text-text-1">{title}</span>
-          <span className="t-small tnum text-text-3">{plays.length} plays</span>
+          {plays.length > 0 && (
+            <span className="t-small tnum text-text-3">
+              {plays.length} {plays.length === 1 ? "play" : "plays"}
+            </span>
+          )}
         </div>
         {status !== "final" && status !== "scheduled" && (
           connected ? <Badge variant="live" dot>Live</Badge> : <Badge variant="neutral">Reconnecting</Badge>
@@ -405,7 +417,7 @@ export function LiveFeed({ gameId, status = "scheduled", homeTeam, awayTeam, pla
       {/* Feed — plays already sorted newest-first from hook */}
       {plays.length === 0 ? (
         <p className="py-16 text-center t-small text-text-3">
-          {status === "scheduled" ? "This game hasn't started." : connected ? "Waiting for tip-off." : "Connecting."}
+          {feedEmptyText(status, connected)}
         </p>
       ) : (
         <div ref={feedRef} className="overflow-y-auto max-h-[calc(100vh-260px)] divide-y divide-border">

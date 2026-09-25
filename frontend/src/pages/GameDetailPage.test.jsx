@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import GameDetailPage from './GameDetailPage'
-import { LiveFeed } from '@/components/sport/LiveFeed'
+import GameDetailPage, { tipOffLabel } from './GameDetailPage'
+import { LiveFeed, feedEmptyText } from '@/components/sport/LiveFeed'
+import { boxScoreEmptyText } from '@/components/sport/BoxScore'
 import * as api from '@/services/api'
 
 // Real, captured API responses (frontend/src/test/fixtures/README below) — no invented
@@ -22,6 +23,9 @@ import REAL_PLAYS from '@/test/fixtures/plays-401811037.json'
 // ingestion/src/collectors/playbyplay.py's _parse_play does. Source URL and mapping notes
 // are recorded in the fixture file itself.
 import REAL_ESPN_PLAYS from '@/test/fixtures/plays-401811037-espn.json'
+// The scheduled MIA @ TOR opener (2026-10-03 23:00Z), the real e2e capture of
+// GET /games/401902644 (its /boxscore was a real 404 and /plays a real []).
+import REAL_SCHEDULED_GAME from '../../e2e/fixtures/api/games_401902644.json'
 
 // The mocked hook must return stable function references across re-renders —
 // GameDetailPage's data-loading effect depends on `setArenaTheme`, so a fresh
@@ -155,6 +159,37 @@ describe('GameDetailPage', () => {
     expect(document.body.textContent).not.toMatch(banned)
   })
 
+  it('a final game with no plays says play-by-play is unavailable, not "Waiting for tip-off"', async () => {
+    renderPage()
+    expect(await screen.findByText("Play-by-play isn't available for this game.")).toBeInTheDocument()
+    expect(screen.getByText('Recap')).toBeInTheDocument()
+    expect(screen.queryByText('Waiting for tip-off.')).toBeNull()
+    expect(screen.queryByText(/\b0 plays\b/)).toBeNull()
+  })
+
+  it('lays the on-court stats out in five equal columns so PF always fits', async () => {
+    renderPage()
+    await screen.findByTestId('scoreboard-header')
+    const pfLabels = await screen.findAllByText('PF', { selector: 'span.t-label' })
+    expect(pfLabels.length).toBeGreaterThan(0)
+    for (const label of pfLabels) {
+      expect(label.parentElement.parentElement).toHaveClass('grid', 'grid-cols-5')
+    }
+  })
+
+  it('a scheduled game shows the tip-off day and time, no "0 0" score, and box score copy', async () => {
+    api.fetchGame.mockResolvedValue(REAL_SCHEDULED_GAME)
+    api.fetchBoxScore.mockRejectedValue(new Error('404'))
+    api.fetchPlays.mockResolvedValue([])
+    renderPage()
+    const header = within(await screen.findByTestId('scoreboard-header'))
+    expect(header.getByTestId('tip-off')).toHaveTextContent(/^Sat, Oct 3 · \d{1,2}:\d{2} [AP]M$/)
+    expect(header.queryAllByText('0')).toHaveLength(0)
+    expect(document.querySelectorAll('[data-testid="scoreboard-header"] .t-score')).toHaveLength(0)
+    expect(await screen.findByText('Box score starts at tip-off.')).toBeInTheDocument()
+    expect(screen.getAllByText('Waiting for tip-off.').length).toBeGreaterThan(0)
+  })
+
   it('shows PageState with a retry action when fetchGame fails', async () => {
     api.fetchGame.mockRejectedValue(new Error('boom'))
     renderPage()
@@ -210,5 +245,29 @@ describe('LiveFeed play card', () => {
     // "Julian Strawther makes layup (Bruce Brown assists)" — real ESPN text — should
     // surface the real assisting player on the assist line, with a team logo beside it.
     expect(screen.getByText('B. Brown')).toBeInTheDocument()
+  })
+})
+
+describe('status-dependent copy', () => {
+  it('feed: only a scheduled game waits for tip-off', () => {
+    expect(feedEmptyText('scheduled', false)).toBe('Waiting for tip-off.')
+    expect(feedEmptyText('final', true)).toBe("Play-by-play isn't available for this game.")
+    expect(feedEmptyText('final', false)).toBe("Play-by-play isn't available for this game.")
+    expect(feedEmptyText('live', true)).toBe('No plays yet.')
+    expect(feedEmptyText('live', false)).toBe('Connecting.')
+  })
+
+  it('box score: tip-off copy for a scheduled game, plain copy otherwise', () => {
+    expect(boxScoreEmptyText('scheduled')).toBe('Box score starts at tip-off.')
+    expect(boxScoreEmptyText('final')).toBe("The box score isn't available for this game.")
+    expect(boxScoreEmptyText('live')).toBe('No box score yet.')
+  })
+
+  it('tip-off label: the ET calendar day, then the GameCard time format', () => {
+    const fmt = () => '7:00 PM'
+    expect(tipOffLabel('2026-10-03T23:00:00Z', fmt)).toBe('Sat, Oct 3 · 7:00 PM')
+    // 03:30Z on Oct 4 is still Oct 3 in ET (11:30 PM EDT).
+    expect(tipOffLabel('2026-10-04T03:30:00Z', fmt)).toBe('Sat, Oct 3 · 7:00 PM')
+    expect(tipOffLabel(null, fmt)).toBe('TBD')
   })
 })

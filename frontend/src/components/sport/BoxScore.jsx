@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { fetchPlays, fetchBoxScore } from "@/services/api";
-import { Skeleton, Card, DataTable, TeamMark } from "@/components/ui";
+import { Skeleton, Card, DataTable, TeamMark, PageState } from "@/components/ui";
 import { useTheme } from "@/context/ThemeContext";
 import { getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
 
@@ -49,7 +49,7 @@ function getOnCourtNames(plays, boxData, homeTeam, awayTeam) {
 
 function StatBlock({ label, value, isPrimary = false }) {
   return (
-    <div className="flex flex-col items-center min-w-[32px]">
+    <div className="flex flex-col items-center min-w-0">
       <span className={`tnum leading-none mb-1 ${isPrimary ? 't-body font-semibold text-text-1' : 't-small text-text-2'}`}>
         {value}
       </span>
@@ -91,7 +91,8 @@ function PlayerRow({ player, teamAbbrev }) {
           )}
         </div>
 
-        <div className="flex items-center gap-4 sm:gap-5">
+        {/* Five equal columns that always fit the card: PF is never clipped at any width. */}
+        <div className="grid grid-cols-5 gap-1">
           <StatBlock label="PTS" value={player.points ?? 0} isPrimary />
           <StatBlock label="FG" value={player.fg || "0-0"} />
           <StatBlock label="REB" value={player.rebounds ?? 0} />
@@ -103,7 +104,19 @@ function PlayerRow({ player, teamAbbrev }) {
   );
 }
 
-function TeamSection({ teamAbbrev, players }) {
+// Empty copy for the on-court card and the full box score, by game status. Only a game
+// that hasn't started says it is waiting for tip-off.
+export function boxScoreEmptyText(status) {
+  if (status === "scheduled") return "Box score starts at tip-off.";
+  if (status === "final") return "The box score isn't available for this game.";
+  return "No box score yet.";
+}
+
+function onCourtEmptyText(status) {
+  return status === "scheduled" ? "Waiting for tip-off." : boxScoreEmptyText(status);
+}
+
+function TeamSection({ teamAbbrev, players, status }) {
   const logo = getLogoUrl(teamAbbrev);
 
   return (
@@ -114,7 +127,7 @@ function TeamSection({ teamAbbrev, players }) {
       </div>
 
       {players.length === 0 ? (
-        <p className="py-8 text-center t-small text-text-3">Waiting for tip-off.</p>
+        <p className="py-8 text-center t-small text-text-3">{onCourtEmptyText(status)}</p>
       ) : (
         <div className="divide-y divide-border">
           {players.map((p, i) => (
@@ -274,7 +287,7 @@ export function FullBoxScore({ gameId, homeTeam, awayTeam, status, boxData: boxD
     );
   }
 
-  if (!boxData) return null;
+  if (!boxData) return <PageState kind="empty" title={boxScoreEmptyText(status)} />;
 
   return (
     <div className="space-y-4">
@@ -354,14 +367,14 @@ export function BoxScore({ gameId, homeTeam, awayTeam, status, side, plays: play
     return loading ? (
       <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
     ) : (
-      <TeamSection teamAbbrev={awayTeam} players={awayPlayers} />
+      <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} />
     );
   }
   if (side === "home") {
     return loading ? (
       <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
     ) : (
-      <TeamSection teamAbbrev={homeTeam} players={homePlayers} />
+      <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} />
     );
   }
 
@@ -375,8 +388,8 @@ export function BoxScore({ gameId, homeTeam, awayTeam, status, side, plays: play
         </div>
       ) : (
         <>
-          <TeamSection teamAbbrev={awayTeam} players={awayPlayers} />
-          <TeamSection teamAbbrev={homeTeam} players={homePlayers} />
+          <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} />
+          <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} />
         </>
       )}
     </div>

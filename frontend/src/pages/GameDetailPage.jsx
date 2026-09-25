@@ -11,10 +11,11 @@ import { useGameFeed } from '@/hooks/useGameFeed';
 import { useFormatTime } from '@/utils/formatTime';
 import { PickTracker } from '@/components/sport/PickTracker';
 import { ChevronLeft } from 'lucide-react';
+import { formatLongDay, todayET } from '@/lib/et';
 
 /* ─── Team Header (inside Scoreboard) ─── */
 
-function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf }) {
+function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf, showScore = true }) {
   const logoUrl = getLogoUrl(abbrev);
   const { playGlassClick } = useTheme();
 
@@ -26,12 +27,14 @@ function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf 
           <TeamMark abbrev={abbrev} logoUrl={logoUrl} size="lg" />
         </Link>
 
-        <span className="relative shrink-0">
-          <span className={`t-score tnum ${isWinner ? 'text-text-1' : 'text-text-3'}`}>{score}</span>
-          {isWinner && (
-            <span className="absolute -right-2 -top-1 h-2 w-2 rounded-sm bg-live animate-ping" aria-hidden="true" />
-          )}
-        </span>
+        {showScore && (
+          <span className="relative shrink-0">
+            <span className={`t-score tnum ${isWinner ? 'text-text-1' : 'text-text-3'}`}>{score}</span>
+            {isWinner && (
+              <span className="absolute -right-2 -top-1 h-2 w-2 rounded-sm bg-live animate-ping" aria-hidden="true" />
+            )}
+          </span>
+        )}
       </div>
 
       {/* Row 2: seed, full name (sm+) and record — never competes with the score for width */}
@@ -50,10 +53,19 @@ function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf 
 
 /* ─── Scoreboard Header ─── */
 
+// "Sat, Oct 3 · 7:00 PM": the ET calendar day of tip-off, then the time in the same
+// format GameCard uses (useFormatTime). No start time means nothing to show but "TBD".
+export function tipOffLabel(startTime, fmt) {
+  if (!startTime) return 'TBD';
+  return `${formatLongDay(todayET(new Date(startTime)))} · ${fmt(startTime)}`;
+}
+
 function ScoreboardHeader({ game, standings }) {
   const fmt = useFormatTime();
   const isFinal = game.status === 'final';
   const isLive = game.status === 'live' || game.status === 'halftime';
+  // Before tip-off there is no score yet: show the tip-off date and time, never "0 0".
+  const isScheduled = !isFinal && !isLive;
   const awayWin = isFinal && game.away_score > game.home_score;
   const homeWin = isFinal && game.home_score > game.away_score;
 
@@ -76,7 +88,9 @@ function ScoreboardHeader({ game, standings }) {
         ) : isFinal ? (
           <span className="t-label text-text-3">Final</span>
         ) : (
-          <span className="t-small tnum text-text-2">{fmt(game.start_time)}</span>
+          <span className="t-small tnum text-text-1" data-testid="tip-off">
+            {tipOffLabel(game.start_time, fmt)}
+          </span>
         )}
       </div>
 
@@ -88,6 +102,7 @@ function ScoreboardHeader({ game, standings }) {
           record={standings[game.away_team]?.record || game.away_record}
           isWinner={awayWin}
           isAway
+          showScore={!isScheduled}
           seed={awaySeed}
           conf={standings[game.away_team]?.conf}
         />
@@ -98,6 +113,7 @@ function ScoreboardHeader({ game, standings }) {
           record={standings[game.home_team]?.record || game.home_record}
           isWinner={homeWin}
           isAway={false}
+          showScore={!isScheduled}
           seed={homeSeed}
           conf={standings[game.home_team]?.conf}
         />
