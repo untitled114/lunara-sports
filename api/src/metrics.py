@@ -17,15 +17,3 @@ espn_polls_total = Counter(
     "Total ESPN API poll cycles",
     ["collector"],
 )
-
-kafka_messages_consumed_total = Counter(
-    "kafka_messages_consumed_total",
-    "Total Kafka messages consumed by the API",
-    ["topic"],
-)
-
-dlq_messages_total = Counter(
-    "dlq_messages_total",
-    "Total messages sent to dead letter queues",
-    ["topic"],
-)

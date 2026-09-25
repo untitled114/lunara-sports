@@ -1,7 +1,7 @@
-"""Export resolved model_picks to GCS as Parquet for V4 model retraining.
+"""Export resolved model_picks to a local directory as Parquet, for V4 model retraining.
 
 Partition layout:
-  gs://{bucket}/model_picks/game_date={YYYY-MM-DD}/picks.parquet
+  {export_dir}/model_picks/game_date={YYYY-MM-DD}/picks.parquet
 
 Only picks with is_hit IS NOT NULL are exported (game must be final).
 Safe to re-run — overwrites the partition for a given date.
@@ -9,9 +9,9 @@ Safe to re-run — overwrites the partition for a given date.
 
 from __future__ import annotations
 
-import io
 import json
 from datetime import date
+from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -23,7 +23,10 @@ from ..db.models import ModelPick
 
 logger = structlog.get_logger(__name__)
 
-# Parquet schema — matches model_picks columns Sport-Suite needs for retraining
+# Parquet schema — matches model_picks columns Sport-Suite needs for retraining.
+# `game_date` is intentionally omitted: it is the Hive partition key
+# (game_date=YYYY-MM-DD in the directory name) and embedding it as a column too
+# collides with pyarrow's partition-column type inference on read.
 _SCHEMA = pa.schema(
     [
         pa.field("id", pa.int64()),
@@ -48,7 +51,6 @@ _SCHEMA = pa.schema(
         pa.field("sport_suite_id", pa.string()),
         pa.field("rolling_stats", pa.string()),  # JSON-encoded
         pa.field("injury_status", pa.string()),
-        pa.field("game_date", pa.date32()),
         pa.field("created_at", pa.timestamp("us", tz="UTC")),
     ]
 )
@@ -83,16 +85,8 @@ def _pick_to_row(pick: ModelPick) -> dict:
     }
 
 
-async def export_picks_for_date(
-    session: AsyncSession,
-    export_date: date,
-    gcs_bucket: str,
-) -> int:
-    """Export all resolved picks for a date to GCS as Parquet.
-
-    Returns count of rows exported (0 if nothing to export).
-    Skips upload if no resolved picks exist for the date.
-    """
+async def _fetch_rows(session: AsyncSession, export_date: date) -> list[dict]:
+    """Fetch and flatten all resolved picks for a date."""
     stmt = (
         select(ModelPick)
         .where(ModelPick.game_date == export_date)
@@ -101,12 +95,24 @@ async def export_picks_for_date(
     )
     result = await session.execute(stmt)
     picks = result.scalars().all()
+    return [_pick_to_row(p) for p in picks]
 
-    if not picks:
+
+async def export_picks_for_date(
+    session: AsyncSession,
+    export_date: date,
+    export_dir: str | Path,
+) -> int:
+    """Export all resolved picks for a date to a local Parquet partition.
+
+    Returns count of rows exported (0 if nothing to export).
+    Skips writing if no resolved picks exist for the date.
+    """
+    rows = await _fetch_rows(session, export_date)
+
+    if not rows:
         logger.info("olap_exporter.no_resolved_picks", date=export_date.isoformat())
         return 0
-
-    rows = [_pick_to_row(p) for p in picks]
 
     # Build columnar dict for pyarrow
     columns: dict[str, list] = {field.name: [] for field in _SCHEMA}
@@ -116,24 +122,15 @@ async def export_picks_for_date(
 
     table = pa.table(columns, schema=_SCHEMA)
 
-    # Serialize to in-memory Parquet buffer
-    buf = io.BytesIO()
-    pq.write_table(table, buf, compression="snappy")
-    buf.seek(0)
-
-    # Upload to GCS
-    from google.cloud import storage as gcs
-
-    client = gcs.Client()
-    bucket = client.bucket(gcs_bucket)
-    blob_path = f"model_picks/game_date={export_date.isoformat()}/picks.parquet"
-    blob = bucket.blob(blob_path)
-    blob.upload_from_file(buf, content_type="application/octet-stream")
-
+    out = (
+        Path(export_dir) / "model_picks" / f"game_date={export_date.isoformat()}" / "picks.parquet"
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(table, out, compression="snappy")
     logger.info(
-        "olap_exporter.uploaded",
+        "olap_exporter.written",
         date=export_date.isoformat(),
         rows=len(rows),
-        path=f"gs://{gcs_bucket}/{blob_path}",
+        path=str(out),
     )
     return len(rows)

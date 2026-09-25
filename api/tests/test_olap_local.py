@@ -7,9 +7,6 @@ from datetime import date
 from pathlib import Path
 
 import pyarrow.parquet as pq
-import pytest
-
-pytestmark = pytest.mark.xfail(strict=True, reason="pending Task 12")
 
 
 async def test_export_writes_partitioned_parquet(session, tmp_path: Path, monkeypatch):
@@ -31,11 +28,7 @@ async def test_poller_disabled_without_export_dir():
     from src.services.olap_poller import run_olap_poller
 
     s = Settings(_env_file=None, olap_export_dir="")
-    # Today Settings has no olap_export_dir field at all (pydantic-settings
-    # silently drops the unknown kwarg under extra="ignore"), so this assert
-    # is what actually pins down "pending Task 12" rather than the call
-    # happening to return fast today for the unrelated reason that
-    # gcs_olap_bucket also defaults to "". R5/ruling: bound the wait so a
-    # regression that reintroduces a real loop fails fast instead of hanging.
+    # R5/ruling: bound the wait so a regression that reintroduces a real
+    # loop fails fast instead of hanging.
     assert s.olap_export_dir == ""
     await asyncio.wait_for(run_olap_poller(s), timeout=2)

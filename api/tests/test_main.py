@@ -23,8 +23,6 @@ def _make_settings(**overrides):
     defaults = dict(
         database_url="sqlite+aiosqlite:///:memory:",
         redis_url="redis://localhost:6379/0",
-        kafka_bootstrap_servers="",
-        schema_registry_url="http://localhost:8081",
         api_host="0.0.0.0",
         api_port=8000,
         sport_suite_db_user="",
@@ -33,7 +31,7 @@ def _make_settings(**overrides):
         sport_suite_predictions_dir="",
         sport_suite_api_url="",
         sport_suite_api_key="",
-        gcs_olap_bucket="",
+        olap_export_dir="",
         jwt_secret="test-secret",
         jwt_algorithm="HS256",
         jwt_expiry_days=7,
@@ -45,17 +43,8 @@ def _make_settings(**overrides):
     return s
 
 
-def _mock_consumer():
-    """Return a mock KafkaConsumerLoop class and its instance."""
-    inst = MagicMock()
-    inst.run = AsyncMock()
-    inst.stop = MagicMock()
-    cls = MagicMock(return_value=inst)
-    return cls, inst
-
-
 @contextmanager
-def _lifespan_mocks(settings, consumer_cls):
+def _lifespan_mocks(settings):
     """Apply all lifespan-related patches at once to avoid deep nesting."""
     targets = {
         "src.main.Settings": MagicMock(return_value=settings),
@@ -66,8 +55,6 @@ def _lifespan_mocks(settings, consumer_cls):
         "src.main.init_espn_client": MagicMock(),
         "src.main.init_sport_suite": AsyncMock(),
         "src.main.populate_team_logos": AsyncMock(),
-        "src.main.init_producer": MagicMock(),
-        "src.main.close_producer": MagicMock(),
         "src.main.close_espn_client": AsyncMock(),
         "src.main.close_sport_suite": AsyncMock(),
         "src.main.close_redis": AsyncMock(),
@@ -77,7 +64,6 @@ def _lifespan_mocks(settings, consumer_cls):
         "src.main.run_pick_sync_poller": AsyncMock(),
         "src.main.run_pick_tracker_poller": AsyncMock(),
         "src.main.run_olap_poller": AsyncMock(),
-        "src.main.KafkaConsumerLoop": consumer_cls,
     }
     with ExitStack() as stack:
         mocks = {}
@@ -87,7 +73,7 @@ def _lifespan_mocks(settings, consumer_cls):
 
 
 @contextmanager
-def _app_test_mocks(consumer_cls, extra_patches=None):
+def _app_test_mocks(extra_patches=None):
     """Apply all patches needed to run the app via TestClient or AsyncClient.
 
     This includes every lifespan dependency so that ``TestClient(app)``
@@ -112,9 +98,7 @@ def _app_test_mocks(consumer_cls, extra_patches=None):
         "src.main.init_espn_client": MagicMock(),
         "src.main.init_sport_suite": AsyncMock(),
         "src.main.populate_team_logos": AsyncMock(),
-        "src.main.init_producer": MagicMock(),
         # Lifespan shutdown mocks
-        "src.main.close_producer": MagicMock(),
         "src.main.close_espn_client": AsyncMock(),
         "src.main.close_sport_suite": AsyncMock(),
         "src.main.close_redis": AsyncMock(),
@@ -128,8 +112,6 @@ def _app_test_mocks(consumer_cls, extra_patches=None):
         "src.main.run_pick_sync_poller": AsyncMock(),
         "src.main.run_pick_tracker_poller": AsyncMock(),
         "src.main.run_olap_poller": AsyncMock(),
-        # Kafka
-        "src.main.KafkaConsumerLoop": consumer_cls,
     }
     if extra_patches:
         targets.update(extra_patches)
@@ -148,52 +130,25 @@ def _app_test_mocks(consumer_cls, extra_patches=None):
 class TestLifespan:
     """Test the lifespan context manager — startup and shutdown paths."""
 
-    async def test_lifespan_without_kafka(self):
-        """When kafka_bootstrap_servers is empty, Kafka consumer is skipped."""
-        settings = _make_settings(kafka_bootstrap_servers="")
-        consumer_cls, consumer_inst = _mock_consumer()
+    async def test_lifespan_full_cycle(self):
+        """Lifespan performs full startup then a clean shutdown (no message broker)."""
+        settings = _make_settings()
 
-        with _lifespan_mocks(settings, consumer_cls) as mocks:
+        with _lifespan_mocks(settings) as mocks:
             async with lifespan(MagicMock()):
-                # Startup — Kafka not initialised because bootstrap_servers is empty
                 mocks["src.main.init_db"].assert_called_once()
                 mocks["src.main.create_tables"].assert_awaited_once()
-                mocks["src.main.init_producer"].assert_not_called()
-                consumer_cls.assert_not_called()
+                mocks["src.main.seed_teams"].assert_awaited_once()
+                mocks["src.main.init_redis"].assert_awaited_once()
+                mocks["src.main.init_espn_client"].assert_called_once()
+                mocks["src.main.init_sport_suite"].assert_awaited_once()
+                mocks["src.main.populate_team_logos"].assert_awaited_once()
 
             # Shutdown
-            mocks["src.main.close_producer"].assert_called_once()
+            mocks["src.main.close_espn_client"].assert_awaited_once()
+            mocks["src.main.close_sport_suite"].assert_awaited_once()
+            mocks["src.main.close_redis"].assert_awaited_once()
             mocks["src.main.close_db"].assert_awaited_once()
-
-    async def test_lifespan_with_kafka(self):
-        """When kafka_bootstrap_servers is set, KafkaConsumerLoop is created."""
-        settings = _make_settings(kafka_bootstrap_servers="localhost:9092")
-        consumer_cls, consumer_inst = _mock_consumer()
-
-        with _lifespan_mocks(settings, consumer_cls) as mocks:
-            async with lifespan(MagicMock()):
-                mocks["src.main.init_producer"].assert_called_once()
-                consumer_cls.assert_called_once_with(settings)
-
-            # Shutdown: consumer.stop() should have been called
-            consumer_inst.stop.assert_called_once()
-
-    async def test_lifespan_consumer_task_exception_on_shutdown(self):
-        """If the consumer task raises on await during shutdown, it is swallowed."""
-        settings = _make_settings(kafka_bootstrap_servers="localhost:9092")
-
-        async def _run_raises():
-            raise RuntimeError("consumer crash")
-
-        consumer_inst = MagicMock()
-        consumer_inst.run = _run_raises
-        consumer_inst.stop = MagicMock()
-        consumer_cls = MagicMock(return_value=consumer_inst)
-
-        with _lifespan_mocks(settings, consumer_cls):
-            # Should not raise even though consumer raises on shutdown
-            async with lifespan(MagicMock()):
-                pass
 
 
 # ---------------------------------------------------------------------------
@@ -208,13 +163,12 @@ class TestHealthEndpoint:
         async def _override():
             yield seeded_session
 
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.db_ping": AsyncMock(return_value=False),
             "src.main.redis_ping": AsyncMock(return_value=True),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             app.dependency_overrides[get_session] = _override
             try:
                 transport = ASGITransport(app=app)
@@ -234,13 +188,12 @@ class TestHealthEndpoint:
         async def _override():
             yield seeded_session
 
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.db_ping": AsyncMock(return_value=True),
             "src.main.redis_ping": AsyncMock(return_value=False),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             app.dependency_overrides[get_session] = _override
             try:
                 transport = ASGITransport(app=app)
@@ -259,13 +212,12 @@ class TestHealthEndpoint:
         async def _override():
             yield seeded_session
 
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.db_ping": AsyncMock(return_value=False),
             "src.main.redis_ping": AsyncMock(return_value=False),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             app.dependency_overrides[get_session] = _override
             try:
                 transport = ASGITransport(app=app)
@@ -322,12 +274,11 @@ class TestScoreboardWebSocket:
     def test_scoreboard_ws_connect_with_cached_data(self):
         """Scoreboard WS sends cached game list on connect, responds to ping."""
         cached_games = [{"id": "g1", "status": "live"}]
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_cached_game_list": AsyncMock(return_value=cached_games),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 with tc.websocket_connect("/ws/scoreboard") as ws:
                     msg = ws.receive_text()
@@ -341,12 +292,11 @@ class TestScoreboardWebSocket:
 
     def test_scoreboard_ws_connect_no_cached_data(self):
         """Scoreboard WS skips initial message when no cache exists."""
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_cached_game_list": AsyncMock(return_value=None),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 with tc.websocket_connect("/ws/scoreboard") as ws:
                     # No cached data — first response should be to a ping
@@ -360,12 +310,11 @@ class TestScoreboardWebSocket:
         open to receive the next message. A "ping" sent right after is the
         first (and only) reply pulled off the wire, proving "hello" itself
         produced nothing."""
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_cached_game_list": AsyncMock(return_value=None),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 with tc.websocket_connect("/ws/scoreboard") as ws:
                     ws.send_text("hello")  # false branch: no reply
@@ -375,12 +324,11 @@ class TestScoreboardWebSocket:
 
     def test_scoreboard_ws_disconnect(self):
         """Scoreboard WS handles clean disconnect."""
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_cached_game_list": AsyncMock(return_value=None),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 with tc.websocket_connect("/ws/scoreboard") as ws:
                     ws.send_text("ping")
@@ -389,12 +337,11 @@ class TestScoreboardWebSocket:
 
     def test_scoreboard_ws_exception_during_cache_fetch(self):
         """Scoreboard WS handles exception in get_cached_game_list gracefully."""
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_cached_game_list": AsyncMock(side_effect=RuntimeError("redis down")),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 # The exception causes the handler to fall through to except Exception
                 # and disconnect cleanly (no unhandled error).
@@ -414,12 +361,11 @@ class TestGameWebSocket:
             {"id": 1, "event_type": "jump_ball", "description": "Tip-off"},
             {"id": 2, "event_type": "jump_shot", "description": "Tatum 2pt"},
         ]
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_recent_plays": AsyncMock(return_value=fake_plays),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 with tc.websocket_connect("/ws/game123") as ws:
                     msg = ws.receive_text()
@@ -434,12 +380,11 @@ class TestGameWebSocket:
 
     def test_game_ws_empty_history(self):
         """Game WS sends empty history when no plays exist."""
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_recent_plays": AsyncMock(return_value=[]),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 with tc.websocket_connect("/ws/game999") as ws:
                     msg = ws.receive_text()
@@ -449,12 +394,11 @@ class TestGameWebSocket:
 
     def test_game_ws_disconnect(self):
         """Game WS handles disconnect cleanly."""
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_recent_plays": AsyncMock(return_value=[]),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 with tc.websocket_connect("/ws/game999") as ws:
                     ws.receive_text()  # consume history
@@ -464,12 +408,11 @@ class TestGameWebSocket:
 
     def test_game_ws_non_ping_message_continues_loop(self):
         """Game WS keeps alive on non-ping messages (no pong for non-ping)."""
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_recent_plays": AsyncMock(return_value=[]),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 with tc.websocket_connect("/ws/game999") as ws:
                     ws.receive_text()  # consume history
@@ -481,12 +424,11 @@ class TestGameWebSocket:
 
     def test_game_ws_exception_during_get_recent_plays(self):
         """Game WS handles exception in get_recent_plays gracefully."""
-        consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_recent_plays": AsyncMock(side_effect=RuntimeError("db error")),
         }
 
-        with _app_test_mocks(consumer_cls, extra_patches=extras):
+        with _app_test_mocks(extra_patches=extras):
             with TestClient(app) as tc:
                 # The exception triggers except Exception, which disconnects cleanly
                 with tc.websocket_connect("/ws/game_err"):

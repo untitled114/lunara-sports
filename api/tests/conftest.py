@@ -197,12 +197,6 @@ async def client(seeded_session):
         for target, mock in _MOCK_PATCHES
     ]
 
-    # Mock KafkaConsumerLoop so tests don't attempt real Kafka connections
-    mock_consumer_instance = MagicMock()
-    mock_consumer_instance.run = AsyncMock()
-    mock_consumer_instance.stop = MagicMock()
-    mock_consumer_cls = MagicMock(return_value=mock_consumer_instance)
-
     with (
         patch(
             "src.services.game_service.get_cached_game_list",
@@ -231,7 +225,6 @@ async def client(seeded_session):
         patch("src.main.init_db"),
         patch("src.main.close_db", new_callable=AsyncMock),
         patch("src.main.run_play_poller", new_callable=AsyncMock),
-        patch("src.main.KafkaConsumerLoop", mock_consumer_cls),
     ):
         app.dependency_overrides[get_session] = _override_session
         transport = ASGITransport(app=app)

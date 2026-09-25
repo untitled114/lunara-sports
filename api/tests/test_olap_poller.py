@@ -1,4 +1,4 @@
-"""Tests for the OLAP poller — nightly Parquet export to GCS."""
+"""Tests for the OLAP poller — nightly Parquet export to a local directory."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ class TestSecondsUntilMidnightET:
 class TestExportDate:
     async def test_skips_when_no_factory(self):
         with patch("src.services.olap_poller.get_session_factory", return_value=None):
-            await _export_date("my-bucket", date(2026, 3, 20))
+            await _export_date("/tmp/my-export-dir", date(2026, 3, 20))
 
     async def test_exports_successfully(self):
         mock_session = AsyncMock()
@@ -37,7 +37,7 @@ class TestExportDate:
                 return_value=5,
             ),
         ):
-            await _export_date("my-bucket", date(2026, 3, 20))
+            await _export_date("/tmp/my-export-dir", date(2026, 3, 20))
 
     async def test_handles_export_error(self):
         mock_session = AsyncMock()
@@ -50,11 +50,11 @@ class TestExportDate:
             patch(
                 "src.services.olap_poller.export_picks_for_date",
                 new_callable=AsyncMock,
-                side_effect=Exception("GCS down"),
+                side_effect=Exception("export failed"),
             ),
         ):
             # Should not raise — error is caught and logged
-            await _export_date("my-bucket", date(2026, 3, 20))
+            await _export_date("/tmp/my-export-dir", date(2026, 3, 20))
 
     async def test_no_rows_exported(self):
         mock_session = AsyncMock()
@@ -70,13 +70,13 @@ class TestExportDate:
                 return_value=0,
             ),
         ):
-            await _export_date("my-bucket", date(2026, 3, 20))
+            await _export_date("/tmp/my-export-dir", date(2026, 3, 20))
 
 
 class TestRunOlapPoller:
-    async def test_skips_when_no_bucket(self):
+    async def test_skips_when_no_export_dir(self):
         settings = MagicMock()
-        settings.gcs_olap_bucket = ""
+        settings.olap_export_dir = ""
         await run_olap_poller(settings)
 
     async def test_skips_when_no_settings(self):

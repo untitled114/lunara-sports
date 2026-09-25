@@ -26,13 +26,11 @@ USER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 # characterization test per Ruling R5.
 
 
-@pytest.mark.xfail(strict=True, reason="pending Task 11")
 def test_kafka_package_is_gone():
     with pytest.raises(ModuleNotFoundError):
         importlib.import_module("src.kafka")
 
 
-@pytest.mark.xfail(strict=True, reason="pending Task 11")
 def test_settings_have_no_kafka_or_gcs():
     from src.config import Settings
 
@@ -42,7 +40,6 @@ def test_settings_have_no_kafka_or_gcs():
     assert s.olap_export_dir == ""
 
 
-@pytest.mark.xfail(strict=True, reason="pending Task 11")
 async def test_add_reaction_broadcasts_to_game_room(client, seeded_session):
     # Patch the ws.live_feed singleton itself (not a name in src.routers.reactions),
     # so this is robust whether Task 11 binds `manager` at module scope in
@@ -66,7 +63,6 @@ async def test_add_reaction_broadcasts_to_game_room(client, seeded_session):
     }
 
 
-@pytest.mark.xfail(strict=True, reason="pending Task 11")
 async def test_remove_reaction_broadcasts_remove(client, seeded_session):
     await client.post(
         f"/plays/{PLAY_ID}/reactions",
