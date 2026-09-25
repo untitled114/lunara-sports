@@ -17,12 +17,16 @@ Runbook for the Lunara backend (API, ingestion, Lumen bot) on the Oracle box
 | Python | uv-managed CPython 3.12 at `/opt/lunara/python`, linked as `/opt/lunara/bin/python3.12` |
 | Deploy bundle | `/opt/lunara/deploy` (this directory, minus tests) and `/opt/lunara/migrations` |
 | Secrets | `/etc/lunara/{api,ingestion,lumen}.env`, `db.secret`, `jwt.secret` (0640 root:lunara, dir 0750 root:lunara) |
-| nginx | `/etc/nginx/sites-available/api.lunara-app.com`, linked from `sites-enabled` |
+| nginx | `/etc/nginx/sites-available/api.lunara-app.com`, linked from `sites-enabled` (ports 80 and 443) |
+| Origin TLS | `/etc/lunara/tls/api.lunara-app.com.{key,csr,pem}` (Cloudflare Origin CA) |
 | OLAP export | `/opt/lunara/olap` |
 
 Nothing goes under `/home/sportsuite/sport-suite`, because Sport-suite's deploy runs
 `rsync --delete` on that tree. The scripts refuse any rsync destination outside
 `/opt/lunara`.
+
+The old GCP Lumen is gone: the GCP project is suspended. Only the OCI
+`cephalon-lumen` holds the Discord token, so the owner won't get duplicate DMs.
 
 The Sport-suite API (0.0.0.0:8000), Airflow (0.0.0.0:8080 and 8793), Grafana (3001),
 Metabase (3000) and MLflow (5001) are not touched. Both Lunara health servers default to
@@ -39,16 +43,55 @@ script does this:
 
 ## TLS between Cloudflare and the origin
 
-The zone's SSL mode reads "full", but on 2026-09-24 the box had nothing listening on 443
-and no certificate: no `/etc/letsencrypt`, no Cloudflare origin cert, and
-`admin.lunara-app.com` is served only by `listen 80;`. From outside, the origin's 443
-times out, yet `https://admin.lunara-app.com` works through Cloudflare. So the edge
-reaches this origin on port 80, and the api site does the same: `listen 80;` only.
+The zone's SSL mode is **Full**. `admin.lunara-app.com` works over plain HTTP to the origin
+only because of a Page Rule (`admin.lunara-app.com/*` sets SSL to Flexible). The api
+carries JWT-authenticated traffic, so it does **not** get that rule. Cloudflare reaches it
+on **443** with a Cloudflare **Origin CA** certificate.
 
-To encrypt the edge-to-origin hop later:
-1. Install a Cloudflare origin certificate.
-2. Add `listen 443 ssl;` with `ssl_certificate` and `ssl_certificate_key` to both vhosts.
-3. Open 443 in the OCI security list and in iptables.
+| File | Mode |
+|---|---|
+| `/etc/lunara/tls/` | dir 0750 root:root |
+| `api.lunara-app.com.key` | 0600 root:root. Generated on the box by provision.sh; never leaves it. |
+| `api.lunara-app.com.csr` | 0644. Public; provision.sh prints only its path. |
+| `api.lunara-app.com.pem` | 0644 root:root. The Origin CA certificate. |
+
+The nginx site has three server blocks:
+- `listen 80;` for `api.lunara-app.com`. It still proxies, because Cloudflare may send
+  `http://` visitors on 80. It sorts after `admin.lunara-app.com`, so admin stays the
+  implicit port-80 default.
+- `listen 443 ssl;` for `api.lunara-app.com`, with the same locations.
+- A `listen 443 ssl default_server; server_name _; return 444;` catch-all. It stops the api
+  block from becoming the implicit 443 default and from answering for other hosts. nginx
+  1.18 on the box has no `ssl_reject_handshake`, so the catch-all presents the same
+  certificate during the handshake and then closes the connection without content.
+
+### Origin certificate: issue, install, renew
+
+1. `deploy/oci/provision.sh` creates the key and CSR. It is idempotent and never
+   overwrites an existing key.
+2. The controller fetches the CSR, a public file:
+   `ssh ss-admin 'sudo cat /etc/lunara/tls/api.lunara-app.com.csr'`.
+3. The controller issues the certificate through the Cloudflare API (Origin CA,
+   `POST /certificates`), with the CSR, hostnames `api.lunara-app.com`, `request_type`
+   `origin-rsa` and `requested_validity` **5475 days (15 years)**. The response's
+   `certificate` is saved locally as a PEM file.
+4. Run `deploy/oci/install_origin_cert.sh <cert.pem>`. It checks that the PEM parses,
+   names the host and has not expired. It confirms that the cert's public key matches the
+   key on the box, comparing public-key hashes only. It then installs the PEM with mode
+   0644, and runs `nginx -t` and a reload if the site is already enabled.
+5. `deploy.sh` refuses to run until the cert and key both exist, the cert is unexpired,
+   and the two match. It fails with the exact next step and never falls back to port 80.
+
+**Renewal.** The certificate is valid for 15 years (it expires around 2041). Only
+Cloudflare's edge trusts Origin CA certs, so there is no public-CA renewal cycle. To
+rotate it, or if the key is ever exposed:
+1. Delete the key and CSR on the box.
+2. Re-run `provision.sh`.
+3. Issue a new certificate from the new CSR.
+4. Run `install_origin_cert.sh`.
+5. Revoke the old certificate in Cloudflare.
+
+`deploy.sh` prints the expiry date on every run.
 
 ## Provision (once; safe to re-run)
 
@@ -76,7 +119,9 @@ What it does:
      file is deleted once `lumen.env` has been written and verified. On re-runs they come
      from the existing `lumen.env`. If neither file exists, the laptop prompts for the
      values with hidden input and sends them over ssh stdin.
-9. Runs `docker compose -p lunara -f docker-compose.redis.yml up -d` and waits for PING.
+9. Generates the origin TLS key and CSR in `/etc/lunara/tls/` if the key is missing, and
+   prints only the CSR path (see "Origin certificate").
+10. Runs `docker compose -p lunara -f docker-compose.redis.yml up -d` and waits for PING.
 
 **Python 3.12.** Ubuntu 22.04 on the box ships python3.10 (without ensurepip) and a
 3.11.0 release candidate. There is no python3.12. Provision bootstraps `uv==0.12.19` in
@@ -96,23 +141,27 @@ deploy/oci/deploy.sh --dry-run
 deploy/oci/deploy.sh
 ```
 
-1. Runs `rsync --delete` from `api/`, `ingestion/` and `lumen-bot/` into `/opt/lunara/<svc>`.
+1. Checks before changing anything on the box: the origin cert and key must exist, the
+   cert must be unexpired, and the two must match. Otherwise the script fails with the
+   next step.
+2. Runs `rsync --delete` from `api/`, `ingestion/` and `lumen-bot/` into `/opt/lunara/<svc>`.
    It excludes tests, `.venv`, `logs/` and `.env`, so the excluded paths on the box survive.
-   It also restages the bundle and the migrations.
-2. Creates or updates each venv as `lunara`: `python3.12 -m venv .venv && .venv/bin/pip install .`.
-3. Applies any new migrations.
-4. Installs the three units (daemon-reload, enable) and the nginx site, runs `nginx -t`,
+   It also restages the bundle and the migrations. (The laptop runs the rsync first; the TLS
+   check is the first server-side step.)
+3. Creates or updates each venv as `lunara`: `python3.12 -m venv .venv && .venv/bin/pip install .`.
+4. Applies any new migrations.
+5. Installs the three units (daemon-reload, enable) and the nginx site, runs `nginx -t`,
    then reloads nginx.
-5. Runs `systemctl restart lunara-api lunara-ingestion cephalon-lumen`.
-6. Runs the health gates, retrying 30 times at 2 s intervals:
+6. Runs `systemctl restart lunara-api lunara-ingestion cephalon-lumen`.
+7. Runs the health gates, retrying 30 times at 2 s intervals:
    - `curl -sf 127.0.0.1:8010/health` must return `"status":"ok"`, which means Postgres
      and Redis are both up.
-   - `curl -s 127.0.0.1:8010/health/db` must return 6/6. A 404 is reported and tolerated
-     while the endpoint does not exist.
+   - `SELECT count(*) FROM teams` as `lunara_app` must return at least 30 (the teams
+     seeded by migration 007).
    - `journalctl -u lunara-ingestion -n 20` must contain `ingestion.starting`.
    - `cephalon-lumen` must be active.
 
-If anything fails after step 4, the script prints `journalctl -n 50` for each unit, rolls
+If anything fails after the units and site are installed (step 5), the script prints `journalctl -n 50` for each unit, rolls
 back and exits non-zero.
 
 ## Rollback

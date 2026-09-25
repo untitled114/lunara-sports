@@ -6,7 +6,8 @@
 # Uses the SSH alias ss-admin (ubuntu, passwordless sudo); override with LUNARA_SSH_HOST.
 # Creates the lunara user, /opt/lunara, /etc/lunara, a uv-managed Python 3.12, the
 # lunara_app role and lunara database on sportsuite_db, applies the migrations, writes
-# /etc/lunara/{api,ingestion,lumen}.env and starts the lunara_redis container.
+# /etc/lunara/{api,ingestion,lumen}.env, generates the origin TLS key + CSR in
+# /etc/lunara/tls (printing only the CSR path) and starts the lunara_redis container.
 # Secrets are generated or read on the server and never printed. --dry-run prints every
 # step and makes no ssh connection.
 
@@ -46,7 +47,10 @@ else
     fi
 fi
 
-say "provision: DB role + database, migrations, env files, Redis"
+say "provision: DB role + database, migrations, env files, TLS key + CSR, Redis"
 remote provision finish
 
-say "provision complete; next: deploy/oci/deploy.sh"
+say "provision complete; next steps"
+printf '    1. controller: fetch the CSR (public) printed above, issue a Cloudflare Origin CA cert\n'
+printf '       for it, then: deploy/oci/install_origin_cert.sh <cert.pem>\n'
+printf '    2. deploy/oci/deploy.sh\n'

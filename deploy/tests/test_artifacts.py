@@ -61,11 +61,52 @@ def test_nginx_websocket_and_blocks():
     assert "location /ws/publish { return 404; }" in conf
 
 
-def test_nginx_listens_on_80():
-    # The Cloudflare edge reaches this origin on port 80 today (see deploy/oci/README.md,
-    # "TLS between Cloudflare and the origin"); no origin certificate exists on the box.
-    conf = (D / "nginx-api.lunara-app.com.conf").read_text()
-    assert "listen 80;" in conf
+def _server_blocks(conf):
+    """Top-level `server { ... }` blocks, split on brace depth."""
+    blocks, depth, cur = [], 0, []
+    for line in conf.splitlines():
+        stripped = line.split("#", 1)[0]
+        if depth == 0 and stripped.strip().startswith("server {"):
+            cur = []
+        if depth > 0 or stripped.strip().startswith("server {"):
+            cur.append(line)
+        depth += stripped.count("{") - stripped.count("}")
+        if depth == 0 and cur:
+            blocks.append("\n".join(cur))
+            cur = []
+    return blocks
+
+
+def test_nginx_api_served_on_80_and_443_with_origin_cert():
+    blocks = _server_blocks((D / "nginx-api.lunara-app.com.conf").read_text())
+    api = [b for b in blocks if "server_name api.lunara-app.com;" in b]
+    listens = sorted(
+        line.strip() for b in api for line in b.splitlines() if "listen" in line
+    )
+    assert listens == ["listen 443 ssl;", "listen 80;"]
+    tls = next(b for b in api if "listen 443 ssl;" in b)
+    assert "ssl_certificate /etc/lunara/tls/api.lunara-app.com.pem;" in tls
+    assert "ssl_certificate_key /etc/lunara/tls/api.lunara-app.com.key;" in tls
+    for b in api:  # same locations on both ports
+        assert "proxy_pass http://127.0.0.1:8010" in b
+        assert "location = /metrics { return 404; }" in b
+        assert "location /ws/publish { return 404; }" in b
+        assert 'proxy_set_header Connection "upgrade";' in b
+        assert "proxy_read_timeout 3600s;" in b
+
+
+def test_nginx_api_blocks_never_default_and_443_has_catch_all():
+    blocks = _server_blocks((D / "nginx-api.lunara-app.com.conf").read_text())
+    for b in blocks:
+        if "server_name api.lunara-app.com;" in b:
+            assert "default_server" not in b
+        else:  # the only other block: 443 catch-all that serves nothing
+            assert "listen 443 ssl default_server;" in b and "return 444;" in b
+            assert "proxy_pass" not in b
+    assert len(blocks) == 3
+    assert not any(
+        "listen 80 default_server" in b for b in blocks
+    )  # admin keeps port 80
 
 
 def test_redis_bound_to_localhost_6380():

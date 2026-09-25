@@ -22,6 +22,10 @@ readonly DB_ROLE=lunara_app
 readonly PY312=/opt/lunara/bin/python3.12
 readonly SERVICES=(lunara-api lunara-ingestion cephalon-lumen)
 readonly NGINX_SITE=api.lunara-app.com
+readonly TLS_DIR=/etc/lunara/tls
+readonly TLS_KEY=/etc/lunara/tls/api.lunara-app.com.key
+readonly TLS_CSR=/etc/lunara/tls/api.lunara-app.com.csr
+readonly TLS_CERT=/etc/lunara/tls/api.lunara-app.com.pem
 }
 
 step() { printf '\n==> [remote] %s\n' "$*"; }

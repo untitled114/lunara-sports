@@ -167,7 +167,31 @@ EOF
     find "$LUNARA_ETC" -maxdepth 1 -type f \( -name '*.env' -o -name '*.secret' \) \
         -exec chown root:lunara {} + -exec chmod 0640 {} +
 
-    step "7. Redis: docker compose -p lunara up -d (127.0.0.1:6380)"
+    step "7. origin TLS key + CSR for api.lunara-app.com (key never leaves the box)"
+    install -d -o root -g root -m 0750 "$TLS_DIR"
+    if [[ -s "$TLS_KEY" ]]; then
+        info "key exists (kept)"
+    else
+        (umask 077 && openssl req -new -newkey rsa:2048 -nodes -subj "/CN=$NGINX_SITE" \
+            -keyout "$TLS_KEY" -out "$TLS_CSR" 2>/dev/null)
+        info "generated key and CSR"
+    fi
+    if [[ ! -s "$TLS_CSR" ]]; then
+        openssl req -new -key "$TLS_KEY" -subj "/CN=$NGINX_SITE" -out "$TLS_CSR"
+        info "regenerated CSR from the existing key"
+    fi
+    chown root:root "$TLS_KEY" "$TLS_CSR"
+    chmod 0600 "$TLS_KEY"
+    chmod 0644 "$TLS_CSR"
+    info "CSR (public): $TLS_CSR"
+    if [[ -s "$TLS_CERT" ]]; then
+        info "certificate present: $TLS_CERT"
+    else
+        info "certificate missing: issue a Cloudflare Origin CA cert for this CSR, then run"
+        info "  deploy/oci/install_origin_cert.sh <cert.pem>   (see deploy/oci/README.md)"
+    fi
+
+    step "8. Redis: docker compose -p lunara up -d (127.0.0.1:6380)"
     docker compose -p lunara -f "$LUNARA_ROOT/deploy/docker-compose.redis.yml" up -d
     for _ in $(seq 1 15); do
         if docker exec lunara_redis redis-cli ping 2>/dev/null | grep -q PONG; then
@@ -205,7 +229,10 @@ describe() {
                 "   ESPN_PROXY_URL <- SPORTSBOOK_PROXY_URL from $SS_ENV" \
                 "   DISCORD_TOKEN/ANTHROPIC_API_KEY <- /etc/lunara/lumen.secret (then verified + removed)" \
                 "   or the existing lumen.env" \
-                "7. docker compose -p lunara -f /opt/lunara/deploy/docker-compose.redis.yml up -d;" \
+                "7. install -d $TLS_DIR (0750 root:root); unless $TLS_KEY exists:" \
+                "   openssl req -new -newkey rsa:2048 -nodes -subj /CN=$NGINX_SITE" \
+                "   -> key (0600 root:root) + CSR $TLS_CSR (0644; its path is printed, nothing else)" \
+                "8. docker compose -p lunara -f /opt/lunara/deploy/docker-compose.redis.yml up -d;" \
                 "   wait for redis-cli PING (15 s)"
             ;;
     esac
