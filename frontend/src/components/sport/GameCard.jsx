@@ -118,15 +118,19 @@ export function GameCard({ game, standings = {}, standingsMeta = { seasonLabel: 
         {wp && (
           <div className="mb-4">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="t-small text-text-2 tnum">{wp.away}%</span>
+              <span className="t-small text-text-2 tnum">
+                <span className="sr-only">{game.away_team} </span>{wp.away}%
+              </span>
               <span className="t-label text-text-3">
                 {standingsMeta.isPrev ? `Based on ${seasonShort} records` : 'Win probability'}
               </span>
-              <span className="t-small text-text-2 tnum">{wp.home}%</span>
+              <span className="t-small text-text-2 tnum">
+                <span className="sr-only">{game.home_team} </span>{wp.home}%
+              </span>
             </div>
-            <div className="h-1.5 w-full rounded-sm overflow-hidden flex bg-surface-2">
+            <div aria-hidden="true" className="h-1.5 w-full rounded-sm overflow-hidden flex bg-surface-2">
               <div className="h-full transition-all duration-1000 bg-text-3" style={{ width: `${wp.away}%` }} />
-              <div className="h-full transition-all duration-1000 bg-accent" style={{ width: `${wp.home}%` }} />
+              <div className="h-full transition-all duration-1000 bg-accent-fill" style={{ width: `${wp.home}%` }} />
             </div>
           </div>
         )}

@@ -6,7 +6,7 @@ import { DateNav } from '@/components/sport/DateNav';
 import { PageState, Segmented } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
 import { useScoreboard } from '@/hooks/useScoreboard';
-import { todayET, formatLongDay } from '@/lib/et';
+import { todayET, addDaysISO, formatLongDay } from '@/lib/et';
 
 const statusOrder = { live: 0, halftime: 1, scheduled: 2, final: 3 };
 
@@ -19,6 +19,11 @@ const FILTERS = [
 
 const EMPTY_META = { seasonLabel: '', isPrev: false };
 
+// A usable ?date= is YYYY-MM-DD and a real calendar day (2026-02-30 round-trips to 03-02).
+function isValidISODate(s) {
+  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && addDaysISO(s, 0) === s;
+}
+
 export default function GamesPage() {
   const [searchParams] = useSearchParams();
   const [standings, setStandings] = useState({});
@@ -26,14 +31,16 @@ export default function GamesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [nextDate, setNextDate] = useState(null);
+  // { status: 'loading' | 'ok' | 'error', date }: only an 'ok' null means nothing is scheduled.
+  const [next, setNext] = useState({ status: 'loading', date: null });
   const [filter, setFilter] = useState('all');
 
   const { playGlassClick } = useTheme();
 
   // NBA games are scheduled in ET, so "today" is today in America/New_York.
   const today = todayET();
-  const dateStr = searchParams.get('date') || today;
+  const rawDate = searchParams.get('date');
+  const dateStr = isValidISODate(rawDate) ? rawDate : today;
 
   // Games come from the shared WS scoreboard channel (REST fallback when disconnected)
   const { games: rawGames } = useScoreboard(dateStr);
@@ -70,10 +77,10 @@ export default function GamesPage() {
   // Next game day after the selected date, for the empty state's next step.
   useEffect(() => {
     let cancelled = false;
-    setNextDate(null);
+    setNext({ status: 'loading', date: null });
     fetchNextGameDate(dateStr)
-      .then((d) => { if (!cancelled) setNextDate(d || null); })
-      .catch(() => { if (!cancelled) setNextDate(null); });
+      .then((d) => { if (!cancelled) setNext({ status: 'ok', date: d || null }); })
+      .catch(() => { if (!cancelled) setNext({ status: 'error', date: null }); });
     return () => { cancelled = true; };
   }, [dateStr]);
 
@@ -101,17 +108,17 @@ export default function GamesPage() {
         kind="empty"
         title={dateStr === today ? 'No games today.' : 'No games on this day.'}
         action={
-          nextDate ? (
+          next.date ? (
             <Link
-              to={`/scoreboard?date=${nextDate}`}
+              to={`/scoreboard?date=${next.date}`}
               onClick={() => playGlassClick()}
               className="t-small text-accent hover:text-accent-hover"
             >
-              Next game: {formatLongDay(nextDate)} →
+              Next game: {formatLongDay(next.date)} →
             </Link>
-          ) : (
+          ) : next.status === 'ok' ? (
             <span className="t-small text-text-2">No games scheduled yet.</span>
-          )
+          ) : null
         }
       />
     );

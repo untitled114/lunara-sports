@@ -20,6 +20,15 @@ describe('GameCard', () => {
     expect(screen.getByText(/Based on 2025–26 records/)).toBeInTheDocument()
     expect(screen.queryByText('100%')).toBeNull()
   })
+  it('win probability: bars hidden from assistive tech, each percentage names its team', () => {
+    const { container } = wrap(<GameCard game={game} standings={{ MIA: st(43, 39, 10, 'East'), TOR: st(46, 36, 5, 'East') }} standingsMeta={{ seasonLabel: '2025–26 final', isPrev: true }} />)
+    const exact = (text) => (_, el) => el?.tagName === 'SPAN' && el.textContent === text
+    expect(screen.getByText(exact('MIA 48%'))).toBeInTheDocument()
+    expect(screen.getByText(exact('TOR 52%'))).toBeInTheDocument()
+    const bar = container.querySelector('[aria-hidden="true"] .bg-accent-fill')
+    expect(bar).not.toBeNull()
+    expect(bar).toHaveStyle({ width: '52%' })
+  })
   it('no standings data: no badge, no win probability', () => {
     wrap(<GameCard game={game} standings={{}} standingsMeta={{ seasonLabel: '', isPrev: false }} />)
     expect(screen.queryByText(/Play-in|#\d/)).toBeNull()
