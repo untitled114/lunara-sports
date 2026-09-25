@@ -163,9 +163,12 @@ class TestClientLifecycle:
                 _get_client()
 
     @pytest.mark.asyncio
-    async def test_close_when_never_initialized_is_noop(self):
+    async def test_close_when_never_initialized_is_noop(self, capsys):
         with patch("src.services.espn_client._client", None):
-            await close_espn_client()  # must not raise
+            await close_espn_client()
+        # The `if _client:` guard skips the body entirely — no aclose(),
+        # no "espn_client.closed" log line.
+        assert "espn_client.closed" not in capsys.readouterr().out
 
     def test_init_creates_client(self):
         with patch("src.services.espn_client._client", None):

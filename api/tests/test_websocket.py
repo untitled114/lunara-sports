@@ -116,6 +116,25 @@ async def test_manager_disconnect_idempotent():
     assert mgr.connection_count() == 0
 
 
+@pytest.mark.asyncio
+async def test_manager_disconnect_one_of_two_keeps_the_other():
+    """Disconnecting one of two sockets on the same game leaves `conns`
+    non-empty — the `if not conns: del ...` cleanup (line 42) is skipped,
+    and the game_id entry itself survives with the other socket still in
+    it."""
+    mgr = ConnectionManager()
+    ws1, ws2 = AsyncMock(), AsyncMock()
+
+    await mgr.connect(ws1, "game1")
+    await mgr.connect(ws2, "game1")
+    assert mgr.connection_count("game1") == 2
+
+    await mgr.disconnect(ws1, "game1")
+
+    assert mgr.connection_count("game1") == 1
+    assert "game1" in mgr.active_games()
+
+
 # ── REST publish endpoint ───────────────────────────────────────────────
 
 

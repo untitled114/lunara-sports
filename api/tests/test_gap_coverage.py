@@ -14,16 +14,17 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_close_redis_when_never_initialized_is_noop():
-    """close_redis() with _pool already None does nothing (line 27->exit)."""
+async def test_close_redis_when_never_initialized_is_noop(capsys):
+    """close_redis() with _pool already None does nothing (line 27->exit):
+    the `if _pool:` guard skips aclose() and the "redis.closed" log line."""
     import src.db.redis as redis_mod
     from src.db.redis import close_redis
 
     old = redis_mod._pool
     redis_mod._pool = None
     try:
-        await close_redis()  # must not raise
-        assert redis_mod._pool is None
+        await close_redis()
+        assert "redis.closed" not in capsys.readouterr().out
     finally:
         redis_mod._pool = old
 
@@ -98,19 +99,23 @@ class TestPostComment:
         assert resp.status_code == 201
         assert resp.json()["play_id"] == 1
 
-    async def test_missing_game_is_not_rejected_today(self, client):
-        """Characterization: post_comment does not check game existence at
-        all — SQLite FK enforcement is also off in this test DB — so a
-        comment against a non-existent game_id is still created (201), not
-        the 404 one might expect. This is a discrepancy from the original
-        task brief's expected case, not a fix; see the Task 7 report."""
+    @pytest.mark.xfail(
+        strict=True,
+        reason="bug: post_comment doesn't 404 on unknown game (500 in prod via FK)",
+    )
+    async def test_missing_game_returns_404(self, client):
+        """post_comment never checks game existence. In this test DB
+        (SQLite, FK enforcement off) that silently produces a 201 with an
+        orphaned comment; in production, `comments.game_id REFERENCES
+        games(id)` means the same request raises an unhandled
+        IntegrityError instead — a 500, not a 404. Neither is correct: the
+        expected behavior is a 404. The fix lands later in the API track."""
         resp = await client.post(
             "/games/NO_SUCH_GAME/comments",
             json={"body": "orphaned comment"},
             headers={"X-User-Id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"},
         )
-        assert resp.status_code == 201
-        assert resp.json()["game_id"] == "NO_SUCH_GAME"
+        assert resp.status_code == 404
 
 
 # ── routers/games.py: GET /games/{game_id} not found ────────────────────

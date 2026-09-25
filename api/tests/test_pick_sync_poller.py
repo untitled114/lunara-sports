@@ -76,11 +76,18 @@ class TestRunPickSyncPoller:
 
         with (
             patch("src.services.pick_sync_poller.get_session_factory", return_value=None),
-            patch("src.services.pick_sync_poller.sync_picks", new_callable=AsyncMock),
-            patch("src.services.pick_sync_poller.asyncio.sleep", side_effect=limited_sleep),
+            patch("src.services.pick_sync_poller.sync_picks", new_callable=AsyncMock) as mock_sync,
+            patch(
+                "src.services.pick_sync_poller.asyncio.sleep", side_effect=limited_sleep
+            ) as mock_sleep,
         ):
             with pytest.raises(asyncio.CancelledError):
                 await run_pick_sync_poller(settings)
+            # factory is None => `continue` before ever reaching sync_picks;
+            # the loop still slept (and retried) exactly the 2 times the
+            # CancelledError trigger let it.
+            mock_sync.assert_not_awaited()
+            assert mock_sleep.call_count == 2
 
     async def test_logs_debug_when_no_picks_synced(self, capsys):
         """sync_picks() returning 0 hits the else branch (line 62), not the

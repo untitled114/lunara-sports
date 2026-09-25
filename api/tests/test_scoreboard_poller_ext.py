@@ -152,10 +152,22 @@ class TestPollScoreboard:
 
             # Only the scoreboard-wide broadcast — no per-game live update.
             assert mock_broadcast.call_count == 1
-            mock_broadcast.assert_called_once_with(
-                "scoreboard",
-                {"type": "scoreboard_update", "data": mock_broadcast.call_args[0][1]["data"]},
-            )
+            call_args, call_kwargs = mock_broadcast.call_args
+            assert call_args[0] == "scoreboard"
+            message = call_args[1]
+            assert message["type"] == "scoreboard_update"
+            rows = message["data"]
+            # Only the parseable, final game made it into rows — the
+            # unparseable event was dropped (line 129).
+            assert len(rows) == 1
+            row = rows[0]
+            assert row["id"] == "401810100"
+            assert row["status"] == "final"
+            assert row["home_team"] == "BOS"
+            assert row["away_team"] == "LAL"
+            assert row["home_score"] == 110
+            assert row["away_score"] == 105
+            assert row["venue"] == "TD Garden"
             mock_cache_state.assert_not_called()
 
     async def test_all_events_unparseable_skips_final_broadcast(self, session_factory):

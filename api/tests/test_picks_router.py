@@ -444,6 +444,26 @@ class TestTailPick:
         assert data["status"] == "tailed"
         assert data["pick_id"] == 10
 
+    async def test_tailing_the_same_pick_twice_is_idempotent(
+        self, picks_client, seeded_picks_session
+    ):
+        """Tailing a pick twice: both requests succeed (200) — tail/untail
+        idempotence is ruled intended behavior, not a bug — and exactly one
+        UserTail row exists afterward (ON CONFLICT DO NOTHING dedupes it),
+        so /picks/tailed shows the pick exactly once."""
+        headers = {"X-User-Id": str(FREE_USER_ID)}
+
+        first = await picks_client.post("/picks/10/tail", headers=headers)
+        second = await picks_client.post("/picks/10/tail", headers=headers)
+        assert first.status_code == 200
+        assert second.status_code == 200
+
+        resp = await picks_client.get("/picks/tailed", headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["id"] == 10
+
 
 # ── DELETE /picks/{pick_id}/tail ───────────────────────────────────────────
 

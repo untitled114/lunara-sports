@@ -354,9 +354,12 @@ class TestScoreboardWebSocket:
                     pong = ws.receive_text()
                     assert json.loads(pong)["type"] == "pong"
 
-    def test_scoreboard_ws_responds_to_multiple_pings(self):
-        """A second ping after the first pong exercises the keep-alive loop
-        looping back to receive_text() again (line 229->227)."""
+    def test_scoreboard_ws_ignores_non_ping_then_responds_to_ping(self):
+        """A non-"ping" message takes the `if data == "ping":` false branch
+        (229->227) — no reply is sent for it, and the loop keeps the socket
+        open to receive the next message. A "ping" sent right after is the
+        first (and only) reply pulled off the wire, proving "hello" itself
+        produced nothing."""
         consumer_cls, _ = _mock_consumer()
         extras = {
             "src.main.get_cached_game_list": AsyncMock(return_value=None),
@@ -365,11 +368,10 @@ class TestScoreboardWebSocket:
         with _app_test_mocks(consumer_cls, extra_patches=extras):
             with TestClient(app) as tc:
                 with tc.websocket_connect("/ws/scoreboard") as ws:
-                    ws.send_text("ping")
-                    assert json.loads(ws.receive_text())["type"] == "pong"
-
-                    ws.send_text("ping")
-                    assert json.loads(ws.receive_text())["type"] == "pong"
+                    ws.send_text("hello")  # false branch: no reply
+                    ws.send_text("ping")  # true branch: replies with pong
+                    reply = json.loads(ws.receive_text())
+                    assert reply["type"] == "pong"
 
     def test_scoreboard_ws_disconnect(self):
         """Scoreboard WS handles clean disconnect."""
