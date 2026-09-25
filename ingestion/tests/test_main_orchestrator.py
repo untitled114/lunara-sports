@@ -371,3 +371,161 @@ class TestRun:
 
 def test_intervals_are_positive():
     assert PBP_INTERVAL > 0 and SCOREBOARD_INTERVAL > PBP_INTERVAL
+
+
+@pytest.mark.asyncio
+class TestFinishedGameFinalPoll:
+    async def test_plays_posted_after_final_reach_the_sink(self):
+        """When the scoreboard flips a game to final, its collector is polled
+        once more before it is retired, so the last plays ESPN posts are kept."""
+        from src.collectors.playbyplay import PlayByPlayCollector
+
+        settings = MagicMock()
+        settings.espn_base_url = "https://espn.test"
+        sink, http = _io()
+        polled_once = asyncio.Event()
+        summaries = [
+            {
+                "plays": [
+                    {"id": "a", "sequenceNumber": "1", "type": {"text": "Jump Ball"}, "text": ""}
+                ]
+            },
+            {
+                "plays": [
+                    {"id": "a", "sequenceNumber": "1", "type": {"text": "Jump Ball"}, "text": ""},
+                    {"id": "b", "sequenceNumber": "2", "type": {"text": "End Game"}, "text": ""},
+                ]
+            },
+        ]
+
+        async def fake_get(url, params=None):
+            body = summaries[min(http.get.await_count - 1, 1)]
+            polled_once.set()
+            resp = MagicMock()
+            resp.raise_for_status = MagicMock()
+            resp.json = MagicMock(return_value=body)
+            return resp
+
+        http.get = AsyncMock(side_effect=fake_get)
+
+        collects = 0
+
+        async def collect():
+            nonlocal collects
+            collects += 1
+            if collects == 1:
+                return [{"game_id": "g1", "status": "live"}]
+            await _real_wait_for(polled_once.wait(), timeout=5)  # pbp_loop polled once
+            return [{"game_id": "g1", "status": "final"}]
+
+        scoreboard = _scoreboard()
+        scoreboard.collect = AsyncMock(side_effect=collect)
+
+        with ExitStack() as stack:
+            m = _patch_run(
+                stack,
+                settings=settings,
+                sink=sink,
+                http=http,
+                scoreboard=scoreboard,
+                wait_for=_split_wait_for(pbp_cycles=1, scoreboard_cycles=2),
+            )
+            stack.enter_context(
+                patch("src.__main__.PlayByPlayCollector", wraps=PlayByPlayCollector)
+            )
+            with pytest.raises(asyncio.CancelledError):
+                await run()
+
+        assert m["build_io"].await_count == 1
+        assert http.get.await_count == 2  # one live poll + the final poll
+        produced = [
+            c.kwargs["value"]["sequence_number"]
+            for c in sink.produce.call_args_list
+            if c.kwargs["topic"] == "raw.plays"
+        ]
+        assert produced == [1, 2]
+
+    async def test_final_poll_failure_is_logged_and_collector_still_closed(self, capsys):
+        sink, http = _io()
+        scoreboard = _scoreboard()
+        scoreboard.collect = AsyncMock(
+            side_effect=[
+                [{"game_id": "g1", "status": "live"}],
+                [{"game_id": "g1", "status": "final"}],
+            ]
+        )
+        pbp = _pbp()
+        pbp.poll = AsyncMock(side_effect=RuntimeError("flush failed"))
+
+        with ExitStack() as stack:
+            _patch_run(
+                stack,
+                settings=MagicMock(),
+                sink=sink,
+                http=http,
+                scoreboard=scoreboard,
+                pbp=pbp,
+                wait_for=_split_wait_for(pbp_cycles=1, scoreboard_cycles=2),
+            )
+            with pytest.raises(asyncio.CancelledError):
+                await run()
+
+        pbp.close.assert_awaited_once()
+        out = capsys.readouterr().out
+        assert "ingestion.final_poll_failed" in out
+        assert "ingestion.scoreboard_error" not in out
+
+
+class TestRateLimitedWarning:
+    def _make(self, window=60.0):
+        from src.__main__ import _RateLimitedWarning
+
+        now = [1000.0]
+        return _RateLimitedWarning("ingestion.pbp_poll_failed", window, clock=lambda: now[0]), now
+
+    def test_logs_once_per_key_per_window_and_counts_suppressed(self, capsys):
+        warn, now = self._make()
+        warn("g1", error="boom")
+        now[0] += 10
+        warn("g1", error="boom")
+        warn("g1", error="boom")
+        warn("g2", error="other")  # a different game is not suppressed
+        now[0] += 50  # 60s after the first log
+        warn("g1", error="boom")
+        lines = [ln for ln in capsys.readouterr().out.splitlines() if "pbp_poll_failed" in ln]
+        assert len(lines) == 3
+        assert "game_id=g1" in lines[0] and "suppressed=0" in lines[0]
+        assert "game_id=g2" in lines[1] and "suppressed=0" in lines[1]
+        assert "game_id=g1" in lines[2] and "suppressed=2" in lines[2]
+
+    def test_forget_resets_the_window(self, capsys):
+        warn, now = self._make()
+        warn("g1", error="boom")
+        warn.forget("g1")
+        warn.forget("never-seen")  # no-op
+        warn("g1", error="boom")
+        assert capsys.readouterr().out.count("pbp_poll_failed") == 2
+
+
+@pytest.mark.asyncio
+async def test_persistent_pbp_failure_logs_once_per_window(capsys):
+    """A game failing every 1s cycle logs pbp_poll_failed once, not per cycle."""
+    sink, http = _io()
+    pbp = _pbp()
+    pbp.poll = AsyncMock(side_effect=RuntimeError("espn parse"))
+
+    with ExitStack() as stack:
+        _patch_run(
+            stack,
+            settings=MagicMock(),
+            sink=sink,
+            http=http,
+            scoreboard=_scoreboard([{"game_id": "g1", "status": "live"}]),
+            pbp=pbp,
+            wait_for=_split_wait_for(pbp_cycles=5, scoreboard_cycles=1),
+        )
+        with pytest.raises(asyncio.CancelledError):
+            await run()
+
+    assert pbp.poll.await_count >= 3
+    assert capsys.readouterr().out.count("ingestion.pbp_poll_failed") == 1

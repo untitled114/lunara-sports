@@ -284,8 +284,11 @@ class TestPlayByPlayPoll:
             await collector.poll()
         mock_sink.flush.assert_not_awaited()
 
-    async def test_unparseable_play_is_dropped(self, mock_settings, mock_sink, mock_http):
-        """_parse_play returning None (defensive) drops that play only."""
+    async def test_parse_returning_none_is_skipped_and_advances(
+        self, mock_settings, mock_sink, mock_http, capsys
+    ):
+        """_parse_play returning None is treated like any unparseable play:
+        warned, skipped, and the high-water mark moves past it."""
         collector = PlayByPlayCollector(mock_settings, mock_sink, "401810001", mock_http)
         response_data = {"plays": [{"id": "1", "sequenceNumber": "3"}]}
         with (
@@ -293,7 +296,53 @@ class TestPlayByPlayPoll:
             patch("src.collectors.playbyplay._parse_play", return_value=None),
         ):
             assert await collector.collect() == []
-        assert collector.new_play_count == 0
+        assert collector.new_play_count == 4
+        out = capsys.readouterr().out
+        assert "pbp.play_skipped" in out and "sequence=3" in out
+
+    async def test_malformed_play_is_skipped_and_later_plays_still_flow(
+        self, mock_settings, mock_sink, mock_http, capsys
+    ):
+        """A play whose text is null (str field) must not block the game:
+        it is skipped with a warning and the plays around it are produced."""
+        collector = PlayByPlayCollector(mock_settings, mock_sink, "401810001", mock_http)
+
+        def play(seq, text="Jayson Tatum makes layup"):
+            return {
+                "id": f"p{seq}",
+                "sequenceNumber": str(seq),
+                "type": {"text": "Layup"},
+                "text": text,
+            }
+
+        first = {"plays": [play(1), play(2, text=None), play(3)]}
+        with patch.object(collector, "_fetch", new_callable=AsyncMock, return_value=first):
+            await collector.poll()
+        produced = [c.kwargs["value"]["sequence_number"] for c in mock_sink.produce.call_args_list]
+        assert produced == [1, 3]
+        out = capsys.readouterr().out
+        assert "pbp.play_skipped" in out
+        assert "game_id=401810001" in out and "sequence=2" in out
+
+        # Next cycle: the malformed play is still in ESPN's feed, but it is
+        # behind the high-water mark now — only the new play is produced
+        # and nothing is re-warned.
+        second = {"plays": [*first["plays"], play(4)]}
+        mock_sink.produce.reset_mock()
+        with patch.object(collector, "_fetch", new_callable=AsyncMock, return_value=second):
+            await collector.poll()
+        produced = [c.kwargs["value"]["sequence_number"] for c in mock_sink.produce.call_args_list]
+        assert produced == [4]
+        assert "pbp.play_skipped" not in capsys.readouterr().out
+
+    async def test_malformed_highest_play_still_advances_high_water_mark(
+        self, mock_settings, mock_sink, mock_http
+    ):
+        collector = PlayByPlayCollector(mock_settings, mock_sink, "401810001", mock_http)
+        data = {"plays": [{"id": "p9", "sequenceNumber": "9", "period": None}]}
+        with patch.object(collector, "_fetch", new_callable=AsyncMock, return_value=data):
+            assert await collector.collect() == []
+        assert collector.new_play_count == 10  # skipped play 9 is never re-parsed
 
     async def test_poll_propagates_a_sink_flush_failure(self, mock_settings, mock_sink, mock_http):
         collector = PlayByPlayCollector(mock_settings, mock_sink, "401810001", mock_http)

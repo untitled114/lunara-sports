@@ -227,6 +227,7 @@ class PlayByPlayCollector(BaseCollector):
         raw_plays = data.get("plays", [])
 
         new_plays = []
+        high_water = self._max_sequence
         for raw in raw_plays:
             try:
                 seq = int(raw.get("sequenceNumber", 0))
@@ -235,13 +236,21 @@ class PlayByPlayCollector(BaseCollector):
             if seq <= self._max_sequence:
                 continue
 
-            parsed = _parse_play(raw, self.game_id, team_map, polled_at)
-            if parsed:
-                new_plays.append(parsed.model_dump(mode="json"))
+            # One malformed play (e.g. null text) must not fail every cycle
+            # and block the rest of the game: skip it, loudly, and move on.
+            try:
+                parsed = _parse_play(raw, self.game_id, team_map, polled_at)
+                error = None if parsed else "unparseable"
+            except Exception as exc:
+                parsed, error = None, repr(exc)
+            high_water = max(high_water, seq)  # parsed or skipped: never re-read
+            if parsed is None:
+                logger.warning("pbp.play_skipped", game_id=self.game_id, sequence=seq, error=error)
+                continue
+            new_plays.append(parsed.model_dump(mode="json"))
 
-        # Update high-water mark
-        if new_plays:
-            self._max_sequence = max(p["sequence_number"] for p in new_plays)
+        # Update high-water mark past every play parsed or skipped
+        self._max_sequence = high_water
 
         logger.info(
             "playbyplay.collected",

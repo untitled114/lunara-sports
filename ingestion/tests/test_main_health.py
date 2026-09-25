@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 import runpy
 import socket
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -86,18 +86,112 @@ async def test_health_server_honours_health_host_and_port(monkeypatch):
     assert got == ("192.0.2.1", 9123)
 
 
-def test_module_guard_runs_main_which_gathers_health_server_and_run():
-    """`if __name__ == "__main__":` defines main() and calls
-    asyncio.run(main()) (lines 157-162). asyncio.gather is mocked so the two
-    real infinite loops (health_server, run) are never actually driven —
-    each is characterized on its own elsewhere — but main()'s own body
-    (the await asyncio.gather(...) line) genuinely executes here.
-    """
-    with patch("asyncio.gather", new_callable=AsyncMock) as mock_gather:
+@pytest.mark.asyncio
+async def test_main_returns_once_run_returns_and_stops_the_health_server():
+    """SIGTERM → run() returns → main() must return too (else systemd waits
+    TimeoutStopSec and SIGKILLs): the health server task is cancelled."""
+    from src.__main__ import main
+
+    started, cancelled = asyncio.Event(), asyncio.Event()
+
+    async def forever_health_server():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    async def fake_run():
+        await started.wait()
+
+    with (
+        patch("src.__main__.health_server", forever_health_server),
+        patch("src.__main__.run", fake_run),
+    ):
+        await asyncio.wait_for(main(), timeout=2)
+    assert cancelled.is_set()
+
+
+@pytest.mark.asyncio
+async def test_main_returns_after_shutdown_is_set_with_the_real_run():
+    """End to end: shutdown already set → run() closes the IO and main()
+    returns with the health server still 'serving forever'."""
+    from src.__main__ import main
+
+    sink = MagicMock()
+    sink.close = AsyncMock()
+    http = AsyncMock()
+    event = MagicMock()
+    event.is_set.return_value = True
+
+    async def forever_health_server():
+        await asyncio.Event().wait()
+
+    with (
+        patch("src.__main__.health_server", forever_health_server),
+        patch("src.__main__.Settings"),
+        patch("src.__main__.build_io", new_callable=AsyncMock, return_value=(sink, http)),
+        patch("src.__main__.ScoreboardCollector", return_value=AsyncMock()),
+        patch("src.__main__.asyncio.Event", return_value=event),
+        patch("src.__main__.asyncio.get_running_loop"),
+    ):
+        await asyncio.wait_for(main(), timeout=2)
+    sink.close.assert_awaited_once()
+    http.aclose.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_main_propagates_run_failure_and_still_stops_health_server():
+    from src.__main__ import main
+
+    started, cancelled = asyncio.Event(), asyncio.Event()
+
+    async def forever_health_server():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    async def failing_run():
+        await started.wait()
+        raise OSError("db unreachable")
+
+    with (
+        patch("src.__main__.health_server", forever_health_server),
+        patch("src.__main__.run", failing_run),
+        pytest.raises(OSError, match="db unreachable"),
+    ):
+        await asyncio.wait_for(main(), timeout=2)
+    assert cancelled.is_set()
+
+
+@pytest.mark.asyncio
+async def test_main_logs_a_failed_health_server_and_still_returns(capsys):
+    """A health server that died (e.g. port in use) is logged at shutdown,
+    not raised over run()'s outcome."""
+    from src.__main__ import main
+
+    async def broken_health_server():
+        raise OSError("address already in use")
+
+    async def fake_run():
+        await asyncio.sleep(0)
+
+    with (
+        patch("src.__main__.health_server", broken_health_server),
+        patch("src.__main__.run", fake_run),
+    ):
+        await asyncio.wait_for(main(), timeout=2)
+    assert "ingestion.health_server_failed" in capsys.readouterr().out
+
+
+def test_module_guard_runs_main():
+    """`if __name__ == "__main__": asyncio.run(main())`. asyncio.run is
+    mocked so main() is never driven here (it is covered above)."""
+    with patch("asyncio.run") as mock_run:
         runpy.run_module("src.__main__", run_name="__main__")
-    mock_gather.assert_awaited_once()
-    health_coro, run_coro = mock_gather.await_args.args
-    assert health_coro.cr_code.co_name == "health_server"
-    assert run_coro.cr_code.co_name == "run"
-    health_coro.close()
-    run_coro.close()
+    mock_run.assert_called_once()
+    (coro,) = mock_run.call_args.args
+    assert coro.cr_code.co_name == "main"
+    coro.close()
