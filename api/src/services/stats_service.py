@@ -253,8 +253,14 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
             if choice and choice.year
             else None
         )
+        if not (espn_data and espn_data.get("categories")) and choice and not choice.is_previous:
+            # Just after the switchover ESPN can have standings for the new season but no
+            # leaders yet (season 2027 answered 404 on 2026-09-25): keep last season's.
+            espn_data = await espn_client.get_stat_leaders(season=choice.year - 1, limit=limit)
+            is_previous = True
+        else:
+            is_previous = bool(choice and choice.is_previous)
         if espn_data:
-            is_previous = choice.is_previous
             season_label = _leaders_season_label(espn_data.get("$ref", ""))
             # Build athlete lookup from cached rosters
             athlete_map = await _build_athlete_lookup()

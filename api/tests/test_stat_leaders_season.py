@@ -97,7 +97,12 @@ async def test_current_season_once_it_has_games(no_name_lookups):
         patch.object(stats_service.espn_client, "get_stat_leaders", leaders),
     ):
         r = await get_stat_leaders(limit=5)
-    leaders.assert_awaited_once_with(season=2027, limit=5)
+    # Asked for 2027 first; with no leaders there it falls back to last season (also None
+    # here), so nothing is shown and nothing is labelled.
+    assert [c.kwargs for c in leaders.await_args_list] == [
+        {"season": 2027, "limit": 5},
+        {"season": 2026, "limit": 5},
+    ]
     assert r.categories == {} and r.season_label == "" and r.is_previous_season is False
 
 
@@ -176,3 +181,23 @@ async def test_shooting_leaders_come_through_on_one_percent_scale(no_name_lookup
     assert r.categories["fg_pct"][0].value == cats["fieldGoalPercentage"]["displayValue"]
     three = float(r.categories["three_pct"][0].value)
     assert 1 < three < 100  # a percentage, not ESPN's fraction
+
+
+@pytest.mark.asyncio
+async def test_new_season_without_leaders_keeps_last_seasons(no_name_lookups):
+    """Once the current season has games but ESPN has no leaders for it yet (the client
+    returns None, as for its real 404 on season 2027), last season's real leaders are shown
+    and labelled as last season's."""
+    current = standings_service.SeasonChoice(2026, "2025-26", False)
+
+    async def leaders(season, limit):
+        return LEADERS_2025 if season == 2025 else None
+
+    with (
+        patch.object(stats_service, "choose_regular_season", AsyncMock(return_value=current)),
+        patch.object(stats_service.espn_client, "get_stat_leaders", AsyncMock(side_effect=leaders)),
+    ):
+        r = await get_stat_leaders(limit=1)
+    assert r.season_label == "2024–25 regular season"
+    assert r.is_previous_season is True
+    assert r.categories["pts"]
