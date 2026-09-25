@@ -16,20 +16,22 @@ describe('ui', () => {
     expect(screen.getByText('L')).toHaveClass('text-loss')
     expect(screen.getByText('Play-in')).toHaveClass('text-warn')
   })
-  it('Badge drops legacy DOM props and renders a dot indicator', () => {
-    const onRemove = vi.fn()
+  it('Badge renders a round dot indicator and passes other props through', () => {
     render(
-      <Badge variant="success" dot size="sm" removable onRemove={onRemove}>
+      <Badge variant="win" dot title="Won">
         Q2
       </Badge>
     )
     const badge = screen.getByText('Q2')
+    expect(badge).toHaveClass('text-live', 'rounded-sm')
+    expect(badge).toHaveAttribute('title', 'Won')
     expect(badge).not.toHaveAttribute('dot')
-    expect(badge).not.toHaveAttribute('size')
-    expect(badge).not.toHaveAttribute('removable')
     const indicator = badge.querySelector('[aria-hidden]')
-    expect(indicator).toHaveClass('rounded-full', 'bg-current')
-    expect(onRemove).not.toHaveBeenCalled()
+    expect(indicator).toHaveClass('h-1.5', 'w-1.5', 'rounded-sm', 'bg-current')
+  })
+  it('Badge falls back to neutral for an unknown variant', () => {
+    render(<Badge variant="primary">Old</Badge>)
+    expect(screen.getByText('Old')).toHaveClass('text-text-2', 'bg-surface-2')
   })
   it('Badge pulse adds a ping to the dot, and the plain dot stays still', () => {
     render(<><Badge variant="live" dot pulse>Live</Badge><Badge variant="live" dot>Still</Badge></>)

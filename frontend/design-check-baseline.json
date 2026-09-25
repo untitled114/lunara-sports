@@ -1,8 +1,4 @@
 {
-  "src/components/ui/Badge.jsx": {
-    "palette": 49,
-    "radius": 2
-  },
   "src/styles.css": {
     "banned": 5,
     "colorFn": 55,
