@@ -6,13 +6,9 @@ import httpx
 import pytest
 import respx
 
-try:
-    from src.http.espn import BLOCK_STATUSES, EspnHttp
-except ImportError:  # pragma: no cover - src.http.espn lands in Task 9
-    BLOCK_STATUSES = frozenset({403, 429})
-    EspnHttp = None
+from src.http.espn import BLOCK_STATUSES, EspnHttp
 
-pytestmark = [pytest.mark.xfail(strict=True, reason="pending Task 9"), pytest.mark.asyncio]
+pytestmark = pytest.mark.asyncio
 URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary"
 
 
