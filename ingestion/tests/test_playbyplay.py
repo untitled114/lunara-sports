@@ -91,6 +91,21 @@ class TestBuildTeamMap:
         assert _build_team_map({}) == {}
         assert _build_team_map({"competitions": []}) == {}
 
+    def test_competitor_missing_abbreviation_is_skipped(self):
+        """A competitor with no team abbreviation contributes no map entry."""
+        header = {
+            "competitions": [
+                {
+                    "competitors": [
+                        {"homeAway": "home", "team": {"id": "2", "abbreviation": "BOS"}},
+                        {"homeAway": "away", "team": {"id": "13", "abbreviation": ""}},
+                    ]
+                }
+            ]
+        }
+        result = _build_team_map(header)
+        assert result == {"2": "BOS"}
+
 
 def _make_espn_play(
     *,
@@ -198,6 +213,13 @@ class TestParsePlay:
         play = _make_espn_play(seq="not_a_number")
         result = _parse_play(play, "401810643", self.team_map, self.polled)
         assert result is None
+
+    def test_invalid_wallclock_falls_back_to_none(self):
+        """An unparsable wallclock string is dropped rather than raising."""
+        play = _make_espn_play(wallclock="not-a-timestamp")
+        result = _parse_play(play, "401810643", self.team_map, self.polled)
+        assert result is not None
+        assert result.wallclock is None
 
     def test_serializes_to_dict(self):
         play = _make_espn_play()

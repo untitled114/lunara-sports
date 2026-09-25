@@ -175,6 +175,13 @@ class TestParseGame:
         result = _parse_game({"id": "123", "competitions": []}, datetime.now(timezone.utc))
         assert result is None
 
+    def test_invalid_date_falls_back_to_polled_at(self):
+        """An unparsable/missing start-time string falls back to polled_at."""
+        polled = datetime(2026, 2, 17, 1, 0, 0, tzinfo=timezone.utc)
+        event = _make_espn_event(date="")
+        result = _parse_game(event, polled)
+        assert result.start_time == polled
+
     def test_serializes_to_dict(self):
         polled = datetime(2026, 2, 17, 1, 0, 0, tzinfo=timezone.utc)
         event = _make_espn_event()

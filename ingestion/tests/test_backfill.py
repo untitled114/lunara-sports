@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import runpy
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -62,3 +63,19 @@ class TestBackfillMain:
                 await main()
                 mock_loader.load_date_range.assert_called_once()
                 mock_producer.flush.assert_called()
+
+
+def test_module_guard_invokes_asyncio_run_with_main():
+    """`if __name__ == "__main__": asyncio.run(main())` (backfill.py:51).
+
+    asyncio.run is mocked so the coroutine it receives is never actually
+    driven — main()'s own behavior is already fully characterized above by
+    calling it directly. This test only characterizes the module-level
+    entry-point wiring itself.
+    """
+    with patch("asyncio.run") as mock_run:
+        runpy.run_module("src.backfill", run_name="__main__")
+    mock_run.assert_called_once()
+    (coro,) = mock_run.call_args.args
+    assert coro.cr_code.co_name == "main"
+    coro.close()  # avoid "coroutine was never awaited" leaking into other tests
