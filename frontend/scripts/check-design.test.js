@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { scan, files } from './check-design.mjs'
+import { scan, files, check } from './check-design.mjs'
 describe('design check', () => {
   it('flags each rule', () => {
     // "Node" is capitalized here (not "node"): the banned-copy rule for
@@ -187,6 +187,24 @@ describe('design check', () => {
         }
         const found = files(root).map((p) => relative(root, p))
         expect(found).toEqual([join('keep', 'A.jsx')])
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('check(): strict over every src file, no baseline', () => {
+    it('returns no errors for a clean tree and one line per rule hit otherwise', () => {
+      const root = mkdtempSync(join(tmpdir(), 'design-check-'))
+      try {
+        mkdirSync(join(root, 'src'))
+        writeFileSync(join(root, 'src', 'Clean.jsx'), '<div className="bg-surface-1 rounded-lg" />\n')
+        expect(check(root)).toEqual([])
+        writeFileSync(join(root, 'src', 'Dirty.jsx'), '<div className="italic bg-[#050a18] bg-[#000000]" />\n')
+        expect(check(root)).toEqual([
+          join('src', 'Dirty.jsx') + ': 2 hex hits',
+          join('src', 'Dirty.jsx') + ': 1 italic hit',
+        ])
       } finally {
         rmSync(root, { recursive: true, force: true })
       }

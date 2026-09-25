@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -125,29 +125,26 @@ export function files(dir) {
   })
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const baseFile = join(ROOT, 'design-check-baseline.json')
-  const base = existsSync(baseFile) ? JSON.parse(readFileSync(baseFile, 'utf8')) : {}
-  const now = {}
-  for (const f of files(join(ROOT, 'src'))) {
-    const rel = relative(ROOT, f)
-    const r = scan(readFileSync(f, 'utf8'), rel)
-    if (Object.keys(r).length) now[rel] = r
-  }
-  if (process.argv.includes('--update-baseline')) {
-    writeFileSync(baseFile, JSON.stringify(now, null, 2) + '\n')
-    console.log(`baseline written: ${Object.keys(now).length} files`)
-    process.exit(0)
-  }
-  const strict = process.argv.includes('--strict')
+// Every rule is strict: any hit in any src file fails. (The per-file baseline that
+// tolerated legacy hits was retired once the last page moved onto the tokens; `--strict`
+// is still accepted so existing invocations keep working.)
+export function check(root = ROOT) {
   const errors = []
-  for (const [f, r] of Object.entries(now)) {
-    for (const [k, n] of Object.entries(r)) {
-      const allowed = strict ? 0 : (base[f]?.[k] ?? 0)
-      if (n > allowed) errors.push(`${f}: ${k} ${n} > ${allowed}`)
+  for (const f of files(join(root, 'src'))) {
+    const rel = relative(root, f)
+    for (const [k, n] of Object.entries(scan(readFileSync(f, 'utf8'), rel))) {
+      errors.push(`${rel}: ${n} ${k} ${n === 1 ? 'hit' : 'hits'}`)
     }
   }
-  for (const f of Object.keys(base)) if (!now[f]) errors.push(`${f}: clean now — remove it from design-check-baseline.json`)
-  if (errors.length) { console.error(errors.join('\n')); process.exit(1) }
-  console.log(`design check OK (${Object.keys(now).length} files still on baseline)`)
+  return errors
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const errors = check()
+  if (errors.length) {
+    console.error(errors.join('\n'))
+    console.error('design check failed: fix the lines above (rules: docs/superpowers/specs/2026-09-25-lunara-design-system-design.md)')
+    process.exit(1)
+  }
+  console.log('design check OK')
 }
