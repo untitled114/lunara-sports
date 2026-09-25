@@ -228,24 +228,6 @@
     "tracking": 14,
     "banned": 7
   },
-  "src/pages/TeamDetailPage.jsx": {
-    "radius": 22,
-    "effect": 19,
-    "palette": 89,
-    "heavy": 36,
-    "tracking": 25,
-    "hex": 3
-  },
-  "src/pages/TeamsPage.jsx": {
-    "palette": 42,
-    "hex": 2,
-    "effect": 6,
-    "heavy": 6,
-    "tracking": 7,
-    "radius": 7,
-    "italic": 3,
-    "banned": 2
-  },
   "src/pages/TermsPage.jsx": {
     "radius": 3,
     "effect": 2,
