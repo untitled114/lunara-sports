@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { PageState } from '@/components/ui';
 import { fetchPlayers } from '@/services/api';
 import { useTheme } from '@/context/ThemeContext';
+import { PlayerHeadshot } from '@/components/sport/PlayerHeadshot';
 
 export default function PlayersPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,18 +83,13 @@ export default function PlayersPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="h-11 w-11 rounded-lg bg-surface-2 border border-border flex items-center justify-center overflow-hidden shrink-0">
-                        {p.headshot_url ? (
-                          <img
-                            src={p.headshot_url}
-                            alt={p.name}
-                            width={88}
-                            height={64}
-                            loading="lazy"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="t-small text-text-2 uppercase">{p.name[0]}</div>
-                        )}
+                        <PlayerHeadshot
+                          url={p.headshot_url}
+                          px={44}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                          fallback={<div className="t-small text-text-2 uppercase">{p.name[0]}</div>}
+                        />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -106,8 +102,11 @@ export default function PlayersPage() {
                             {p.name}
                           </Link>
                         </div>
+                        {/* Each value keeps its units on one line (6' 9" never splits). */}
                         <p className="t-small text-text-2 mt-0.5">
-                          {p.position}{p.height ? ` • ${p.height}` : ''}{p.weight ? ` • ${p.weight} lbs` : ''}
+                          {p.position}
+                          {p.height ? <> • <span className="whitespace-nowrap">{p.height}</span></> : null}
+                          {p.weight ? <> • <span className="whitespace-nowrap">{p.weight} lbs</span></> : null}
                         </p>
                       </div>
                     </div>

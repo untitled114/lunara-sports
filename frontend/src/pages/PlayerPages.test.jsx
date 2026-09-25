@@ -9,6 +9,13 @@ import { scan } from '../../scripts/check-design.mjs'
 import PlayersPage from './PlayersPage'
 import PlayerProfilePage from './PlayerProfilePage'
 import * as api from '@/services/api'
+import { getHeadshotUrl } from '@/utils/teamColors'
+// Real e2e captures (see e2e/fixtures/README.md): GET /players, and player 4066261
+// (Bam Adebayo) with his stats and game log.
+import REAL_PLAYERS from '../../e2e/fixtures/api/players.json'
+import REAL_BAM from '../../e2e/fixtures/api/players_4066261.json'
+import REAL_BAM_STATS from '../../e2e/fixtures/api/players_4066261_stats.json'
+import REAL_BAM_LOG from '../../e2e/fixtures/api/players_4066261_log.json'
 
 vi.mock('@/context/ThemeContext', () => ({
   useTheme: () => ({ playGlassClick: vi.fn(), playThud: vi.fn() }),
@@ -38,6 +45,16 @@ beforeEach(() => {
 })
 
 describe('PlayersPage', () => {
+  it('loads small combiner headshots (2x the 44px avatar) and keeps heights on one line', async () => {
+    api.fetchPlayers.mockResolvedValue(REAL_PLAYERS)
+    renderWithRouter(<PlayersPage />)
+    const [first] = REAL_PLAYERS[0].players
+    const img = await screen.findByAltText(first.name)
+    expect(img).toHaveAttribute('src', getHeadshotUrl(first.headshot_url, 88))
+    expect(document.querySelectorAll('img[src*="/i/headshots/"]:not([src*="/combiner/"])')).toHaveLength(0)
+    expect(screen.getAllByText(first.height)[0]).toHaveClass('whitespace-nowrap')
+  })
+
   it('search with no results shows the plain "no players match" copy', async () => {
     api.fetchPlayers.mockResolvedValue([])
     renderWithRouter(<PlayersPage />)
@@ -144,6 +161,20 @@ describe('PlayerProfilePage', () => {
     expect(stl).toHaveClass('tnum')
     const blk = screen.getByText('1')
     expect(blk).toHaveClass('tnum')
+    // An ISO date never splits at its hyphens.
+    expect(screen.getByText('2026-04-30')).toHaveClass('whitespace-nowrap')
+  })
+
+  it('loads the headshot at 2x its 80px size through the combiner, and the tabs never overflow', async () => {
+    api.fetchPlayerDetail.mockResolvedValue(REAL_BAM)
+    api.fetchPlayerStats.mockResolvedValue(REAL_BAM_STATS)
+    api.fetchPlayerGameLog.mockResolvedValue(REAL_BAM_LOG)
+
+    renderWithRouter(<PlayerProfilePage />, { route: '/player/4066261', path: '/player/:id' })
+
+    const img = await screen.findByAltText('Bam Adebayo')
+    expect(img).toHaveAttribute('src', getHeadshotUrl(REAL_BAM.headshot_url, 160))
+    expect(screen.getByRole('tablist')).toHaveClass('max-w-full', 'overflow-x-auto', 'scrollbar-hide')
   })
 })
 

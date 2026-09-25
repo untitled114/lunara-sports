@@ -4,6 +4,7 @@ import { Badge, Skeleton, Segmented, SectionHeader, DataTable, PageState } from 
 import { TrendingUp, Shield, Zap, Award, ChevronRight, Target, Activity } from 'lucide-react';
 import { fetchStatLeaders, fetchTeamStatsList } from '@/services/api';
 import { useTheme } from '@/context/ThemeContext';
+import { PlayerHeadshot } from '@/components/sport/PlayerHeadshot';
 
 function LeaderboardCard({ title, icon: Icon, data, unit, delay = 0 }) {
   const { playGlassClick } = useTheme();
@@ -36,11 +37,13 @@ function LeaderboardCard({ title, icon: Icon, data, unit, delay = 0 }) {
                 <td className="py-4 px-2">
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-md bg-surface-2 border border-border overflow-hidden shrink-0">
-                      {row.headshot_url ? (
-                        <img src={row.headshot_url} alt={row.player} width={96} height={70} loading="lazy" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center t-small text-text-3">{row.player[0]}</div>
-                      )}
+                      <PlayerHeadshot
+                        url={row.headshot_url}
+                        px={48}
+                        alt={row.player}
+                        className="w-full h-full object-cover"
+                        fallback={<div className="w-full h-full flex items-center justify-center t-small text-text-3">{row.player[0]}</div>}
+                      />
                     </div>
                     <div className="flex flex-col min-w-0">
                       <Link
