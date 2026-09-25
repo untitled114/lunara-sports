@@ -10,6 +10,9 @@ const api = vi.hoisted(() => ({ fetchStandings: vi.fn(), fetchNextGameDate: vi.f
 // Keep the real pure helpers (buildStandingsLookup); only the network calls are mocked.
 vi.mock('@/services/api', async (importOriginal) => ({ ...(await importOriginal()), ...api }))
 import GamesPage from './GamesPage'
+// Real GET /standings capture (e2e/fixtures/README.md). The games list itself is the
+// mocked hook's state; [] is what GET /games/?game_date=2026-09-25 really returns.
+import REAL_STANDINGS from '../../e2e/fixtures/api/standings.json'
 
 const at = (date) => render(<MemoryRouter initialEntries={[`/scoreboard?date=${date}`]}><GamesPage /></MemoryRouter>)
 
@@ -22,7 +25,7 @@ describe('GamesPage', () => {
   })
   afterEach(() => { vi.useRealTimers(); vi.clearAllMocks() })
   it('empty today links to the next game day', async () => {
-    api.fetchStandings.mockResolvedValue({ eastern: [], western: [], season_label: '2025–26 final', is_previous_season: true })
+    api.fetchStandings.mockResolvedValue(REAL_STANDINGS)
     api.fetchNextGameDate.mockResolvedValue('2026-10-03')
     at('2026-09-25')
     expect(await screen.findByText('No games today.')).toBeInTheDocument()
@@ -34,7 +37,7 @@ describe('GamesPage', () => {
   })
   it('while the games are loading: the loading state, never "No games today."', async () => {
     scoreboard.state = { ...scoreboard.state, loading: true }
-    api.fetchStandings.mockResolvedValue({ eastern: [], western: [] })
+    api.fetchStandings.mockResolvedValue(REAL_STANDINGS)
     api.fetchNextGameDate.mockResolvedValue('2026-09-26')
     at('2026-09-25')
     await waitFor(() => expect(api.fetchStandings).toHaveBeenCalled())
@@ -45,7 +48,7 @@ describe('GamesPage', () => {
   })
   it('a failed games load: the error state, and "Try again" retries', async () => {
     scoreboard.state = { ...scoreboard.state, error: true }
-    api.fetchStandings.mockResolvedValue({ eastern: [], western: [] })
+    api.fetchStandings.mockResolvedValue(REAL_STANDINGS)
     at('2026-09-25')
     expect(await screen.findByText("Couldn't load games.")).toBeInTheDocument()
     expect(screen.queryByText('No games today.')).toBeNull()
@@ -53,14 +56,14 @@ describe('GamesPage', () => {
     expect(scoreboard.retry).toHaveBeenCalledTimes(1)
   })
   it('no next game: plain message, no link', async () => {
-    api.fetchStandings.mockResolvedValue({ eastern: [], western: [] })
+    api.fetchStandings.mockResolvedValue(REAL_STANDINGS)
     api.fetchNextGameDate.mockResolvedValue(null)
     at('2026-09-25')
     expect(await screen.findByText('No games scheduled yet.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Next game/ })).toBeNull()
   })
   it('failed next-game lookup does not claim nothing is scheduled', async () => {
-    api.fetchStandings.mockResolvedValue({ eastern: [], western: [] })
+    api.fetchStandings.mockResolvedValue(REAL_STANDINGS)
     api.fetchNextGameDate.mockRejectedValue(new Error('down'))
     at('2026-09-25')
     expect(await screen.findByText('No games today.')).toBeInTheDocument()
@@ -70,7 +73,7 @@ describe('GamesPage', () => {
     expect(screen.queryByRole('link', { name: /Next game/ })).toBeNull()
   })
   it.each(['garbage', '2026-9-5', '2026-02-30', ''])('malformed ?date=%s falls back to today (ET)', async (bad) => {
-    api.fetchStandings.mockResolvedValue({ eastern: [], western: [] })
+    api.fetchStandings.mockResolvedValue(REAL_STANDINGS)
     api.fetchNextGameDate.mockResolvedValue(null)
     at(bad)
     expect(await screen.findByText('No games today.')).toBeInTheDocument()
@@ -78,7 +81,7 @@ describe('GamesPage', () => {
     expect(api.fetchNextGameDate).toHaveBeenCalledWith('2026-09-25')
   })
   it('standings error shows retry that refetches', async () => {
-    api.fetchStandings.mockRejectedValueOnce(new Error('down')).mockResolvedValue({ eastern: [], western: [] })
+    api.fetchStandings.mockRejectedValueOnce(new Error('down')).mockResolvedValue(REAL_STANDINGS)
     api.fetchNextGameDate.mockResolvedValue(null)
     at('2026-09-25')
     expect(await screen.findByText("Couldn't load standings.")).toBeInTheDocument()

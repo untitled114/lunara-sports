@@ -153,24 +153,31 @@ describe('StandingsPage', () => {
     expect(screen.queryByText('Eastern Conference')).not.toBeInTheDocument()
   })
 
-  it('splits the play-in line by seed, not array order (real rows, seeds swapped at the 10/11 boundary)', async () => {
-    // Same real fixture rows (unmodified stats) — only the `seed` label is swapped
-    // between the rank-10 and rank-11 teams, mirroring the tiebreak swaps already
-    // present elsewhere in the live data (e.g. ranks 5/6, 7/8).
-    const swappedEastern = FIXTURE.eastern.map((t) => {
-      if (t.abbrev === 'MIA') return { ...t, seed: 11 } // was seed 10 / rank 10
-      if (t.abbrev === 'MIL') return { ...t, seed: 10 } // was seed 11 / rank 11
-      return t
-    })
-    fetchStandings.mockResolvedValue({ ...FIXTURE, eastern: swappedEastern })
+  it('orders by seed, not by the API rank order, and draws each line at its seed boundary (real, unmodified capture)', async () => {
+    // The real 2025–26 East has ATL at rank 5 / seed 6 and TOR at rank 6 / seed 5, so
+    // the API's array order (by rank) and seed order disagree there.
+    const atl = FIXTURE.eastern.find((t) => t.abbrev === 'ATL')
+    const tor = FIXTURE.eastern.find((t) => t.abbrev === 'TOR')
+    expect([atl.rank, atl.seed, tor.rank, tor.seed]).toEqual([5, 6, 6, 5])
+    fetchStandings.mockResolvedValue(FIXTURE)
     renderPage()
 
     await screen.findByText('Eastern Conference')
-    const eastern = screen.getByTestId('conference-eastern')
-    const text = eastern.textContent
+    const text = screen.getByTestId('conference-eastern').textContent
+    expect(text.indexOf('Toronto Raptors')).toBeLessThan(text.indexOf('Atlanta Hawks'))
 
-    expect(text.indexOf('Milwaukee Bucks')).toBeLessThan(text.indexOf('Play-in line'))
-    expect(text.indexOf('Play-in line')).toBeLessThan(text.indexOf('Miami Heat'))
+    // Every team sits in its own seed band: 1–6 above the playoff line, 7–10 between the
+    // lines, 11+ below the play-in line.
+    const playoff = text.indexOf('Playoff line')
+    const playIn = text.indexOf('Play-in line')
+    expect(playoff).toBeGreaterThan(-1)
+    expect(playIn).toBeGreaterThan(playoff)
+    for (const t of FIXTURE.eastern) {
+      const at = text.indexOf(t.name)
+      if (t.seed <= 6) expect(at, t.name).toBeLessThan(playoff)
+      else if (t.seed <= 10) expect(at > playoff && at < playIn, t.name).toBe(true)
+      else expect(at, t.name).toBeGreaterThan(playIn)
+    }
   })
 
   it('sorting by a column header reorders the table (controlled DataTable sort, restored from the base)', async () => {

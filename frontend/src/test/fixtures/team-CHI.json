@@ -1,0 +1,14 @@
+{
+  "_source": "curl https://api.lunara-app.com/teams/CHI -> HTTP 200, captured 2026-09-25T15:21:04-0400 (ET). Real, unmodified response body.",
+  "data": {
+    "name": "Chicago Bulls",
+    "abbrev": "CHI",
+    "city": "Chicago",
+    "venue": "United Center",
+    "record": "0-0",
+    "conference": "Eastern",
+    "division": "Central",
+    "color": "#ce1141",
+    "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/chi.png"
+  }
+}

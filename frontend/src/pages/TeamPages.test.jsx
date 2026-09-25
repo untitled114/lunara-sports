@@ -27,102 +27,22 @@ vi.mock('@/context/ThemeContext', () => ({
   useTheme: () => sound,
 }))
 
-// 30 real NBA teams (structural fixture only — no stats/predictions).
-const TEAMS = [
-  ['Atlanta Hawks', 'ATL', 'Eastern', 'Southeast'],
-  ['Boston Celtics', 'BOS', 'Eastern', 'Atlantic'],
-  ['Brooklyn Nets', 'BKN', 'Eastern', 'Atlantic'],
-  ['Charlotte Hornets', 'CHA', 'Eastern', 'Southeast'],
-  ['Chicago Bulls', 'CHI', 'Eastern', 'Central'],
-  ['Cleveland Cavaliers', 'CLE', 'Eastern', 'Central'],
-  ['Detroit Pistons', 'DET', 'Eastern', 'Central'],
-  ['Indiana Pacers', 'IND', 'Eastern', 'Central'],
-  ['Miami Heat', 'MIA', 'Eastern', 'Southeast'],
-  ['Milwaukee Bucks', 'MIL', 'Eastern', 'Central'],
-  ['New York Knicks', 'NY', 'Eastern', 'Atlantic'],
-  ['Orlando Magic', 'ORL', 'Eastern', 'Southeast'],
-  ['Philadelphia 76ers', 'PHI', 'Eastern', 'Atlantic'],
-  ['Toronto Raptors', 'TOR', 'Eastern', 'Atlantic'],
-  ['Washington Wizards', 'WSH', 'Eastern', 'Southeast'],
-  ['Dallas Mavericks', 'DAL', 'Western', 'Southwest'],
-  ['Denver Nuggets', 'DEN', 'Western', 'Northwest'],
-  ['Golden State Warriors', 'GS', 'Western', 'Pacific'],
-  ['Houston Rockets', 'HOU', 'Western', 'Southwest'],
-  ['LA Clippers', 'LAC', 'Western', 'Pacific'],
-  ['Los Angeles Lakers', 'LAL', 'Western', 'Pacific'],
-  ['Memphis Grizzlies', 'MEM', 'Western', 'Southwest'],
-  ['Minnesota Timberwolves', 'MIN', 'Western', 'Northwest'],
-  ['New Orleans Pelicans', 'NO', 'Western', 'Southwest'],
-  ['Oklahoma City Thunder', 'OKC', 'Western', 'Northwest'],
-  ['Phoenix Suns', 'PHX', 'Western', 'Pacific'],
-  ['Portland Trail Blazers', 'POR', 'Western', 'Northwest'],
-  ['Sacramento Kings', 'SAC', 'Western', 'Pacific'],
-  ['San Antonio Spurs', 'SA', 'Western', 'Southwest'],
-  ['Utah Jazz', 'UTA', 'Western', 'Northwest'],
-]
+// Real captures only, nothing hand-built:
+// - e2e/fixtures/api/*.json: GET /teams, /standings, /teams/MIA, /teams/MIA/roster
+//   (provenance in e2e/fixtures/README.md; MIA re-fetched 2026-09-25, byte-identical).
+// - src/test/fixtures/{team,roster}-{DET,CHI}.json: GET /teams/DET(/roster) and
+//   /teams/CHI(/roster), captured with curl on 2026-09-25 (see each file's _source).
+import REAL_TEAMS from '../../e2e/fixtures/api/teams.json'
+import REAL_STANDINGS from '../../e2e/fixtures/api/standings.json'
+import REAL_MIA from '../../e2e/fixtures/api/teams_MIA.json'
+import REAL_MIA_ROSTER from '../../e2e/fixtures/api/teams_MIA_roster.json'
+import REAL_DET from '@/test/fixtures/team-DET.json'
+import REAL_DET_ROSTER from '@/test/fixtures/roster-DET.json'
+import REAL_CHI from '@/test/fixtures/team-CHI.json'
+import REAL_CHI_ROSTER from '@/test/fixtures/roster-CHI.json'
 
-function makeTeams() {
-  return TEAMS.map(([name, abbrev, conference, division]) => ({
-    name,
-    abbrev,
-    conference,
-    division,
-    logo_url: '',
-    last_game: '',
-  }))
-}
-
-// Real StandingsTeam-shaped row for MIA (api/src/models/schemas.py StandingsTeam),
-// as returned inside a StandingsResponse from GET /standings.
-const STANDINGS_FIXTURE = {
-  eastern: [
-    {
-      rank: 9,
-      name: 'Miami Heat',
-      abbrev: 'MIA',
-      w: 37,
-      l: 45,
-      pct: '.451',
-      gb: '-',
-      conf: '',
-      home: '22-18',
-      road: '15-27',
-      l10: '4-6',
-      strk: 'L2',
-      logo_url: '',
-      seed: 9,
-    },
-  ],
-  western: [],
-  season: '2025-26',
-  season_label: '2025–26 final',
-  is_previous_season: true,
-}
-
-const ROSTER_FIXTURE = [
-  {
-    id: '2199',
-    jersey: '22',
-    name: 'Jimmy Butler',
-    position: 'F',
-    height: "6'7\"",
-    weight: '230',
-    age: 34,
-    experience: '13',
-    headshot_url: 'https://a.espncdn.com/i/headshots/nba/players/full/2199.png',
-  },
-  {
-    id: '3155',
-    jersey: '13',
-    name: 'Bam Adebayo',
-    position: 'C',
-    height: "6'9\"",
-    weight: '255',
-    age: 27,
-    experience: '7',
-    headshot_url: '',
-  },
-]
+const row = (abbrev) => [...REAL_STANDINGS.eastern, ...REAL_STANDINGS.western].find((t) => t.abbrev === abbrev)
+const BAM = REAL_MIA_ROSTER.find((p) => p.name === 'Bam Adebayo')
 
 function renderTeamDetail(abbrev = 'MIA') {
   return render(
@@ -134,15 +54,23 @@ function renderTeamDetail(abbrev = 'MIA') {
   )
 }
 
+function mockTeam(detail, roster) {
+  fetchTeamDetail.mockResolvedValue(detail)
+  fetchStandings.mockResolvedValue(REAL_STANDINGS)
+  fetchTeamRoster.mockResolvedValue(roster)
+  fetchTeamSchedule.mockResolvedValue([])
+}
+
 describe('TeamsPage', () => {
-  it('renders 30 TeamMarks from a mocked fetchTeams', async () => {
-    fetchTeams.mockResolvedValue(makeTeams())
+  it('renders a TeamMark for each of the 30 real teams', async () => {
+    fetchTeams.mockResolvedValue(REAL_TEAMS)
     render(
       <MemoryRouter>
         <TeamsPage />
       </MemoryRouter>
     )
     await screen.findByText('Atlanta Hawks')
+    expect(REAL_TEAMS).toHaveLength(30)
     expect(screen.getAllByRole('img')).toHaveLength(30)
   })
 
@@ -160,43 +88,31 @@ describe('TeamsPage', () => {
 
 describe('TeamDetailPage', () => {
   it('shows the name, a large TeamMark, the record line, and the roster as a DataTable', async () => {
-    fetchTeamDetail.mockResolvedValue({
-      name: 'Miami Heat',
-      abbrev: 'MIA',
-      city: 'Miami, FL',
-      venue: 'Kaseya Center',
-      conference: 'Eastern',
-      division: 'Southeast',
-      color: '#98002E',
-      logo_url: '',
-    })
-    fetchStandings.mockResolvedValue(STANDINGS_FIXTURE)
-    fetchTeamRoster.mockResolvedValue(ROSTER_FIXTURE)
-    fetchTeamSchedule.mockResolvedValue([])
-
+    mockTeam(REAL_MIA, REAL_MIA_ROSTER)
     renderTeamDetail('MIA')
 
     await screen.findByText('Miami Heat')
+    expect(screen.getByAltText('MIA logo')).toHaveClass('h-14', 'w-14')
 
-    const mark = screen.getByAltText('MIA logo')
-    expect(mark).toHaveClass('h-14', 'w-14')
-
-    // recordLine: "2025–26 final" -> "2025–26" prefix, since is_previous_season is true.
-    expect(await screen.findByText('2025–26: 37-45')).toBeInTheDocument()
+    // recordLine: real 2025–26 final 43-39, prefixed because is_previous_season is true.
+    expect(await screen.findByText('2025–26: 43-39')).toBeInTheDocument()
 
     expect(await screen.findByRole('columnheader', { name: 'Player' })).toBeInTheDocument()
     expect(screen.getByRole('table')).toBeInTheDocument()
-    expect(await screen.findByText('Jimmy Butler')).toBeInTheDocument()
+    // Bam Adebayo links to his real ESPN id.
+    const bam = await screen.findByRole('link', { name: /Bam Adebayo/ })
+    expect(BAM.id).toBe('4066261')
+    expect(bam).toHaveAttribute('href', '/player/4066261')
 
     // Tap sound on the roster player link, exactly as in base (fb7b2d1).
     sound.playGlassClick.mockClear()
-    fireEvent.click(screen.getByRole('link', { name: /Jimmy Butler/ }))
+    fireEvent.click(bam)
     expect(sound.playGlassClick).toHaveBeenCalledTimes(1)
   })
 
   it('shows PageState on a fetch error, with a working retry', async () => {
     fetchTeamDetail.mockRejectedValueOnce(new Error('team not found'))
-    fetchStandings.mockResolvedValue(STANDINGS_FIXTURE)
+    fetchStandings.mockResolvedValue(REAL_STANDINGS)
 
     renderTeamDetail('MIA')
 
@@ -205,19 +121,8 @@ describe('TeamDetailPage', () => {
   })
 
   it('D12: Stats tab is built from the standings row already loaded for the team', async () => {
-    fetchTeamDetail.mockResolvedValue({
-      name: 'Miami Heat',
-      abbrev: 'MIA',
-      city: 'Miami, FL',
-      venue: 'Kaseya Center',
-      conference: 'Eastern',
-      division: 'Southeast',
-      color: '#98002E',
-      logo_url: '',
-    })
-    fetchStandings.mockResolvedValue(STANDINGS_FIXTURE)
-    fetchTeamRoster.mockResolvedValue(ROSTER_FIXTURE)
-    fetchTeamSchedule.mockResolvedValue([])
+    mockTeam(REAL_MIA, REAL_MIA_ROSTER)
+    const mia = row('MIA')
 
     renderTeamDetail('MIA')
     await screen.findByText('Miami Heat')
@@ -226,36 +131,26 @@ describe('TeamDetailPage', () => {
 
     // SectionHeader aside = season_label.
     expect(await screen.findByRole('heading', { name: 'Season stats' })).toBeInTheDocument()
-    expect(screen.getByText('2025–26 final')).toBeInTheDocument()
+    expect(screen.getByText(REAL_STANDINGS.season_label)).toBeInTheDocument()
 
-    // W, L, PCT, GB, Home, Road, L10 from the standings row.
-    expect(screen.getByText('W')).toBeInTheDocument()
-    expect(screen.getByText('37')).toBeInTheDocument()
-    expect(screen.getByText('L')).toBeInTheDocument()
-    expect(screen.getByText('45')).toBeInTheDocument()
-    expect(screen.getByText('.451')).toBeInTheDocument()
-    expect(screen.getByText('22-18')).toBeInTheDocument()
-    expect(screen.getByText('15-27')).toBeInTheDocument()
-    expect(screen.getByText('4-6')).toBeInTheDocument()
+    // W, L, PCT, GB, Home, Road, L10 from the real standings row.
+    for (const v of [mia.w, mia.l, mia.pct, mia.gb, mia.home, mia.road, mia.l10]) {
+      expect(screen.getAllByText(String(v)).length).toBeGreaterThan(0)
+    }
 
-    // is_previous_season is true in the fixture: no stale "current streak".
+    // is_previous_season is true: no stale "current streak".
+    expect(REAL_STANDINGS.is_previous_season).toBe(true)
     expect(screen.queryByText('Streak')).not.toBeInTheDocument()
-    expect(screen.queryByText('L2')).not.toBeInTheDocument()
+    expect(screen.queryByText(mia.strk)).not.toBeInTheDocument()
 
-    // Conference seed (seedBadge: 7-10 -> Play-in) — shown both in the hero
-    // header and the Stats tab's own seed line.
+    // Real seed 10 -> Play-in, in the hero and in the Stats tab's seed line.
     expect(screen.getAllByText('Play-in').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('D12: Stats tab shows PageState empty when the team has no standings row', async () => {
-    fetchTeamDetail.mockResolvedValue({
-      name: 'Miami Heat',
-      abbrev: 'MIA',
-      conference: 'Eastern',
-      division: 'Southeast',
-    })
-    fetchStandings.mockResolvedValue({ eastern: [], western: [], season_label: '', is_previous_season: false })
-    fetchTeamRoster.mockResolvedValue([])
+  it('D12: Stats tab shows PageState empty when standings could not be loaded', async () => {
+    fetchTeamDetail.mockResolvedValue(REAL_MIA)
+    fetchStandings.mockRejectedValue(new Error('network down'))
+    fetchTeamRoster.mockResolvedValue(REAL_MIA_ROSTER)
     fetchTeamSchedule.mockResolvedValue([])
 
     renderTeamDetail('MIA')
@@ -266,89 +161,47 @@ describe('TeamDetailPage', () => {
     expect(await screen.findByText("Stats aren't available for this team yet.")).toBeInTheDocument()
   })
 
-  it('D9: restores conference rank, roster headshots, roster size, and the GB "Leader" wording', async () => {
-    fetchTeamDetail.mockResolvedValue({
-      name: 'Miami Heat',
-      abbrev: 'MIA',
-      city: 'Miami, FL',
-      venue: 'Kaseya Center',
-      conference: 'Eastern',
-      division: 'Southeast',
-      color: '#98002E',
-      logo_url: '',
-    })
-    fetchStandings.mockResolvedValue(STANDINGS_FIXTURE)
-    fetchTeamRoster.mockResolvedValue(ROSTER_FIXTURE)
-    fetchTeamSchedule.mockResolvedValue([])
+  it('D9: restores conference rank, roster headshots with an initial fallback, and roster size', async () => {
+    mockTeam(REAL_MIA, REAL_MIA_ROSTER)
 
     const { container } = renderTeamDetail('MIA')
     await screen.findByText('Miami Heat')
-    await screen.findByText('Jimmy Butler')
+    await screen.findByText('Bam Adebayo')
 
-    // 1. Conference rank Stat in the hero: seed (9) is present, so it wins over rank.
+    // 1. Conference rank Stat in the hero, from the real seed (10).
     expect(screen.getByText('Conference rank')).toBeInTheDocument()
-    expect(screen.getAllByText('#9 East').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('#10 East').length).toBeGreaterThanOrEqual(1)
 
-    // 2. Roster headshots: an <img> via getHeadshotUrl (its /combiner/ URL,
-    // distinct from the hero's team-logo combiner URL) for the player with a
-    // headshot_url, an initials fallback for the one without.
+    // 2. Roster headshots through getHeadshotUrl (the combiner); the real roster's
+    // players with no headshot_url get their initial instead.
+    const withShot = REAL_MIA_ROSTER.filter((p) => p.headshot_url)
+    const without = REAL_MIA_ROSTER.filter((p) => !p.headshot_url)
+    expect(without.length).toBeGreaterThan(0)
     const avatars = container.querySelectorAll('img[src*="headshots"]')
-    expect(avatars.length).toBe(1)
-    expect(avatars[0].getAttribute('src')).toContain('2199.png')
-    expect(screen.getByText('B')).toBeInTheDocument() // Bam Adebayo's initials fallback
-    // Heights keep their units on one line (6'7" never splits).
-    expect(screen.getByText("6'7\"")).toHaveClass('whitespace-nowrap')
+    expect(avatars.length).toBe(withShot.length)
+    expect([...avatars].some((a) => a.getAttribute('src').includes('4066261.png'))).toBe(true)
+    // Heights keep their units on one line (6' 9" never splits).
+    expect(screen.getAllByText(BAM.height)[0]).toHaveClass('whitespace-nowrap')
 
     // 3. Roster size restored near the tab bar.
-    expect(screen.getByText('Roster size: 2')).toBeInTheDocument()
-
-    // 4. GB "Leader" wording (fixture's gb is "-") — in the Stats tab grid.
-    await userEvent.click(screen.getByRole('tab', { name: 'Stats' }))
-    expect(screen.getByText('Leader')).toBeInTheDocument()
-    // Conference rank also appears in the Stats tab grid (hero + tab = 2+).
-    expect(screen.getAllByText('#9 East').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText(`Roster size: ${REAL_MIA_ROSTER.length}`)).toBeInTheDocument()
   })
 
-  it('D9: conference rank falls back to standings rank when seed is missing (below the top 10)', async () => {
-    fetchTeamDetail.mockResolvedValue({
-      name: 'Charlotte Hornets',
-      abbrev: 'CHA',
-      conference: 'Eastern',
-      division: 'Southeast',
-    })
-    fetchStandings.mockResolvedValue({
-      eastern: [
-        {
-          rank: 12,
-          name: 'Charlotte Hornets',
-          abbrev: 'CHA',
-          w: 18,
-          l: 64,
-          pct: '.220',
-          gb: '25',
-          conf: '',
-          home: '10-31',
-          road: '8-33',
-          l10: '2-8',
-          strk: 'L6',
-          logo_url: '',
-          seed: null,
-        },
-      ],
-      western: [],
-      season: '2025-26',
-      season_label: '2025–26',
-      is_previous_season: false,
-    })
-    fetchTeamRoster.mockResolvedValue([])
-    fetchTeamSchedule.mockResolvedValue([])
+  it('D9: the GB "Leader" wording for the real conference leader (DET, gb "-")', async () => {
+    expect(row('DET').gb).toBe('-')
+    mockTeam(REAL_DET.data, REAL_DET_ROSTER.data)
+    renderTeamDetail('DET')
+    await screen.findByText('Detroit Pistons')
+    await userEvent.click(screen.getByRole('tab', { name: 'Stats' }))
+    expect(await screen.findByText('Leader')).toBeInTheDocument()
+    expect(screen.getAllByText('East #1').length).toBeGreaterThanOrEqual(1)
+  })
 
-    renderTeamDetail('CHA')
-    await screen.findByText('Charlotte Hornets')
-
-    // No seed (rank 12 is outside seedBadge's 1-10 range, and seed itself is
-    // null) — no seed Badge — but the Conference rank Stat still shows,
-    // falling back to the standings `rank`.
+  it('D9: a team seeded 11+ gets no seed badge but still shows its conference rank (real CHI, seed 12)', async () => {
+    expect(row('CHI').seed).toBe(12)
+    mockTeam(REAL_CHI.data, REAL_CHI_ROSTER.data)
+    renderTeamDetail('CHI')
+    await screen.findByText('Chicago Bulls')
     expect(screen.queryByText('Play-in')).not.toBeInTheDocument()
     expect(screen.getAllByText('#12 East').length).toBeGreaterThanOrEqual(1)
   })

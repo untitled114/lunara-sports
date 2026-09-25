@@ -76,7 +76,8 @@ describe('GameDetailPage', () => {
     // status "final" here (real) means useGameFeed's isLive branch is false, so it never
     // opens a WebSocket — no WS mocking needed for this real, completed game.
     api.fetchGame.mockResolvedValue(REAL_GAME)
-    api.fetchStandings.mockResolvedValue([])
+    // Standings unavailable (a failed request; the page carries on without them).
+    api.fetchStandings.mockRejectedValue(new Error('standings down'))
     api.fetchModelPicks.mockResolvedValue([])
     api.fetchBoxScore.mockResolvedValue(REAL_BOX_DATA)
     api.fetchPlays.mockResolvedValue(REAL_PLAYS)
