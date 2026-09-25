@@ -13,24 +13,26 @@ Runbook for the Lunara backend (API, ingestion, Lumen bot) on the Oracle box
 | Lumen bot | `cephalon-lumen.service`, health server on `PORT=8012` |
 | Redis | container `lunara_redis` (compose project `lunara`), 127.0.0.1:**6380**, 256 MB LRU, no persistence |
 | Postgres | `sportsuite_db` container, 127.0.0.1:5500, database `lunara`, role `lunara_app` |
-| Code | `/opt/lunara/{api,ingestion,lumen-bot}`, each with its own `.venv` |
+| Code | `/opt/lunara/{api,ingestion,lumen-bot}`: symlinks to the live release `/opt/lunara/releases/<YYYYmmddTHHMMSS>/<svc>`, each release with its own `.venv` |
+| Lumen logs | `/opt/lunara/shared/lumen-bot-logs`, linked as `logs/` in every release |
 | Python | uv-managed CPython 3.12 at `/opt/lunara/python`, linked as `/opt/lunara/bin/python3.12` |
 | Deploy bundle | `/opt/lunara/deploy` (this directory, minus tests) and `/opt/lunara/migrations` |
 | Secrets | `/etc/lunara/{api,ingestion,lumen}.env`, `db.secret`, `jwt.secret` (0640 root:lunara, dir 0750 root:lunara) |
-| nginx | `/etc/nginx/sites-available/api.lunara-app.com`, linked from `sites-enabled` (ports 80 and 443) |
+| nginx | `/etc/nginx/sites-available/api.lunara-app.com` (ports 80 and 443) and `000-lunara-default-443` (443 catch-all), both linked from `sites-enabled` |
 | Origin TLS | `/etc/lunara/tls/api.lunara-app.com.{key,csr,pem}` (Cloudflare Origin CA) |
 | OLAP export | `/opt/lunara/olap` |
 
 Nothing goes under `/home/sportsuite/sport-suite`, because Sport-suite's deploy runs
-`rsync --delete` on that tree. The scripts refuse any rsync destination outside
-`/opt/lunara`.
+`rsync --delete` on that tree. The scripts accept only these rsync destinations:
+`/opt/lunara/<name>` and `/opt/lunara/releases/<YYYYmmddTHHMMSS>/<name>`.
 
 The old GCP Lumen is gone: the GCP project is suspended. Only the OCI
 `cephalon-lumen` holds the Discord token, so the owner won't get duplicate DMs.
 
 The Sport-suite API (0.0.0.0:8000), Airflow (0.0.0.0:8080 and 8793), Grafana (3001),
 Metabase (3000) and MLflow (5001) are not touched. Both Lunara health servers default to
-port 8080, which Airflow already holds, so the env files set `PORT` explicitly.
+port 8080, which Airflow already holds, so the env files set `PORT` explicitly. They also
+set `HEALTH_HOST=127.0.0.1`, so the servers listen only on loopback.
 
 ## DNS
 
@@ -40,6 +42,13 @@ script does this:
 | Type | Name | Content | Proxy |
 |---|---|---|---|
 | A | `api.lunara-app.com` | `129.80.171.19` | proxied |
+
+## Prerequisites already in place
+
+- Port 443 on the box is open **only to Cloudflare's IPv4 ranges**, in both the OCI NSG
+  `nsg-sportsuite` and host iptables. The controller did this with
+  `~/ops/open_https_cloudflare.sh`. Nothing in `deploy/oci` touches firewalls.
+- The DNS record above exists.
 
 ## TLS between Cloudflare and the origin
 
@@ -51,19 +60,28 @@ on **443** with a Cloudflare **Origin CA** certificate.
 | File | Mode |
 |---|---|
 | `/etc/lunara/tls/` | dir 0750 root:root |
-| `api.lunara-app.com.key` | 0600 root:root. Generated on the box by provision.sh; never leaves it. |
+| `api.lunara-app.com.key` | 0600 root:root. Never leaves the box. The controller created it already; it is the same key as admin's `/etc/nginx/tls/admin.lunara-app.com.key`. provision.sh generates one only if it is missing and never regenerates an existing key. |
 | `api.lunara-app.com.csr` | 0644. Public; provision.sh prints only its path. |
-| `api.lunara-app.com.pem` | 0644 root:root. The Origin CA certificate. |
+| `api.lunara-app.com.pem` | 0644 root:root. The Origin CA certificate, which covers admin and api. The controller installs it. |
 
-The nginx site has three server blocks:
-- `listen 80;` for `api.lunara-app.com`. It still proxies, because Cloudflare may send
-  `http://` visitors on 80. It sorts after `admin.lunara-app.com`, so admin stays the
-  implicit port-80 default.
-- `listen 443 ssl;` for `api.lunara-app.com`, with the same locations.
-- A `listen 443 ssl default_server; server_name _; return 444;` catch-all. It stops the api
-  block from becoming the implicit 443 default and from answering for other hosts. nginx
-  1.18 on the box has no `ssl_reject_handshake`, so the catch-all presents the same
-  certificate during the handshake and then closes the connection without content.
+There are two nginx files:
+- `api.lunara-app.com` has two blocks, and both have `server_name api.lunara-app.com` and
+  no `default_server`:
+  - `listen 80;` still proxies, because Cloudflare may send `http://` visitors on 80. The
+    file sorts after `admin.lunara-app.com`, so admin stays the implicit port-80 default
+    (bare-IP traffic).
+  - `listen 443 ssl;` has the same locations, `ssl_protocols TLSv1.2 TLSv1.3` and the
+    origin cert.
+- `000-lunara-default-443` is the only 443 `default_server`:
+  `server_name _; return 444;`, with `ssl_protocols TLSv1.2 TLSv1.3`. It sorts first, so
+  neither the api block nor admin's own `listen 443 ssl` block (explicit
+  `server_name admin.lunara-app.com`, added by the controller) can become the implicit 443
+  default. Unknown hosts get the connection closed without content.
+  - nginx 1.18 has no `ssl_reject_handshake`, so the handshake still presents the origin
+    certificate.
+  - Checked in `nginx:1.18-alpine` with an admin 443 block alongside: `nginx -t` passes;
+    api and admin are each served on 443; unknown SNI is closed; bare-IP port 80 still
+    reaches admin.
 
 ### Origin certificate: issue, install, renew
 
@@ -111,6 +129,10 @@ What it does:
 6. Creates the role `lunara_app` (LOGIN NOSUPERUSER) and the database `lunara` (OWNER
    `lunara_app`, CONNECT revoked from PUBLIC) as `mlb_user`. The SQL is
    `sql/bootstrap_role_db.sql`, sent on stdin.
+   - The password is set as a SCRAM-SHA-256 verifier computed on the server with python3
+     hashlib, so the plaintext never reaches Postgres.
+   - The session also sets `log_statement=none`, `log_min_duration_statement=-1`,
+     `log_min_error_statement=panic` and `pg_stat_statements.track_utility=off`.
 7. Applies the migrations as `lunara_app` (see below).
 8. Writes `/etc/lunara/{api,ingestion,lumen}.env` on the server:
    - `SPORT_SUITE_API_KEY` is `LUNARA_API_KEY` from `systemctl show sport-suite-api`.
@@ -119,8 +141,9 @@ What it does:
      file is deleted once `lumen.env` has been written and verified. On re-runs they come
      from the existing `lumen.env`. If neither file exists, the laptop prompts for the
      values with hidden input and sends them over ssh stdin.
-9. Generates the origin TLS key and CSR in `/etc/lunara/tls/` if the key is missing, and
-   prints only the CSR path (see "Origin certificate").
+9. Generates the origin TLS key and CSR in `/etc/lunara/tls/` only if the key is missing.
+   An existing key, such as the one the controller already created, is authoritative and
+   never regenerated. It prints only the CSR path (see "Origin certificate").
 10. Runs `docker compose -p lunara -f docker-compose.redis.yml up -d` and waits for PING.
 
 **Python 3.12.** Ubuntu 22.04 on the box ships python3.10 (without ensurepip) and a
@@ -141,39 +164,73 @@ deploy/oci/deploy.sh --dry-run
 deploy/oci/deploy.sh
 ```
 
-1. Checks before changing anything on the box: the origin cert and key must exist, the
-   cert must be unexpired, and the two must match. Otherwise the script fails with the
-   next step.
-2. Runs `rsync --delete` from `api/`, `ingestion/` and `lumen-bot/` into `/opt/lunara/<svc>`.
-   It excludes tests, `.venv`, `logs/` and `.env`, so the excluded paths on the box survive.
-   It also restages the bundle and the migrations. (The laptop runs the rsync first; the TLS
-   check is the first server-side step.)
-3. Creates or updates each venv as `lunara`: `python3.12 -m venv .venv && .venv/bin/pip install .`.
-4. Applies any new migrations.
-5. Installs the three units (daemon-reload, enable) and the nginx site, runs `nginx -t`,
-   then reloads nginx.
-6. Runs `systemctl restart lunara-api lunara-ingestion cephalon-lumen`.
-7. Runs the health gates, retrying 30 times at 2 s intervals:
-   - `curl -sf 127.0.0.1:8010/health` must return `"status":"ok"`, which means Postgres
-     and Redis are both up.
-   - `SELECT count(*) FROM teams` as `lunara_app` must return at least 30 (the teams
-     seeded by migration 007).
-   - `journalctl -u lunara-ingestion -n 20` must contain `ingestion.starting`.
-   - `cephalon-lumen` must be active.
+1. **Preflight, read-only, before anything is copied.** It checks:
+   - the `lunara` user exists;
+   - `/etc/lunara/{api,ingestion,lumen}.env` and `db.secret` exist;
+   - `/opt/lunara/bin/python3.12` is 3.12;
+   - the origin cert and key exist, the cert is unexpired, and the two match;
+   - `/opt/lunara/<svc>` is absent or a symlink;
+   - at least 2 GB is free;
+   - `nginx -t` already passes.
 
-If anything fails after the units and site are installed (step 5), the script prints `journalctl -n 50` for each unit, rolls
-back and exits non-zero.
+   Any failure prints the exact next step.
+2. **Stage a release.** The laptop runs `rsync --delete --mkpath` of `api/`,
+   `ingestion/`, `lumen-bot/`, `deploy/oci` and the migrations into
+   `/opt/lunara/releases/<YYYYmmddTHHMMSS>` (America/New_York). Tests, `.venv`, `logs/` and
+   `.env` are excluded. Nothing live changes.
+3. **Build fresh venvs in the release,** as `lunara`: `python3.12 -m venv .venv && pip install .`
+   (the pip cache is `/opt/lunara/.cache/pip`). `lumen-bot/logs` is linked to the shared
+   log directory. The live venvs are untouched.
+4. **Apply new migrations** from the release. Migrations are forward-only; a failure up to
+   here leaves the live release running.
+5. **Record a baseline and arm rollback.**
+   - Baseline: the HTTP codes of `Host: admin.lunara-app.com http://127.0.0.1/grafana/`
+     and bare-IP `http://127.0.0.1/`.
+   - Rollback state: the previous symlink targets, each unit's enabled/active state, and
+     copies of the unit files and both nginx files in `<release>/.rollback`.
+6. **Swap and install.** Swap the `/opt/lunara/<svc>` symlinks atomically (`mv -T`),
+   install the units (daemon-reload, enable) and both nginx files, run `nginx -t`, reload,
+   then restart the three units.
+7. **Gates,** retrying 30 times at 2 s intervals:
+   - `127.0.0.1:8010/health` returns `"status":"ok"`;
+   - `curl -skf --resolve api.lunara-app.com:443:127.0.0.1 https://api.lunara-app.com/health`;
+   - `curl -sf -H 'Host: api.lunara-app.com' http://127.0.0.1/health`;
+   - the admin `/grafana/` and bare-IP `/` codes are **unchanged** from the baseline;
+   - `SELECT count(*) FROM teams` as `lunara_app` is at least 30;
+   - `journalctl -u lunara-ingestion --since @<restart>` contains `ingestion.starting`;
+   - after 5 s, `cephalon-lumen` is active and `NRestarts` has not grown for any unit.
+8. **Refresh `/opt/lunara/{deploy,migrations}`** from the release. `live_slate_check.py`
+   runs from there.
 
-## Rollback
+**Automatic rollback** covers any failure after the swap. The script prints
+`journalctl -n 50` for each unit, then:
+- points the symlinks back to the previous release;
+- restores the previous unit files and nginx files, or removes them on a first deploy;
+- runs daemon-reload;
+- restarts the units that were active before and stops the others;
+- disables the units that this run enabled;
+- reloads nginx if `nginx -t` passes.
+
+Sport-suite services, Airflow, `sportsuite_db` and `lunara_redis` are never touched.
+
+## Releases
+
+Every deploy leaves `/opt/lunara/releases/<ts>` behind, with venvs of a few hundred MB.
+Nothing prunes them automatically; deploy only prints a note when there are more than 5.
+To prune by hand, keeping the live release and the one before it:
+`ls -1d /opt/lunara/releases/*`, then `readlink /opt/lunara/api`, then `sudo rm -rf` the
+older ones.
+
+## Rollback (manual emergency stop)
 
 ```bash
 deploy/oci/deploy.sh --rollback
 ```
 
-Rollback stops `lunara-api`, `lunara-ingestion` and `cephalon-lumen`, removes the api
-nginx site, and reloads nginx only if `nginx -t` passes. It never touches Sport-suite
-services, Airflow, `sportsuite_db` or `lunara_redis`. The database and `/etc/lunara` are
-kept.
+This stops and disables `lunara-api`, `lunara-ingestion` and `cephalon-lumen`, removes both
+Lunara nginx files, and reloads nginx if `nginx -t` passes. The releases, the database and
+`/etc/lunara` are kept. To return to an older release instead, point the three
+`/opt/lunara/<svc>` symlinks at it and restart the units.
 
 ## Live-slate check (go/no-go, spec decision 10)
 
@@ -184,6 +241,14 @@ ssh ss-admin 'sudo -u lunara /opt/lunara/ingestion/.venv/bin/python /opt/lunara/
 # through ingestion's EspnHttp with the proxy fallback:
 ssh ss-admin 'sudo -u lunara sh -c "set -a; . /etc/lunara/ingestion.env; exec /opt/lunara/ingestion/.venv/bin/python /opt/lunara/deploy/live_slate_check.py --via-ingestion"'
 ```
+
+Run it **outside the Sport-suite pipeline windows**. Airflow's `nba_full_pipeline` runs
+every 3 h at :30 from 2:30 AM to 8:30 PM ET, and `nba_daily_card` runs every 30 min;
+check the Airflow UI for the night's schedule. Otherwise the whole-box CPU figure
+includes the pipeline. For example, run it between 7:00 and 8:15 PM ET, or after
+9:00 PM ET. The JSON also reports `lunara_units_cpu_pct`: each Lunara unit's own share of
+the box over the window, from systemd `CPUUsageNSec`. It is informational, not a pass
+rule; record it in the go-live record.
 
 The script polls every live game's `/summary` once per second for 90 s, with gzip and
 httpx's default User-Agent. The run passes only if all three hold:

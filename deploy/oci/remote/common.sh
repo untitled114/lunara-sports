@@ -44,10 +44,10 @@ psql_app() {
         psql -X -q -h 127.0.0.1 -U "$DB_ROLE" -d "$DB_NAME" -v ON_ERROR_STOP=1 "$@"
 }
 
-# Apply every storage/postgres/migrations/*.sql not yet recorded in schema_migrations,
+# Apply every *.sql in DIR (default /opt/lunara/migrations) not yet recorded in schema_migrations,
 # in filename order, each in one transaction together with its bookkeeping row.
 apply_migrations() {
-    local dir="$LUNARA_ROOT/migrations" f name sum applied
+    local dir="${1:-$LUNARA_ROOT/migrations}" f name sum applied
     [[ -d "$dir" ]] || die "$dir missing (stage the bundle first)"
 
     psql_app <<'SQL'

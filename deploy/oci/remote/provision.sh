@@ -56,6 +56,22 @@ read_env_value() {
     printf -v "$__out" '%s' "$v"
 }
 
+# SCRAM-SHA-256 verifier (RFC 5802/7677, Postgres format) for the password on stdin, so
+# only the verifier is sent to Postgres. The password is hex, so SASLprep is the identity.
+scram_verifier() {
+    # shellcheck disable=SC2016  # python source, not shell
+    python3 -c '
+import base64, hashlib, hmac, os, sys
+pw = sys.stdin.read().strip().encode()
+salt, it = os.urandom(16), 4096
+salted = hashlib.pbkdf2_hmac("sha256", pw, salt, it)
+ck = hmac.new(salted, b"Client Key", hashlib.sha256).digest()
+sk = hmac.new(salted, b"Server Key", hashlib.sha256).digest()
+b = lambda x: base64.b64encode(x).decode()
+print(f"SCRAM-SHA-256${it}:{b(salt)}${b(hashlib.sha256(ck).digest())}:{b(sk)}")
+'
+}
+
 # Write an env file atomically as 0640 root:lunara from stdin.
 write_env() {
     local dest="$1" tmp
@@ -90,8 +106,12 @@ phase_finish() {
     ensure_secret "$LUNARA_ETC/jwt.secret" 32
 
     step "4. role lunara_app (LOGIN NOSUPERUSER) and database lunara on $DB_CONTAINER"
+    local verifier
+    verifier="$(scram_verifier <"$LUNARA_ETC/db.secret")"
+    [[ "$verifier" =~ ^SCRAM-SHA-256\$4096:[A-Za-z0-9+/=]+\$[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$ ]] ||
+        die "could not compute the SCRAM verifier"
     {
-        printf '\\set pw %s\n' "'$(cat "$LUNARA_ETC/db.secret")'"
+        printf '\\set verifier %s\n' "'$verifier'"
         cat "$LUNARA_ROOT/deploy/sql/bootstrap_role_db.sql"
     } | docker exec -i "$DB_CONTAINER" \
         psql -X -q -U "$DB_SUPERUSER" -d postgres -v ON_ERROR_STOP=1
@@ -133,6 +153,7 @@ EOF
 DATABASE_URL=postgresql://$DB_ROLE:$dbpw@127.0.0.1:5500/$DB_NAME
 ESPN_PROXY_URL=$proxy
 PORT=8011
+HEALTH_HOST=127.0.0.1
 PYTHONUNBUFFERED=1
 EOF
 
@@ -154,6 +175,7 @@ ANTHROPIC_API_KEY=$akey
 LUNARA_API_URL=http://127.0.0.1:8010
 LUNARA_WS_URL=ws://127.0.0.1:8010/ws
 PORT=8012
+HEALTH_HOST=127.0.0.1
 PYTHONUNBUFFERED=1
 EOF
     if [[ "$src" == "$LUNARA_ETC/lumen.secret" ]]; then
@@ -219,7 +241,8 @@ describe() {
             printf '%s\n' \
                 "3. openssl rand -hex 24 > /etc/lunara/db.secret and -hex 32 > jwt.secret" \
                 "   (only if missing; 0640 root:lunara; never printed)" \
-                "4. docker exec -i sportsuite_db psql -U mlb_user -d postgres < \\set pw + sql/bootstrap_role_db.sql" \
+                "4. SCRAM-SHA-256 verifier computed on the server from db.secret (python3 hashlib);" \
+                "   docker exec -i sportsuite_db psql -U mlb_user -d postgres < \\set verifier + sql/bootstrap_role_db.sql" \
                 "   (CREATE ROLE lunara_app LOGIN NOSUPERUSER if missing; ALTER ROLE ... PASSWORD;" \
                 "    CREATE DATABASE lunara OWNER lunara_app if missing; CONNECT only for lunara_app)" \
                 "5. as lunara_app: CREATE TABLE IF NOT EXISTS schema_migrations; apply each" \

@@ -50,28 +50,31 @@ remote() {
     cat "$OCI_DIR/remote/common.sh" "$src" | ssh "$SSH_HOST" "sudo bash -s -- $*"
 }
 
-# rsync a local directory into a root-owned destination on the box via sudo rsync.
-# Only /opt/lunara/* destinations are allowed.
+# rsync a local directory into a destination on the box via sudo rsync. Allowed
+# destinations only: /opt/lunara/<name> (bundle, migrations) and
+# /opt/lunara/releases/<YYYYmmddTHHMMSS>/<name> (a release being staged).
+readonly DEST_RE='^/opt/lunara/([a-z][a-z-]*|releases/[0-9]{8}T[0-9]{6}/[a-z][a-z-]*)$'
 push() {
     local src="$1" dest="$2" owner="$3"
     shift 3
-    case "$dest" in
-        /opt/lunara/*) ;;
-        *)
-            printf 'refusing rsync destination outside /opt/lunara: %s\n' "$dest" >&2
-            exit 1
-            ;;
-    esac
-    run rsync -rlptz --delete --rsync-path="sudo rsync" --chown="$owner" \
+    if ! [[ "$dest" =~ $DEST_RE ]]; then
+        printf 'refusing rsync destination: %s\n' "$dest" >&2
+        exit 1
+    fi
+    run rsync -rlptz --delete --mkpath --rsync-path="sudo rsync" --chown="$owner" \
         --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
         --exclude='__pycache__/' --exclude='*.pyc' --exclude='.pytest_cache/' \
         --exclude='.coverage' --exclude='htmlcov/' --exclude='.ruff_cache/' "$@" \
         "$src/" "$SSH_HOST:$dest/"
 }
 
+# stage_bundle [<base>]: deploy/oci and the migrations into <base>/{deploy,migrations}
+# (default /opt/lunara, used by provision; deploy.sh passes its release dir).
 stage_bundle() {
-    say "stage deploy bundle and migrations (rsync --delete, /opt/lunara only)"
-    push "$OCI_DIR" /opt/lunara/deploy root:root --exclude='tests/' --exclude='*.md'
-    push "$REPO_ROOT/storage/postgres/migrations" /opt/lunara/migrations root:root \
+    local base="${1:-/opt/lunara}"
+    say "stage deploy bundle and migrations into $base (rsync --delete)"
+    push "$OCI_DIR" "$base/deploy" root:root --exclude='tests/' --exclude='*.md' \
+        --exclude='__init__.py'
+    push "$REPO_ROOT/storage/postgres/migrations" "$base/migrations" root:root \
         --include='*.sql' --exclude='*'
 }

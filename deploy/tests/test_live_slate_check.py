@@ -72,3 +72,30 @@ def test_read_cpu_busy_seconds_excludes_idle_and_iowait(tmp_path, monkeypatch):
     stat.write_text("cpu  100 0 50 1000 25 5 5 0 0 0\ncpu0 1 1 1 1 1 1 1 1 0 0\n")
     monkeypatch.setattr("os.sysconf", lambda name: 100)
     assert read_cpu_busy_seconds(str(stat)) == 1.6
+
+
+def test_units_cpu_pct_is_share_of_box_and_tolerates_missing():
+    from deploy.oci.live_slate_check import units_cpu_pct
+
+    before = {
+        "lunara-api": 1_000_000_000,
+        "lunara-ingestion": None,
+        "cephalon-lumen": 5,
+    }
+    after = {"lunara-api": 10_000_000_000, "lunara-ingestion": 7, "cephalon-lumen": 1}
+    pct = units_cpu_pct(before, after, wall_seconds=90, cores=4)
+    assert pct == {"lunara-api": 2.5, "lunara-ingestion": None, "cephalon-lumen": None}
+
+
+def test_read_units_cpu_nsec_maps_not_set_and_errors(monkeypatch):
+    import subprocess
+
+    from deploy.oci import live_slate_check as m
+
+    outs = iter(["123\n", "18446744073709551615\n", "[not set]\n"])
+
+    def fake_run(*a, **k):
+        return subprocess.CompletedProcess(a, 0, stdout=next(outs), stderr="")
+
+    monkeypatch.setattr(m.subprocess, "run", fake_run)
+    assert m.read_units_cpu_nsec(("a", "b", "c")) == {"a": 123, "b": None, "c": None}

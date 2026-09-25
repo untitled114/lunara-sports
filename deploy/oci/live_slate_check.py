@@ -25,6 +25,7 @@ import asyncio
 import json
 import os
 import statistics
+import subprocess
 import sys
 import time
 from collections import Counter
@@ -102,6 +103,46 @@ def read_cpu_busy_seconds(path: str = "/proc/stat") -> float:
     return (sum(values) - idle) / os.sysconf("SC_CLK_TCK")
 
 
+LUNARA_UNITS = ("lunara-api", "lunara-ingestion", "cephalon-lumen")
+NSEC_NOT_SET = 2**64 - 1  # systemd's "[not set]"
+
+
+def read_units_cpu_nsec(units=LUNARA_UNITS) -> dict[str, int | None]:
+    """systemd CPUUsageNSec per unit; None when unavailable (no systemd, no accounting)."""
+    out: dict[str, int | None] = {}
+    for unit in units:
+        try:
+            raw = subprocess.run(
+                ["systemctl", "show", "-p", "CPUUsageNSec", "--value", unit],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            ).stdout.strip()
+            value = int(raw)
+            out[unit] = None if value >= NSEC_NOT_SET else value
+        except (OSError, ValueError, subprocess.SubprocessError):
+            out[unit] = None
+    return out
+
+
+def units_cpu_pct(
+    before: dict[str, int | None],
+    after: dict[str, int | None],
+    wall_seconds: float,
+    cores: int,
+) -> dict[str, float | None]:
+    """Each unit's share of the whole box over the window, in percent (info only)."""
+    pct: dict[str, float | None] = {}
+    for unit, b in before.items():
+        a = after.get(unit)
+        if b is None or a is None or a < b or not wall_seconds or not cores:
+            pct[unit] = None
+        else:
+            pct[unit] = round(100.0 * (a - b) / 1e9 / (wall_seconds * cores), 2)
+    return pct
+
+
 def live_game_ids(scoreboard: dict, include_all: bool = False) -> list[str]:
     """IDs of in-progress events (state "in"); every event when include_all is set."""
     ids = []
@@ -158,6 +199,7 @@ async def _run(args: argparse.Namespace) -> int:
                 codes[0] += 1  # transport failure counts as non-200
             latencies.append(time.perf_counter() - t0)
 
+        units0 = read_units_cpu_nsec()
         cpu0, wall0 = read_cpu_busy_seconds(), time.monotonic()
         deadline = wall0 + args.seconds
         while time.monotonic() < deadline:
@@ -166,6 +208,7 @@ async def _run(args: argparse.Namespace) -> int:
             rounds.append(time.monotonic() - r0)
             await asyncio.sleep(max(0.0, 1.0 - (time.monotonic() - r0)))
         cpu1, wall1 = read_cpu_busy_seconds(), time.monotonic()
+        units1 = read_units_cpu_nsec()
     finally:
         await closer()
 
@@ -177,6 +220,10 @@ async def _run(args: argparse.Namespace) -> int:
         wall_seconds=wall1 - wall0,
         cores=os.cpu_count() or 1,
         via_ingestion=args.via_ingestion,
+    )
+    # Info only (not a pass rule): the Lunara units' own share of the box.
+    result["lunara_units_cpu_pct"] = units_cpu_pct(
+        units0, units1, wall1 - wall0, os.cpu_count() or 1
     )
     result["date"] = date
     result["games"] = len(games)

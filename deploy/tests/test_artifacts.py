@@ -95,18 +95,32 @@ def test_nginx_api_served_on_80_and_443_with_origin_cert():
         assert "proxy_read_timeout 3600s;" in b
 
 
-def test_nginx_api_blocks_never_default_and_443_has_catch_all():
-    blocks = _server_blocks((D / "nginx-api.lunara-app.com.conf").read_text())
-    for b in blocks:
-        if "server_name api.lunara-app.com;" in b:
-            assert "default_server" not in b
-        else:  # the only other block: 443 catch-all that serves nothing
-            assert "listen 443 ssl default_server;" in b and "return 444;" in b
-            assert "proxy_pass" not in b
-    assert len(blocks) == 3
+def test_nginx_api_file_has_only_api_blocks_never_default():
+    conf = (D / "nginx-api.lunara-app.com.conf").read_text()
+    blocks = _server_blocks(conf)
+    assert len(blocks) == 2
+    assert all("server_name api.lunara-app.com;" in b for b in blocks)
     assert not any(
-        "listen 80 default_server" in b for b in blocks
-    )  # admin keeps port 80
+        "default_server" in line.split("#", 1)[0] for line in conf.splitlines()
+    )
+    tls = next(b for b in blocks if "listen 443 ssl;" in b)
+    assert "ssl_protocols TLSv1.2 TLSv1.3;" in tls
+
+
+def test_nginx_443_catch_all_is_its_own_first_sorting_file():
+    name = "nginx-000-lunara-default-443.conf"
+    blocks = _server_blocks((D / name).read_text())
+    assert len(blocks) == 1
+    (b,) = blocks
+    assert "listen 443 ssl default_server;" in b and "server_name _;" in b
+    assert "return 444;" in b and "proxy_pass" not in b
+    assert "ssl_protocols TLSv1.2 TLSv1.3;" in b
+    assert "ssl_certificate /etc/lunara/tls/api.lunara-app.com.pem;" in b
+    assert "ssl_certificate_key /etc/lunara/tls/api.lunara-app.com.key;" in b
+    # installed as sites-available/000-lunara-default-443: sorts before admin/api
+    installed = name.removeprefix("nginx-").removesuffix(".conf")
+    assert installed < "admin.lunara-app.com" < "api.lunara-app.com"
+    assert "listen 80" not in b  # admin keeps the implicit port-80 default
 
 
 def test_redis_bound_to_localhost_6380():

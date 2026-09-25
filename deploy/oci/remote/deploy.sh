@@ -1,16 +1,35 @@
 # shellcheck shell=bash
 # Server half of deploy/oci/deploy.sh. Sent after remote/common.sh on ssh stdin and run
-# as root: `sudo bash -s -- deploy|rollback`. The laptop has already rsynced the code
-# into /opt/lunara/{api,ingestion,lumen-bot}, the migrations into /opt/lunara/migrations
-# and deploy/oci into /opt/lunara/deploy.
+# as root: `sudo bash -s -- preflight | deploy <release> | rollback`.
 #
-# Rollback touches ONLY Lunara: the three Lunara units and the api nginx site. It never
-# stops Sport-suite services, Airflow, the sportsuite_db container or lunara_redis.
+#   preflight  read-only checks, run by the laptop BEFORE it rsyncs anything
+#   deploy     the laptop has rsynced api/, ingestion/, lumen-bot/, deploy/oci and the
+#              migrations into /opt/lunara/releases/<release>/. Build fresh venvs there,
+#              apply migrations, then swap /opt/lunara/<svc> symlinks to the release,
+#              install units + nginx, restart, gate. Any failure after the swap rolls back
+#              to the previous release (or, on a first deploy, stops the units and
+#              removes the Lunara nginx files).
+#   rollback   manual emergency stop: stop + disable the Lunara units, remove the Lunara
+#              nginx files, reload nginx.
+#
+# Everything here touches ONLY Lunara: the three Lunara units, /opt/lunara, and the two
+# Lunara nginx files. Never Sport-suite services, Airflow, sportsuite_db or lunara_redis.
 
 readonly NGINX_AVAIL=/etc/nginx/sites-available/$NGINX_SITE
 readonly NGINX_ENABLED=/etc/nginx/sites-enabled/$NGINX_SITE
+readonly CATCHALL=000-lunara-default-443
+readonly CATCHALL_AVAIL=/etc/nginx/sites-available/$CATCHALL
+readonly CATCHALL_ENABLED=/etc/nginx/sites-enabled/$CATCHALL
+readonly RELEASES=$LUNARA_ROOT/releases
+readonly CODE_SVCS=(api ingestion lumen-bot)
 readonly GATE_TRIES=30
-LIVE_CHANGED=0
+readonly MIN_FREE_KB=2000000
+
+REL=""
+ARMED=0
+declare -A PREV_TARGET=() WAS_ENABLED=() WAS_ACTIVE=()
+ADMIN_BASE=""
+BARE_BASE=""
 
 print_logs() {
     local u
@@ -20,25 +39,76 @@ print_logs() {
     done
 }
 
-rollback() {
-    step "ROLLBACK: stop Lunara units, remove the api nginx site"
-    systemctl stop "${SERVICES[@]}" 2>/dev/null || true
-    rm -f "$NGINX_ENABLED" "$NGINX_AVAIL"
+reload_nginx_if_valid() {
     if nginx -t 2>/dev/null; then
         systemctl reload nginx
-        info "nginx reloaded without $NGINX_SITE"
+        info "nginx reloaded"
     else
-        info "WARNING: nginx -t fails even without $NGINX_SITE; nginx NOT reloaded"
+        info "WARNING: nginx -t fails; nginx NOT reloaded (inspect: nginx -t)"
     fi
+}
+
+# Manual emergency stop (deploy.sh --rollback).
+rollback_stop() {
+    step "ROLLBACK: stop + disable Lunara units, remove the Lunara nginx files"
+    systemctl stop "${SERVICES[@]}" 2>/dev/null || true
+    systemctl disable "${SERVICES[@]}" 2>/dev/null || true
+    rm -f "$NGINX_ENABLED" "$NGINX_AVAIL" "$CATCHALL_ENABLED" "$CATCHALL_AVAIL"
+    reload_nginx_if_valid
+}
+
+# Automatic rollback after a failed deploy: restore exactly what was there before.
+rollback_release() {
+    step "ROLLBACK to the state before release $REL"
+    local svc u f
+    for svc in "${CODE_SVCS[@]}"; do
+        if [[ -n "${PREV_TARGET[$svc]}" ]]; then
+            ln -sfn "${PREV_TARGET[$svc]}" "$LUNARA_ROOT/.$svc.tmp"
+            mv -Tf "$LUNARA_ROOT/.$svc.tmp" "$LUNARA_ROOT/$svc"
+            info "$LUNARA_ROOT/$svc -> ${PREV_TARGET[$svc]}"
+        else
+            rm -f "$LUNARA_ROOT/$svc"
+        fi
+    done
+    for u in "${SERVICES[@]}"; do
+        if [[ -f "$REL/.rollback/$u.service" ]]; then
+            install -m 0644 "$REL/.rollback/$u.service" "/etc/systemd/system/$u.service"
+        fi
+    done
+    for f in "$NGINX_SITE" "$CATCHALL"; do
+        if [[ -f "$REL/.rollback/nginx-$f" ]]; then
+            install -m 0644 "$REL/.rollback/nginx-$f" "/etc/nginx/sites-available/$f"
+            ln -sfn "/etc/nginx/sites-available/$f" "/etc/nginx/sites-enabled/$f"
+        else
+            rm -f "/etc/nginx/sites-enabled/$f" "/etc/nginx/sites-available/$f"
+        fi
+    done
+    systemctl daemon-reload
+    for u in "${SERVICES[@]}"; do
+        if [[ "${WAS_ACTIVE[$u]}" == active ]]; then
+            systemctl restart "$u" || true
+        else
+            systemctl stop "$u" 2>/dev/null || true
+        fi
+        if [[ "${WAS_ENABLED[$u]}" != enabled ]]; then
+            systemctl disable "$u" 2>/dev/null || true
+        fi
+    done
+    reload_nginx_if_valid
 }
 
 on_error() {
     local rc=$?
+    # A failing command substitution runs this trap in a subshell too; only the main
+    # shell may print logs and roll back, and only once.
+    if ((BASH_SUBSHELL > 0)); then exit "$rc"; fi
     trap - ERR
     printf '\nDEPLOY FAILED (exit %s)\n' "$rc" >&2
-    if ((LIVE_CHANGED)); then
+    if ((ARMED)); then
         print_logs
-        rollback
+        rollback_release
+    else
+        info "nothing live was changed; the release dir $REL is left for inspection"
     fi
     exit "$rc"
 }
@@ -48,10 +118,8 @@ gate_fail() {
     return 1
 }
 
-# The nginx site needs the Cloudflare Origin CA cert + key. Checked before anything on
-# the box changes; there is no silent fallback to port 80 only.
+# Origin cert + key for the api 443 block (Cloudflare Origin CA). No silent fallback.
 check_origin_tls() {
-    step "1b. origin TLS for $NGINX_SITE"
     [[ -s "$TLS_KEY" ]] ||
         die "missing $TLS_KEY. Next step: run deploy/oci/provision.sh (generates key + CSR)."
     [[ -s "$TLS_CERT" ]] || die "missing $TLS_CERT. Next step: issue a Cloudflare Origin CA \
@@ -64,56 +132,141 @@ certificate for $TLS_CSR, then run deploy/oci/install_origin_cert.sh <cert.pem> 
     cpub="$(openssl x509 -in "$TLS_CERT" -noout -pubkey | sha256sum)"
     [[ "$kpub" == "$cpub" ]] ||
         die "$TLS_CERT does not match $TLS_KEY. Next step: issue the cert from $TLS_CSR."
-    info "cert + key present and matching; expires $(openssl x509 -in "$TLS_CERT" -noout -enddate | cut -d= -f2)"
+    info "TLS: cert + key present and matching; expires \
+$(openssl x509 -in "$TLS_CERT" -noout -enddate | cut -d= -f2)"
+}
+
+# Read-only. The laptop runs this before any rsync; deploy re-runs it.
+preflight() {
+    step "0. preflight (read-only)"
+    id lunara >/dev/null 2>&1 || die "no lunara user. Next step: deploy/oci/provision.sh"
+    local f
+    for f in api.env ingestion.env lumen.env db.secret; do
+        [[ -s "$LUNARA_ETC/$f" ]] || die "missing $LUNARA_ETC/$f. Next step: provision.sh"
+    done
+    if ! "$PY312" -c 'import sys; assert sys.version_info[:2] == (3, 12)' 2>/dev/null; then
+        die "$PY312 is not a working Python 3.12. Next step: provision.sh"
+    fi
+    info "python: $("$PY312" --version)"
+    check_origin_tls
+    local svc
+    for svc in "${CODE_SVCS[@]}"; do
+        if [[ -e "$LUNARA_ROOT/$svc" && ! -L "$LUNARA_ROOT/$svc" ]]; then
+            die "$LUNARA_ROOT/$svc is a real directory, not a release symlink; move it aside"
+        fi
+    done
+    local free
+    free="$(df -Pk "$LUNARA_ROOT" | awk 'NR == 2 {print $4}')"
+    ((free >= MIN_FREE_KB)) || die "only ${free} KB free under $LUNARA_ROOT (need 2 GB)"
+    nginx -t 2>/dev/null || die "nginx -t already fails before this deploy; fix nginx first"
+    info "preflight OK (free: $((free / 1024)) MB; nginx -t passes)"
 }
 
 build_venvs() {
-    [[ -x "$PY312" ]] || die "$PY312 missing (run provision.sh first)"
-    local svc
-    for svc in api ingestion lumen-bot; do
-        step "2. venv for $svc"
-        local d="$LUNARA_ROOT/$svc"
+    local svc d
+    for svc in "${CODE_SVCS[@]}"; do
+        step "2. fresh venv for $svc in the release"
+        d="$REL/$svc"
         [[ -f "$d/pyproject.toml" ]] || die "$d/pyproject.toml missing (rsync step)"
-        if [[ ! -x "$d/.venv/bin/python" ]]; then
-            sudo -u lunara -H "$PY312" -m venv "$d/.venv"
-        fi
-        (cd "$d" && sudo -u lunara -H "$d/.venv/bin/pip" install --no-cache-dir -q .)
+        sudo -u lunara -H "$PY312" -m venv "$d/.venv"
+        (cd "$d" && sudo -u lunara -H env PIP_CACHE_DIR="$LUNARA_ROOT/.cache/pip" \
+            "$d/.venv/bin/pip" install -q .)
         info "$svc: $("$d/.venv/bin/python" --version)"
     done
+    # Lumen writes logs/game_context relative to its working directory: keep them across
+    # releases.
+    install -d -o lunara -g lunara -m 0755 "$LUNARA_ROOT/shared/lumen-bot-logs"
+    ln -sfn "$LUNARA_ROOT/shared/lumen-bot-logs" "$REL/lumen-bot/logs"
 }
 
-install_units_and_site() {
-    step "4. install systemd units + nginx site, nginx -t, reload"
-    local u
+http_code() { curl -s -m 5 -o /dev/null -w '%{http_code}' "$@" || true; }
+
+capture_baseline() {
+    ADMIN_BASE="$(http_code -H 'Host: admin.lunara-app.com' http://127.0.0.1/grafana/)"
+    BARE_BASE="$(http_code http://127.0.0.1/)"
+    info "baseline before nginx change: admin /grafana/ = $ADMIN_BASE, bare-IP / = $BARE_BASE"
+}
+
+arm_rollback() {
+    local svc u f
+    install -d -m 0700 "$REL/.rollback"
+    for svc in "${CODE_SVCS[@]}"; do
+        PREV_TARGET[$svc]="$(readlink "$LUNARA_ROOT/$svc" 2>/dev/null || true)"
+    done
     for u in "${SERVICES[@]}"; do
-        install -m 0644 -o root -g root "$LUNARA_ROOT/deploy/$u.service" \
-            "/etc/systemd/system/$u.service"
+        WAS_ENABLED[$u]="$(systemctl is-enabled "$u" 2>/dev/null || true)"
+        WAS_ACTIVE[$u]="$(systemctl is-active "$u" 2>/dev/null || true)"
+        if [[ -f "/etc/systemd/system/$u.service" ]]; then
+            cp -p "/etc/systemd/system/$u.service" "$REL/.rollback/$u.service"
+        fi
+    done
+    for f in "$NGINX_SITE" "$CATCHALL"; do
+        if [[ -f "/etc/nginx/sites-available/$f" ]]; then
+            cp -p "/etc/nginx/sites-available/$f" "$REL/.rollback/nginx-$f"
+        fi
+    done
+    ARMED=1
+    info "rollback armed (previous api release: ${PREV_TARGET[api]:-none})"
+}
+
+swap_and_install() {
+    step "4. swap /opt/lunara/<svc> -> release; install units + nginx files; nginx -t; reload"
+    local svc u
+    for svc in "${CODE_SVCS[@]}"; do
+        ln -sfn "$REL/$svc" "$LUNARA_ROOT/.$svc.tmp"
+        mv -Tf "$LUNARA_ROOT/.$svc.tmp" "$LUNARA_ROOT/$svc"
+    done
+    for u in "${SERVICES[@]}"; do
+        install -m 0644 -o root -g root "$REL/deploy/$u.service" "/etc/systemd/system/$u.service"
     done
     systemctl daemon-reload
-    systemctl enable "${SERVICES[@]}" >/dev/null
-    LIVE_CHANGED=1
-    install -m 0644 -o root -g root "$LUNARA_ROOT/deploy/nginx-api.lunara-app.com.conf" \
-        "$NGINX_AVAIL"
+    systemctl enable "${SERVICES[@]}" >/dev/null 2>&1
+    install -m 0644 -o root -g root "$REL/deploy/nginx-api.lunara-app.com.conf" "$NGINX_AVAIL"
+    install -m 0644 -o root -g root "$REL/deploy/nginx-$CATCHALL.conf" "$CATCHALL_AVAIL"
     ln -sfn "$NGINX_AVAIL" "$NGINX_ENABLED"
+    ln -sfn "$CATCHALL_AVAIL" "$CATCHALL_ENABLED"
     nginx -t
     systemctl reload nginx
 }
 
-health_gates() {
-    step "6. health gates"
-    local i body=""
-    # Gate 1: /health answers 200 and reports postgres + redis up.
+wait_for() { # wait_for <description> <command...>: retry GATE_TRIES x 2 s
+    local what="$1" i
+    shift
     for i in $(seq 1 "$GATE_TRIES"); do
-        if body="$(curl -sf -m 5 http://127.0.0.1:8010/health)" &&
-            [[ "$body" == *'"status":"ok"'* ]]; then
-            info "gate 1 /health: $body"
-            break
-        fi
-        ((i == GATE_TRIES)) && gate_fail "/health not 200 + status ok: ${body:-no response}"
+        if "$@"; then return 0; fi
+        ((i < GATE_TRIES)) || break
         sleep 2
     done
+    gate_fail "$what"
+}
 
-    # Gate 2: a real DB read as lunara_app: the seeded teams table (migration 007).
+health_ok() { [[ "$(curl -sf -m 5 "$@" 2>/dev/null || true)" == *'"status":"ok"'* ]]; }
+
+health_gates() {
+    local since="$1"
+    declare -A nrestarts=()
+    local u
+    for u in "${SERVICES[@]}"; do
+        nrestarts[$u]="$(systemctl show -p NRestarts --value "$u")"
+    done
+
+    step "6. health gates"
+    wait_for "direct /health not 200 + status ok" health_ok http://127.0.0.1:8010/health
+    info "gate 1 direct: 127.0.0.1:8010/health status ok"
+
+    wait_for "https://api.lunara-app.com/health via nginx :443 not ok" \
+        health_ok -k --resolve api.lunara-app.com:443:127.0.0.1 https://api.lunara-app.com/health
+    wait_for "http://api.lunara-app.com/health via nginx :80 not ok" \
+        health_ok -H 'Host: api.lunara-app.com' http://127.0.0.1/health
+    info "gate 2 nginx: api /health ok on :443 and :80"
+
+    local admin bare
+    admin="$(http_code -H 'Host: admin.lunara-app.com' http://127.0.0.1/grafana/)"
+    bare="$(http_code http://127.0.0.1/)"
+    [[ "$admin" == "$ADMIN_BASE" && "$bare" == "$BARE_BASE" ]] ||
+        gate_fail "admin regression: /grafana/ $ADMIN_BASE -> $admin, bare-IP / $BARE_BASE -> $bare"
+    info "gate 3 admin unchanged: /grafana/ = $admin, bare-IP / = $bare"
+
     local teams
     teams="$(psql_app -At <<'SQL'
 SELECT count(*) FROM teams;
@@ -122,65 +275,108 @@ SQL
     if ! [[ "$teams" =~ ^[0-9]+$ ]] || ((teams < 30)); then
         gate_fail "SELECT count(*) FROM teams as lunara_app returned '${teams}', need >= 30"
     fi
-    info "gate 2 DB: teams = $teams"
+    info "gate 4 DB as lunara_app: teams = $teams"
 
-    # Gate 3: ingestion logged its start line.
-    for i in $(seq 1 "$GATE_TRIES"); do
-        if journalctl -u lunara-ingestion -n 20 --no-pager 2>/dev/null |
-            grep -q 'ingestion.starting'; then
-            info "gate 3 lunara-ingestion: ingestion.starting seen"
-            break
-        fi
-        ((i == GATE_TRIES)) && gate_fail "no ingestion.starting in journalctl -u lunara-ingestion"
-        sleep 2
-    done
+    ingestion_started() {
+        journalctl -u lunara-ingestion --since "@$since" --no-pager 2>/dev/null |
+            grep -q 'ingestion.starting'
+    }
+    wait_for "no ingestion.starting from lunara-ingestion since the restart" ingestion_started
+    info "gate 5 lunara-ingestion: ingestion.starting since @$since"
 
-    # Lumen has no HTTP gate in the plan; require the unit to be running.
+    sleep 5
     systemctl is-active --quiet cephalon-lumen || gate_fail "cephalon-lumen not active"
-    info "cephalon-lumen active"
+    for u in "${SERVICES[@]}"; do
+        local now
+        now="$(systemctl show -p NRestarts --value "$u")"
+        [[ "$now" == "${nrestarts[$u]}" ]] ||
+            gate_fail "$u restarted by systemd during the gates (NRestarts ${nrestarts[$u]} -> $now)"
+    done
+    info "gate 6 all units active, no crash-restarts"
+}
+
+finish_release() {
+    step "7. record release $REL"
+    rsync -a --delete "$REL/deploy/" "$LUNARA_ROOT/deploy/"
+    rsync -a --delete "$REL/migrations/" "$LUNARA_ROOT/migrations/"
+    local n
+    n="$(find "$RELEASES" -mindepth 1 -maxdepth 1 -type d | wc -l)"
+    if ((n > 5)); then
+        info "NOTE: $n releases under $RELEASES; old ones are not pruned automatically"
+        info "      (README: 'Releases'). Current: $REL"
+    fi
 }
 
 do_deploy() {
+    local release="${1:-}"
+    [[ "$release" =~ ^[0-9]{8}T[0-9]{6}$ ]] || die "usage: deploy <YYYYmmddTHHMMSS>"
+    REL="$RELEASES/$release"
     set -o errtrace
     trap on_error ERR
-    [[ -f "$LUNARA_ETC/api.env" && -f "$LUNARA_ETC/db.secret" ]] ||
-        die "/etc/lunara not provisioned (run provision.sh first)"
-    check_origin_tls
+
+    preflight
+    step "1. check the staged release $REL"
+    local svc
+    for svc in "${CODE_SVCS[@]}" deploy migrations; do
+        [[ -d "$REL/$svc" ]] || die "$REL/$svc missing (rsync step)"
+    done
     build_venvs
-    step "3. apply new migrations"
-    apply_migrations
-    install_units_and_site
+    step "3. apply new migrations (from the release)"
+    apply_migrations "$REL/migrations"
+
+    capture_baseline
+    arm_rollback
+    swap_and_install
     step "5. systemctl restart ${SERVICES[*]}"
+    local since
+    since="$(date +%s)"
     systemctl restart "${SERVICES[@]}"
-    health_gates
+    health_gates "$since"
+    finish_release
     trap - ERR
-    step "deploy OK"
+    step "deploy OK: release $release is live"
 }
 
 # Used by the laptop's --dry-run (run locally, prints only).
 describe() {
     case "$1" in
+        preflight)
+            printf '%s\n' \
+                "0. preflight, read-only, before ANY rsync: lunara user; /etc/lunara/{api,ingestion,lumen}.env" \
+                "   + db.secret; $PY312 is 3.12; $TLS_KEY + $TLS_CERT present, unexpired, matching;" \
+                "   /opt/lunara/{api,ingestion,lumen-bot} absent or symlinks; >= 2 GB free; nginx -t passes"
+            ;;
         deploy)
             printf '%s\n' \
-                "1b. preflight: $TLS_KEY and $TLS_CERT exist, cert not expired, cert matches key" \
-                "   (else fail with the next step; nothing on the box has changed yet)" \
-                "2. per service (api, ingestion, lumen-bot), as lunara: $PY312 -m venv .venv" \
-                "   (if missing) && .venv/bin/pip install ." \
-                "3. apply migrations not yet in schema_migrations (as lunara_app)" \
-                "4. install {${SERVICES[*]}}.service -> /etc/systemd/system; daemon-reload; enable" \
-                "   install nginx-api.lunara-app.com.conf -> $NGINX_AVAIL; symlink $NGINX_ENABLED;" \
-                "   nginx -t; systemctl reload nginx" \
+                "0. preflight again (same checks)" \
+                "1. release dir $RELEASES/<release>/{api,ingestion,lumen-bot,deploy,migrations} complete" \
+                "2. fresh venv per service IN THE RELEASE, as lunara: $PY312 -m venv .venv && pip install ." \
+                "   (live /opt/lunara/<svc> untouched); lumen-bot/logs -> $LUNARA_ROOT/shared/lumen-bot-logs" \
+                "3. apply migrations from the release not yet in schema_migrations (as lunara_app)" \
+                "   -- a failure up to here changes nothing live (DB migrations are forward-only)" \
+                "   baseline: admin /grafana/ and bare-IP / HTTP codes on 127.0.0.1:80" \
+                "   arm rollback: previous symlink targets, unit enabled/active state, copies of" \
+                "   unit files + nginx files into <release>/.rollback" \
+                "4. swap /opt/lunara/<svc> symlinks to the release (atomic mv -T); install" \
+                "   {${SERVICES[*]}}.service; daemon-reload; enable; install $NGINX_AVAIL and" \
+                "   $CATCHALL_AVAIL (+ sites-enabled links); nginx -t; reload" \
                 "5. systemctl restart ${SERVICES[*]}" \
-                "6. gates ($GATE_TRIES x 2 s): curl -sf 127.0.0.1:8010/health status ok;" \
-                "   as lunara_app: SELECT count(*) FROM teams >= 30;" \
-                "   journalctl -u lunara-ingestion -n 20 has ingestion.starting; cephalon-lumen active" \
-                "   on any failure after step 4: print journalctl -n 50 per unit, then rollback"
+                "6. gates ($GATE_TRIES x 2 s): 127.0.0.1:8010/health status ok;" \
+                "   curl -skf --resolve api.lunara-app.com:443:127.0.0.1 https://api.lunara-app.com/health;" \
+                "   curl -sf -H 'Host: api.lunara-app.com' http://127.0.0.1/health;" \
+                "   admin /grafana/ + bare-IP / codes equal the baseline; teams >= 30 as lunara_app;" \
+                "   journalctl -u lunara-ingestion --since @<restart> has ingestion.starting;" \
+                "   after 5 s: cephalon-lumen active and NRestarts unchanged for all three units" \
+                "   any failure after the swap: journalctl -n 50 per unit, then roll back to the" \
+                "   previous release (symlinks, unit files, nginx files, enabled/active state)" \
+                "7. refresh $LUNARA_ROOT/{deploy,migrations} from the release"
             ;;
         rollback)
             printf '%s\n' \
                 "print journalctl -n 50 for ${SERVICES[*]}" \
-                "systemctl stop ${SERVICES[*]}" \
-                "rm -f $NGINX_ENABLED $NGINX_AVAIL; nginx -t && systemctl reload nginx"
+                "systemctl stop + disable ${SERVICES[*]}" \
+                "rm -f $NGINX_ENABLED $NGINX_AVAIL $CATCHALL_ENABLED $CATCHALL_AVAIL" \
+                "nginx -t && systemctl reload nginx"
             ;;
     esac
 }
@@ -188,13 +384,14 @@ describe() {
 main() {
     exec </dev/null
     case "${1:-}" in
-        deploy) do_deploy ;;
+        preflight) preflight ;;
+        deploy) do_deploy "${2:-}" ;;
         describe) describe "${2:-}" ;;
         rollback)
             print_logs
-            rollback
+            rollback_stop
             ;;
-        *) die "usage: deploy (deploy|rollback|describe deploy|describe rollback)" ;;
+        *) die "usage: deploy (preflight|deploy <release>|rollback|describe <phase>)" ;;
     esac
 }
 
