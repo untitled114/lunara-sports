@@ -126,8 +126,10 @@ export function ScoreTicker() {
 
   if (games.length === 0) {
     return (
-      <div className="h-[120px] overflow-hidden flex items-center border-b border-border bg-surface-1 px-8">
-        <PageState kind="loading" />
+      <div className="h-[120px] overflow-hidden flex items-center border-b border-border bg-surface-0 px-8 w-full">
+        <div className="w-full">
+          <PageState kind="loading" />
+        </div>
       </div>
     );
   }
