@@ -116,14 +116,25 @@ function onCourtEmptyText(status) {
   return status === "scheduled" ? "Waiting for tip-off." : boxScoreEmptyText(status);
 }
 
-function TeamSection({ teamAbbrev, players, status }) {
+// What the side panel really lists. Live: the five on court now (starters, then every
+// "X enters the game for Y" substitution in the plays). Final with plays: the same
+// tracking run to the last play, so the five who closed the game. Final with no plays:
+// nothing to track, so the panel lists the box score's starters (flagged by the API);
+// with no starter flags either, it is just the first five box-score players.
+export function onCourtLabel(status, playsCount, hasStarters) {
+  if (status !== "final") return "On court";
+  if (playsCount > 0) return "Closing lineup";
+  return hasStarters ? "Starters" : "Players";
+}
+
+function TeamSection({ teamAbbrev, players, status, label = "On court" }) {
   const logo = getLogoUrl(teamAbbrev);
 
   return (
     <Card className="mb-4 last:mb-0">
       <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
         <TeamMark abbrev={teamAbbrev} logoUrl={logo} size="sm" />
-        <span className="t-label text-text-3">On court</span>
+        <span className="t-label text-text-3">{label}</span>
       </div>
 
       {players.length === 0 ? (
@@ -361,20 +372,24 @@ export function BoxScore({ gameId, homeTeam, awayTeam, status, side, plays: play
 
   const homePlayers = filterOnCourt(boxData?.home?.players, homeOnCourt);
   const awayPlayers = filterOnCourt(boxData?.away?.players, awayOnCourt);
+  const labelFor = (teamPlayers) =>
+    onCourtLabel(status, plays.length, (teamPlayers || []).some((p) => p.starter));
+  const homeLabel = labelFor(boxData?.home?.players);
+  const awayLabel = labelFor(boxData?.away?.players);
 
   // If side is specified, render only that team
   if (side === "away") {
     return loading ? (
       <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
     ) : (
-      <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} />
+      <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} label={awayLabel} />
     );
   }
   if (side === "home") {
     return loading ? (
       <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
     ) : (
-      <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} />
+      <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} label={homeLabel} />
     );
   }
 
@@ -388,8 +403,8 @@ export function BoxScore({ gameId, homeTeam, awayTeam, status, side, plays: play
         </div>
       ) : (
         <>
-          <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} />
-          <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} />
+          <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} label={awayLabel} />
+          <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} label={homeLabel} />
         </>
       )}
     </div>
