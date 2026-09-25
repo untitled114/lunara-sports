@@ -17,6 +17,10 @@ TOPIC_PLAYS = "raw.plays"
 # collectors outrunning flush). We never drop — just shout loudly.
 PENDING_BACKLOG_THRESHOLD = 20000
 
+# One flush writes at most this many snapshots (the first, plus what collectors
+# produced while it was writing) before leaving the rest to the next flush.
+MAX_DRAIN_ROUNDS = 5
+
 # Transient: the connection/pool/server itself is unusable right now, or Postgres
 # is asking us to back off and retry (admin shutdown, starting up, too many
 # connections, serialization/deadlock conflict, statement/command timeout).
@@ -111,6 +115,9 @@ class PostgresSink:
       so at most one flush is ever talking to Postgres at a time. This keeps
       writes — and therefore game-state upserts — committed in the order they
       were requested, not in whatever order their connections happen to finish.
+      A ``flush()`` that finds the lock held returns immediately: the flush in
+      flight drains what was produced meanwhile (up to ``MAX_DRAIN_ROUNDS``
+      snapshots). ``close()`` waits for the lock instead.
     - If the write fails transiently, the snapshot is requeued: newer game
       state (produced during the failed attempt) wins over the stale
       snapshot, and snapshot plays are put back ahead of anything newer so
@@ -157,51 +164,70 @@ class PostgresSink:
             self._backlog_logged = False
 
     async def flush(self) -> None:
-        if not self.pending:
+        """Write everything buffered — or return at once if a flush is in flight.
+
+        The flush already holding the lock drains whatever was produced while it
+        was writing, so a collector never queues behind another collector's write
+        (a per-game poll timeout would otherwise cancel it there).
+        """
+        if self._lock.locked():
             return
-        if self._pool is None:
-            raise RuntimeError("PostgresSink not connected")
+        await self._drain()
+
+    async def _drain(self) -> None:
+        """Under the lock: write snapshots until the buffer is empty (bounded)."""
         async with self._lock:
-            # Detach: anything produce()'d while we're awaiting the write below
-            # lands in a fresh buffer, never in the snapshot we're about to send.
-            games, self._games = self._games, {}
-            plays, self._plays = self._plays, []
-            game_rows, play_rows = list(games.values()), list(plays)
-            try:
-                async with self._pool.acquire(timeout=5) as conn, conn.transaction():
-                    await self._write(conn, UPSERT_GAME_SQL, game_rows)
-                    await self._write(conn, INSERT_PLAY_SQL, play_rows)
-            except _TRANSIENT_ERRORS as exc:
-                self._requeue(games, plays)
-                logger.warning(
-                    "sink.flush_deferred",
-                    error=str(exc),
-                    error_class=type(exc).__name__,  # str() is empty for e.g. TimeoutError
-                    games=len(games),
-                    plays=len(plays),
-                )
-                return
-            except Exception as exc:
-                self._requeue(games, plays)
-                logger.error(
-                    "sink.flush_failed",
-                    error=type(exc).__name__,
-                    games=len(games),
-                    plays=len(plays),
-                )
-                raise
-            except BaseException as exc:
-                # CancelledError (task cancellation at shutdown, asyncio.wait_for
-                # timeout) is a BaseException, not an Exception — it must still
-                # requeue the snapshot instead of silently dropping it.
-                self._requeue(games, plays)
-                logger.warning(
-                    "sink.flush_cancelled",
-                    error_class=type(exc).__name__,
-                    games=len(games),
-                    plays=len(plays),
-                )
-                raise
+            for _ in range(MAX_DRAIN_ROUNDS):
+                if not self.pending:
+                    return
+                if self._pool is None:
+                    raise RuntimeError("PostgresSink not connected")
+                if not await self._write_snapshot():
+                    return  # transient failure: buffer kept for the next flush
+
+    async def _write_snapshot(self) -> bool:
+        """Detach the buffers and write them; False if deferred by a transient error."""
+        # Detach: anything produce()'d while we're awaiting the write below
+        # lands in a fresh buffer, never in the snapshot we're about to send.
+        games, self._games = self._games, {}
+        plays, self._plays = self._plays, []
+        game_rows, play_rows = list(games.values()), list(plays)
+        try:
+            async with self._pool.acquire(timeout=5) as conn, conn.transaction():
+                await self._write(conn, UPSERT_GAME_SQL, game_rows)
+                await self._write(conn, INSERT_PLAY_SQL, play_rows)
+        except _TRANSIENT_ERRORS as exc:
+            self._requeue(games, plays)
+            logger.warning(
+                "sink.flush_deferred",
+                error=str(exc),
+                error_class=type(exc).__name__,  # str() is empty for e.g. TimeoutError
+                games=len(games),
+                plays=len(plays),
+            )
+            return False
+        except Exception as exc:
+            self._requeue(games, plays)
+            logger.error(
+                "sink.flush_failed",
+                error=type(exc).__name__,
+                games=len(games),
+                plays=len(plays),
+            )
+            raise
+        except BaseException as exc:
+            # CancelledError (task cancellation at shutdown, asyncio.wait_for
+            # timeout) is a BaseException, not an Exception — it must still
+            # requeue the snapshot instead of silently dropping it.
+            self._requeue(games, plays)
+            logger.warning(
+                "sink.flush_cancelled",
+                error_class=type(exc).__name__,
+                games=len(games),
+                plays=len(plays),
+            )
+            raise
+        return True
 
     def _requeue(self, games: dict[str, tuple], plays: list[tuple]) -> None:
         """Put a failed snapshot back, merged with anything produced meanwhile."""
@@ -228,7 +254,7 @@ class PostgresSink:
 
     async def close(self) -> None:
         try:
-            await self.flush()
+            await self._drain()  # waits for an in-flight flush, then writes the rest
         except Exception as exc:
             logger.error(
                 "sink.close_unflushed",

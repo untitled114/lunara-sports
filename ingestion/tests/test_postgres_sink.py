@@ -503,6 +503,7 @@ async def test_pool_acquire_timeout_keeps_buffer():
 
 async def test_event_produced_mid_flush_lands_in_a_fresh_buffer_and_survives():
     proceed = asyncio.Event()
+    written: list[list[int]] = []
 
     class SlowConn:
         def transaction(self):
@@ -510,6 +511,7 @@ async def test_event_produced_mid_flush_lands_in_a_fresh_buffer_and_survives():
 
         async def executemany(self, sql, rows):
             await proceed.wait()
+            written.append([r[1] for r in rows])
 
     class SlowPool:
         def acquire(self, timeout=None):
@@ -528,8 +530,9 @@ async def test_event_produced_mid_flush_lands_in_a_fresh_buffer_and_survives():
     proceed.set()
     await flush_task
 
-    assert sink.pending == 1  # flush #1's success didn't clobber the mid-flush event
-    await sink.flush()
+    # flush #1's success didn't clobber the mid-flush event: it drained it as a
+    # second, separate snapshot
+    assert written == [[7], [8]]
     assert sink.pending == 0
 
 
@@ -564,7 +567,7 @@ async def test_overlapping_flush_failure_keeps_its_events_pending():
         await asyncio.sleep(0)  # let the first flush take the lock and start writing
         sink.produce("raw.plays", "B", {**PLAY, "game_id": "B", "sequence_number": 7})
         flush2 = asyncio.create_task(sink.flush())
-        await asyncio.sleep(0)  # flush2 must be blocked on the lock, not racing a connection
+        await asyncio.sleep(0)  # flush2 returned at once: it never races a connection
         assert calls["n"] == 1
         release.set()
         await flush2
@@ -607,7 +610,7 @@ async def test_lock_serializes_flushes_so_game_upserts_commit_in_order():
 
     sink.produce("raw.scoreboard", "401", {**GAME, "status": "final"})
     flush2 = asyncio.create_task(sink.flush())
-    await asyncio.sleep(0)  # flush2 must wait for the lock — it cannot race ahead
+    await asyncio.sleep(0)  # flush2 returns at once; flush1 drains "final" after "live"
 
     first_may_finish.set()
     await asyncio.gather(flush1, flush2)
@@ -760,3 +763,119 @@ async def test_close_after_a_cancelled_flush_still_writes_the_requeued_events():
 
     assert sink.pending == 0
     assert written == [(INSERT_PLAY_SQL, [("401", 7)])]
+
+
+# --- Final fix wave #11: a flush that finds another in flight returns at once.
+# The in-flight flush drains what was produced meanwhile; close() still waits. ---
+
+
+class _GatedConn:
+    """executemany waits on ``gate`` for its first call only; records every write."""
+
+    def __init__(self, gate: asyncio.Event, written: list, on_write=None):
+        self.gate = gate
+        self.written = written
+        self.on_write = on_write
+        self.calls = 0
+
+    def transaction(self):
+        return _NullTx()
+
+    async def executemany(self, sql, rows):
+        self.calls += 1
+        if self.calls == 1:
+            await self.gate.wait()
+        if self.on_write is not None:
+            self.on_write()
+        self.written.append([r[1] for r in rows])
+
+
+class _OnePool:
+    def __init__(self, conn):
+        self.conn = conn
+
+    def acquire(self, timeout=None):
+        return _Acquire(self.conn)
+
+    async def close(self):
+        pass
+
+
+async def test_flush_while_another_is_in_flight_returns_immediately():
+    gate, written = asyncio.Event(), []
+    sink = PostgresSink("postgresql://x", pool=_OnePool(_GatedConn(gate, written)))
+    sink.produce("raw.plays", "401", {**PLAY, "sequence_number": 1})
+    first = asyncio.create_task(sink.flush())
+    await asyncio.sleep(0)  # first flush holds the lock, blocked mid-write
+
+    sink.produce("raw.plays", "401", {**PLAY, "sequence_number": 2})
+    await asyncio.wait_for(sink.flush(), 0.1)  # does not queue behind the lock
+    assert sink.pending == 1  # buffered for the in-flight flush
+
+    gate.set()
+    await asyncio.wait_for(first, 1)
+    assert written == [[1], [2]]  # the in-flight flush drained seq 2 too
+    assert sink.pending == 0
+
+
+async def test_close_waits_for_an_in_flight_flush_and_writes_everything():
+    gate, written = asyncio.Event(), []
+    sink = PostgresSink("postgresql://x", pool=_OnePool(_GatedConn(gate, written)))
+    sink.produce("raw.plays", "401", {**PLAY, "sequence_number": 1})
+    first = asyncio.create_task(sink.flush())
+    await asyncio.sleep(0)
+
+    sink.produce("raw.plays", "401", {**PLAY, "sequence_number": 2})
+    closing = asyncio.create_task(sink.close())
+    await asyncio.sleep(0.01)
+    assert not closing.done()  # close()'s final flush waits for the lock
+
+    gate.set()
+    await asyncio.wait_for(asyncio.gather(first, closing), 1)
+    assert sorted(s for batch in written for s in batch) == [1, 2]
+    assert sink.pending == 0
+
+
+async def test_in_flight_drain_is_bounded_when_producers_never_stop():
+    """A producer that adds a play during every write can't pin one flush forever."""
+    gate, written = asyncio.Event(), []
+    gate.set()
+    seq = iter(range(100, 200))
+    sink_ref: list[PostgresSink] = []
+
+    def produce_more():
+        sink_ref[0].produce("raw.plays", "401", {**PLAY, "sequence_number": next(seq)})
+
+    sink = PostgresSink("postgresql://x", pool=_OnePool(_GatedConn(gate, written, produce_more)))
+    sink_ref.append(sink)
+    sink.produce("raw.plays", "401", {**PLAY, "sequence_number": 1})
+    await asyncio.wait_for(sink.flush(), 1)
+    assert len(written) == postgres_module.MAX_DRAIN_ROUNDS
+    assert sink.pending == 1  # left for the next flush, not lost
+
+
+async def test_in_flight_drain_stops_after_a_transient_failure():
+    """A deferred (transient) write ends the drain; the events stay buffered."""
+    release = asyncio.Event()
+    attempts = {"n": 0}
+
+    class Conn:
+        def transaction(self):
+            return _NullTx()
+
+        async def executemany(self, sql, rows):
+            attempts["n"] += 1
+            if attempts["n"] == 1:
+                await release.wait()
+                raise OSError("reset")
+
+    sink = PostgresSink("postgresql://x", pool=_OnePool(Conn()))
+    sink.produce("raw.plays", "401", {**PLAY, "sequence_number": 1})
+    first = asyncio.create_task(sink.flush())
+    await asyncio.sleep(0)
+    sink.produce("raw.plays", "401", {**PLAY, "sequence_number": 2})
+    await asyncio.wait_for(sink.flush(), 0.1)  # returns at once
+    release.set()
+    await asyncio.wait_for(first, 1)
+    assert attempts["n"] == 1  # no retry storm inside one flush
+    assert [r[1] for r in sink._plays] == [1, 2]
