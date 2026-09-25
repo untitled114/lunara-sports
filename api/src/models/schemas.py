@@ -328,8 +328,11 @@ class StatLeader(BaseModel):
 class StatLeadersResponse(BaseModel):
     categories: dict[str, list[StatLeader]]
     # The season the leaders are from, read from ESPN's payload (e.g.
-    # "2024–25 regular season"); "" when ESPN doesn't say.
+    # "2025–26 regular season"); "" when ESPN doesn't say.
     season_label: str = ""
+    # True before this season's first regular-season game: the leaders are last
+    # season's (the same decision as the standings fallback).
+    is_previous_season: bool = False
 
 
 class TeamStatsRow(BaseModel):

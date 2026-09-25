@@ -8,6 +8,7 @@ import structlog
 
 from ..models.schemas import PlayerSeasonStats, StatLeader, StatLeadersResponse, TeamStatsRow
 from . import espn_client
+from .standings_service import choose_regular_season
 
 logger = structlog.get_logger(__name__)
 
@@ -226,13 +227,21 @@ def _leaders_season_label(ref: str) -> str:
 
 
 async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
-    """Get league stat leaders from the ESPN core API."""
+    """League stat leaders for the regular season the standings show: last season's
+    until this season's first regular-season game, then this season's."""
     categories = {}
     season_label = ""
+    is_previous = False
 
     try:
-        espn_data = await espn_client.get_stat_leaders(limit=limit)
+        choice = await choose_regular_season()
+        espn_data = (
+            await espn_client.get_stat_leaders(season=choice.year, limit=limit)
+            if choice and choice.year
+            else None
+        )
         if espn_data:
+            is_previous = choice.is_previous
             season_label = _leaders_season_label(espn_data.get("$ref", ""))
             # Build athlete lookup from cached rosters
             athlete_map = await _build_athlete_lookup()
@@ -279,7 +288,9 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
 
     # No leaders means nothing to label.
     return StatLeadersResponse(
-        categories=categories, season_label=season_label if categories else ""
+        categories=categories,
+        season_label=season_label if categories else "",
+        is_previous_season=is_previous if categories else False,
     )
 
 
