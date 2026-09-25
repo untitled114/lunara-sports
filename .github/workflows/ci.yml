@@ -64,13 +64,13 @@ jobs:
         run: cd lumen-bot && ruff check *.py tests/
 
       - name: Test ingestion
-        run: cd ingestion && pytest tests/ -v
+        run: cd ingestion && pytest tests/ -q --cov --cov-report=term-missing
 
       - name: Test api
-        run: cd api && pytest tests/ -v
+        run: cd api && pytest tests/ -q --cov --cov-report=term-missing
 
       - name: Test lumen-bot
-        run: cd lumen-bot && pytest tests/ -v
+        run: cd lumen-bot && pytest tests/ -q --cov --cov-report=term-missing
 
   java-test:
     runs-on: ubuntu-latest

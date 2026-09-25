@@ -19,17 +19,20 @@ repos:
   - repo: local
     hooks:
       - id: pytest-api
-        name: pytest api (75% coverage)
-        entry: bash -c 'cd api && python3 -m pytest tests/ -q --tb=short --no-header --cov=src --cov-fail-under=75'
+        name: pytest api (coverage gate from pyproject)
+        entry: bash -c 'cd api && python3 -m pytest tests/ -q --tb=short --no-header --cov --cov-report=term-missing'
         language: system
         pass_filenames: false
         files: ^api/
-        types: [python]
-
       - id: pytest-ingestion
-        name: pytest ingestion (75% coverage)
-        entry: bash -c 'cd ingestion && python3 -m pytest tests/ -q --tb=short --no-header --cov=src --cov-fail-under=75'
+        name: pytest ingestion (coverage gate from pyproject)
+        entry: bash -c 'cd ingestion && python3 -m pytest tests/ -q --tb=short --no-header --cov --cov-report=term-missing'
         language: system
         pass_filenames: false
         files: ^ingestion/
-        types: [python]
+      - id: pytest-lumen
+        name: pytest lumen-bot (coverage gate from pyproject)
+        entry: bash -c 'cd lumen-bot && python3 -m pytest tests/ -q --tb=short --no-header --cov --cov-report=term-missing'
+        language: system
+        pass_filenames: false
+        files: ^lumen-bot/

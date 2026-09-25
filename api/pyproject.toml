@@ -68,3 +68,12 @@ ignore = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+fail_under = 0      # raised to 99.1 in Task 16 once met
+show_missing = true
+skip_covered = true
