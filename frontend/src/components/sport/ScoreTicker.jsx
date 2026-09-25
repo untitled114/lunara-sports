@@ -104,7 +104,7 @@ function TickerItem({ game }) {
       <div className="flex flex-col items-center justify-center min-w-[100px] py-5 relative z-10 gap-1.5">
         {isLive ? (
           <>
-            <Badge variant="live" dot>
+            <Badge variant="live" dot pulse>
               Live
             </Badge>
             <span className="t-small tnum text-text-1">{game.status === 'halftime' ? 'Halftime' : `Q${game.quarter}`}</span>
