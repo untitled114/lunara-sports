@@ -4,7 +4,7 @@ import { useRef } from 'react'
 // APG tabs pattern (automatic activation): roving tabindex — only the selected tab is
 // tabbable (tabIndex 0), the rest are tabIndex -1 — and ArrowLeft/ArrowRight/Home/End
 // both move focus and select in one step.
-export function Segmented({ options, value, onChange, className }) {
+export function Segmented({ options, value, onChange, className, 'aria-label': ariaLabel }) {
   const tabRefs = useRef([])
 
   const selectByIndex = (index) => {
@@ -40,6 +40,7 @@ export function Segmented({ options, value, onChange, className }) {
   return (
     <div
       role="tablist"
+      aria-label={ariaLabel}
       className={clsx(
         // Same overflow behaviour as Tabs: never wider than its container; scrolls sideways
         // with no visible scrollbar when the options don't fit.
@@ -62,7 +63,8 @@ export function Segmented({ options, value, onChange, className }) {
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={clsx(
               't-small shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 transition-colors focus-visible:outline-2 outline-accent',
-              selected ? 'bg-surface-2 text-text-1' : 'text-text-2 hover:text-text-1'
+              // Selected = the accent fill, the same look as the top nav and the date strip.
+              selected ? 'bg-accent-fill text-white' : 'text-text-2 hover:text-text-1'
             )}
           >
             {o.label}

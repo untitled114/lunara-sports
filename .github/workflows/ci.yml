@@ -3,8 +3,8 @@ name: CI/CD
 on:
   push:
     branches: [main]
+  # Every pull request, whatever its base: a PR stacked on another branch gets CI too.
   pull_request:
-    branches: [main]
 
 jobs:
   # ─── Lint & Test ─────────────────────────────────────────────────────────────
@@ -145,6 +145,13 @@ jobs:
       - name: Design check
         working-directory: frontend
         run: npm run design:check
+
+      - name: Playwright image tag matches @playwright/test
+        working-directory: frontend
+        run: |
+          v=$(node -p "require('./package.json').devDependencies['@playwright/test']")
+          grep -q "image: mcr.microsoft.com/playwright:v$v-noble" ../.github/workflows/ci.yml \
+            || { echo "ci.yml e2e image must be mcr.microsoft.com/playwright:v$v-noble"; exit 1; }
 
       - name: Build
         working-directory: frontend

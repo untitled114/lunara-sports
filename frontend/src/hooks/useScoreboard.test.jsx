@@ -47,10 +47,11 @@ class FakeSocket {
 }
 
 function Consumer({ id, date }) {
-  const { games, connected, loading } = useScoreboard(date)
+  const { games, connected, loading, error, retry } = useScoreboard(date)
   return (
     <div data-testid={id}>
-      {loading ? 'loading' : `${games.length} games`} {connected ? 'connected' : 'offline'}
+      {loading ? 'loading' : error ? 'error' : `${games.length} games`} {connected ? 'connected' : 'offline'}
+      <button onClick={retry}>retry {id}</button>
     </div>
   )
 }
@@ -269,6 +270,42 @@ describe('useScoreboard', () => {
     act(() => vi.advanceTimersByTime(1000))
     expect(FakeSocket.instances).toHaveLength(4)
     await flush()
+  })
+
+  it('a failed fetch reports error (not an empty list) and retry() loads the games', async () => {
+    api.fetchGames.mockRejectedValueOnce(new Error('503')).mockResolvedValue(gamesOct03.data)
+    render(<Consumer id="e" date="2026-10-03" />)
+    expect(screen.getByTestId('e')).toHaveTextContent('loading')
+    await waitFor(() => expect(screen.getByTestId('e')).toHaveTextContent('error'))
+    act(() => screen.getByText('retry e').click())
+    expect(screen.getByTestId('e')).toHaveTextContent('loading')
+    await waitFor(() => expect(screen.getByTestId('e')).toHaveTextContent(`${gamesOct03.data.length} games`))
+    expect(api.fetchGames).toHaveBeenCalledTimes(2)
+  })
+
+  it('a WS update that lands before the initial fetch is not overwritten by it', async () => {
+    let resolveFetch
+    api.fetchGames.mockReturnValue(new Promise((r) => { resolveFetch = r }))
+    render(<Consumer id="w" date={todayET()} />)
+    act(() => {
+      FakeSocket.instances[0].open()
+      FakeSocket.instances[0].message({ type: 'scoreboard_update', data: gamesJan15Final.data })
+    })
+    const n = gamesJan15Final.data.length
+    expect(screen.getByTestId('w')).toHaveTextContent(`${n} games`)
+    await act(async () => resolveFetch(gamesOct03.data))
+    expect(screen.getByTestId('w')).toHaveTextContent(`${n} games`)
+  })
+
+  it('a WS update clears an earlier fetch error', async () => {
+    api.fetchGames.mockRejectedValue(new Error('timeout'))
+    render(<Consumer id="c" date={todayET()} />)
+    await waitFor(() => expect(screen.getByTestId('c')).toHaveTextContent('error'))
+    act(() => {
+      FakeSocket.instances[0].open()
+      FakeSocket.instances[0].message({ type: 'scoreboard_update', data: gamesJan15Final.data })
+    })
+    expect(screen.getByTestId('c')).toHaveTextContent(`${gamesJan15Final.data.length} games`)
   })
 
   it('leaves no timers, sockets or fetches behind after the last consumer unmounts', async () => {

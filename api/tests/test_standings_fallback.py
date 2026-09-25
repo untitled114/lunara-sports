@@ -119,3 +119,25 @@ def test_standings_abbreviations_match_games_for_every_team():
     missing = games_abbrevs - normalized
     assert not mismatched, f"standings abbreviations with no games match: {mismatched}"
     assert not missing, f"games abbreviations standings never produces: {missing}"
+
+
+@pytest.mark.asyncio
+async def test_previous_season_payload_without_conferences_falls_back_to_current():
+    """ESPN answers the previous-season request but with no children[] (no
+    conferences): that is not a usable fallback, so the current (empty) season is
+    returned instead of empty conferences flagged as last season's."""
+    prev = json.loads(json.dumps(PREV))
+    prev.pop("children")
+    get = AsyncMock(side_effect=lambda season=None: prev if season == 2026 else PRE)
+    with patch.object(standings_service.espn_client, "get_standings", get):
+        r = await standings_service.get_standings()
+    assert r.is_previous_season is False
+    assert r.season_label == "2026–27"
+    assert len(r.eastern) == 15 and len(r.western) == 15
+
+
+def test_label_without_season_years_is_empty_not_final():
+    """No seasonYears and no displayName from ESPN: no label, never " final"."""
+    assert standings_service._label("", True) == ""
+    assert standings_service._label("", False) == ""
+    assert standings_service._label("2025-26", True) == "2025–26 final"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Skeleton, Segmented, SectionHeader, DataTable, PageState } from '@/components/ui';
+import { Badge, Card, Skeleton, Segmented, SectionHeader, DataTable, PageState } from '@/components/ui';
 import { TrendingUp, Shield, Zap, Award, ChevronRight, Target, Activity } from 'lucide-react';
 import { fetchStatLeaders, fetchTeamStatsList } from '@/services/api';
 import { useTheme } from '@/context/ThemeContext';
@@ -10,8 +10,9 @@ function LeaderboardCard({ title, icon: Icon, data, unit, delay = 0 }) {
   const { playGlassClick } = useTheme();
 
   return (
-    <div
-      className="bg-surface-1 border border-border rounded-lg overflow-hidden flex flex-col h-full animate-fadeIn transition-colors duration-500 hover:border-border-strong group"
+    // The shared Card chrome; `p-0!` keeps the header and footer strips flush.
+    <Card
+      className="p-0! overflow-hidden flex flex-col h-full animate-fadeIn duration-500 group"
       style={{ animationDelay: `${delay}s` }}
     >
       {/* Card header */}
@@ -77,7 +78,7 @@ function LeaderboardCard({ title, icon: Icon, data, unit, delay = 0 }) {
           <ChevronRight className="h-3 w-3 text-text-3 group-hover/link:translate-x-1 group-hover/link:text-accent transition-all" />
         </Link>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -93,6 +94,9 @@ function StatSection({ title, subtitle, children }) {
 export default function StatsPage() {
   const [activeTab, setActiveTab] = useState('players');
   const [leaders, setLeaders] = useState({});
+  // The season the leaders are from, as the API reads it from ESPN (e.g.
+  // "2024–25 regular season"); no label when the payload doesn't say.
+  const [seasonLabel, setSeasonLabel] = useState('');
   const [teamStats, setTeamStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -107,6 +111,7 @@ export default function StatsPage() {
       .then(([leadersData, teamsData]) => {
         if (cancelled) return;
         setLeaders(leadersData?.categories || {});
+        setSeasonLabel(leadersData?.season_label || '');
         setTeamStats(teamsData || []);
       })
       .catch(() => {
@@ -158,13 +163,19 @@ export default function StatsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-border pb-10">
         <div>
-          <h1 className="t-title text-text-1">Statistics</h1>
+          <h1 className="t-title text-text-1">Stats</h1>
           <p className="t-label text-text-3 mt-3">
-            League stats <span className="mx-3 text-text-3">|</span> 2025-26 regular season
+            League stats
+            {seasonLabel && (
+              <>
+                <span className="mx-3 text-text-3">|</span> {seasonLabel}
+              </>
+            )}
           </p>
         </div>
 
         <Segmented
+          aria-label="Stats view"
           options={[
             { id: 'players', label: 'Individual' },
             { id: 'teams', label: 'Franchise' },
@@ -190,8 +201,15 @@ export default function StatsPage() {
             <LeaderboardCard title="Steals" icon={Zap} data={leaders.stl || []} unit="SPG" delay={0.5} />
           </StatSection>
 
+          {/* Shooting */}
+          <StatSection title="Shooting" subtitle="Field goal, three-point and free throw percentage">
+            <LeaderboardCard title="Field goal %" icon={Target} data={leaders.fg_pct || []} unit="FG%" delay={0.6} />
+            <LeaderboardCard title="Three-point %" icon={Target} data={leaders.three_pct || []} unit="3P%" delay={0.7} />
+            <LeaderboardCard title="Free throw %" icon={Target} data={leaders.ft_pct || []} unit="FT%" delay={0.8} />
+          </StatSection>
+
           {/* Advanced stats banner */}
-          <div className="bg-surface-1 border border-border rounded-lg p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+          <Card className="p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
             <div className="flex items-center gap-6 relative z-10">
               <div className="h-20 w-20 rounded-lg bg-surface-2 border border-border flex items-center justify-center shrink-0">
                 <Award className="h-10 w-10 text-accent" />
@@ -207,7 +225,7 @@ export default function StatsPage() {
             >
               See standings
             </Link>
-          </div>
+          </Card>
         </div>
       ) : (
         <div className="space-y-6 animate-scaleIn">

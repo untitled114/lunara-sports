@@ -2,6 +2,15 @@ import React, { useState, useCallback } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 
 const EMOJIS = ['🔥', '😱', '🧱', '🎯', '🙌', '🧊'];
+// What a screen reader says for each reaction button instead of the raw emoji.
+const EMOJI_NAMES = {
+  '🔥': 'Fire',
+  '😱': 'Shocked',
+  '🧱': 'Brick',
+  '🎯': 'Bullseye',
+  '🙌': 'Raised hands',
+  '🧊': 'Ice cold',
+};
 
 export function ReactionOverlay() {
   const [reactions, setReactions] = useState([]);
@@ -43,6 +52,7 @@ export function ReactionOverlay() {
           <button
             key={emoji}
             onClick={() => addReaction(emoji)}
+            aria-label={`React: ${EMOJI_NAMES[emoji]}`}
             className="h-10 w-10 flex items-center justify-center text-xl hover:scale-125 hover:-translate-y-1 active:scale-90 transition-all rounded-md hover:bg-surface-2/60"
           >
             {emoji}

@@ -4,7 +4,7 @@ import { ChevronRight, Trophy, Target, Activity, Shield, BarChart2, Brain, Users
 import clsx from 'clsx';
 import { useTheme } from '@/context/ThemeContext';
 import { BRANDING_IMAGES } from '@/constants/branding';
-import { Badge, SectionHeader } from '@/components/ui';
+import { Badge, Card, SectionHeader } from '@/components/ui';
 import { useScoreboard } from '@/hooks/useScoreboard';
 import { todayET } from '@/lib/et';
 
@@ -21,10 +21,13 @@ function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var
   };
 
   return (
-    <a
+    // The shared Card chrome; `transition-all!` keeps this card's lift transition
+    // (Card's transition-colors would otherwise win in the stylesheet order).
+    <Card
+      as="a"
       href={link}
       onClick={handleClick}
-      className="group block bg-surface-1 border border-border rounded-lg p-7 sm:p-10 transition-all duration-1000 hover:border-border-strong hover:-translate-y-2 animate-float relative overflow-hidden h-full"
+      className="group block p-7 sm:p-10 transition-all! duration-1000 hover:-translate-y-2 animate-float relative overflow-hidden h-full"
       style={{ animationDelay: delay }}
     >
       {image && (
@@ -44,7 +47,7 @@ function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var
           Explore <ChevronRight className="h-3.5 w-3.5" />
         </div>
       </div>
-    </a>
+    </Card>
   );
 }
 
@@ -143,7 +146,7 @@ export default function LandingPage() {
         </div>
 
         {/* What we offer */}
-        <div className="group bg-surface-1 border border-border rounded-lg p-8 sm:p-16 relative overflow-hidden">
+        <Card className="group p-8 sm:p-16 relative overflow-hidden">
           <img
             src={BRANDING_IMAGES.transitions.main1}
             alt=""
@@ -205,7 +208,7 @@ export default function LandingPage() {
               Get started <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

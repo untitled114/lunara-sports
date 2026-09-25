@@ -5,13 +5,13 @@ import { getLogoUrl } from '@/utils/teamColors';
 import { useTheme } from '@/context/ThemeContext';
 import { useFormatTime } from '@/utils/formatTime';
 import { Badge, Card, TeamMark } from '@/components/ui';
-import { seedBadge, winProbability, recordLine } from '@/lib/gameMath';
+import { seedBadge, winProbability, recordLine, periodLabel } from '@/lib/gameMath';
 
 function StatusBadge({ game, fmt }) {
   if (game.status === 'live') {
     return (
       <Badge variant="live" dot>
-        <span className="tnum">Q{game.quarter} {game.clock}</span>
+        <span className="tnum">{[periodLabel(game.quarter), game.clock].filter(Boolean).join(' ')}</span>
       </Badge>
     );
   }

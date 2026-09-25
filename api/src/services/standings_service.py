@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
 import structlog
 
 from ..models.schemas import StandingsResponse, StandingsTeam
@@ -107,6 +109,8 @@ def _season_years(data: dict, index: int) -> tuple[int | None, str]:
 
 def _label(years: str, final: bool) -> str:
     """Render a season-years string (e.g. "2025-26") as a display label."""
+    if not years:
+        return ""  # ESPN sent no season name: no label rather than " final"
     pretty = years.replace("-", "–")
     return f"{pretty} final" if final else pretty
 
@@ -124,37 +128,61 @@ def _parse(data: dict) -> tuple[list[StandingsTeam], list[StandingsTeam]]:
     return eastern, western
 
 
-async def get_standings() -> StandingsResponse:
-    """Current standings; before the regular season starts, last season's final standings."""
+@dataclass
+class SeasonChoice:
+    """Which regular season to show, decided once for standings and stat leaders.
+
+    `year` is ESPN's end-year for that season (2026 = 2025-26), `years` its display
+    years ("2025-26"), `is_previous` whether it is last season's (the current one has
+    no regular-season games yet). `eastern`/`western` are that season's parsed
+    standings.
+    """
+
+    year: int | None
+    years: str
+    is_previous: bool
+    eastern: list[StandingsTeam] = field(default_factory=list)
+    western: list[StandingsTeam] = field(default_factory=list)
+
+
+async def choose_regular_season() -> SeasonChoice | None:
+    """The current regular season once any regular-season game is played; before that,
+    the previous completed regular season. None when ESPN has no standings at all.
+
+    ESPN's default standings are the regular season (seasonType 2), so preseason games
+    never count. If the previous season can't be loaded (or has no conferences), the
+    current season is used.
+    """
     data = await espn_client.get_standings(season=None)
     if not data:
-        return StandingsResponse(eastern=[], western=[])
+        return None
 
     eastern, western = _parse(data)
-    _, cur_years = _season_years(data, 0)
+    cur_year, cur_years = _season_years(data, 0)
+    current = SeasonChoice(cur_year, cur_years, False, eastern, western)
     if any(t.w + t.l for t in eastern + western):
-        return StandingsResponse(
-            eastern=eastern,
-            western=western,
-            season=cur_years,
-            season_label=_label(cur_years, final=False),
-        )
+        return current
 
     prev_year, prev_years = _season_years(data, 1)
     prev = await espn_client.get_standings(season=prev_year) if prev_year else None
     if not prev:
-        return StandingsResponse(
-            eastern=eastern,
-            western=western,
-            season=cur_years,
-            season_label=_label(cur_years, final=False),
-        )
-
+        return current
     p_east, p_west = _parse(prev)
+    if not (p_east or p_west):
+        # A previous-season payload with no conferences is no fallback at all.
+        return current
+    return SeasonChoice(prev_year, prev_years, True, p_east, p_west)
+
+
+async def get_standings() -> StandingsResponse:
+    """Current standings; before the regular season starts, last season's final standings."""
+    choice = await choose_regular_season()
+    if choice is None:
+        return StandingsResponse(eastern=[], western=[])
     return StandingsResponse(
-        eastern=p_east,
-        western=p_west,
-        season=prev_years,
-        season_label=_label(prev_years, final=True),
-        is_previous_season=True,
+        eastern=choice.eastern,
+        western=choice.western,
+        season=choice.years,
+        season_label=_label(choice.years, final=choice.is_previous),
+        is_previous_season=choice.is_previous,
     )

@@ -42,6 +42,7 @@ function FilterBar({ filters, onChange }) {
         <div key={section.key} className="flex flex-col gap-2 min-w-0 max-w-full">
           <span className="t-label text-text-3">{section.label}</span>
           <Segmented
+            aria-label={section.label}
             options={section.options.map((opt) => ({ id: opt, label: opt === 'star_tier' ? 'Star' : opt }))}
             value={filters[section.key]}
             onChange={(value) => onChange(section.key, value)}

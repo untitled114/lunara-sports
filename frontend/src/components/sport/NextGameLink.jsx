@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 import { fetchNextGameDate } from '@/services/api';
 import { formatLongDay } from '@/lib/et';
 
@@ -34,15 +35,16 @@ export function useNextGameDate(after) {
  * the same copy and style as the scoreboard's empty state. Renders nothing while the
  * lookup is pending or when it fails (the link is optional), and "No games scheduled yet."
  * when the lookup succeeds with no date. It adds no tap sound (sounds stay exactly as-is).
+ * `className` only adds layout (the ticker centres it on its one-line empty state).
  */
-export function NextGameLink({ after }) {
+export function NextGameLink({ after, className }) {
   const next = useNextGameDate(after);
 
   if (next.date) {
     return (
       <Link
         to={`/scoreboard?date=${next.date}`}
-        className="t-small text-accent hover:text-accent-hover"
+        className={clsx('t-small text-accent hover:text-accent-hover transition-colors', className)}
       >
         Next game: {formatLongDay(next.date)} →
       </Link>

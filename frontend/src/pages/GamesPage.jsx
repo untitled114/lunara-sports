@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { fetchStandings, fetchNextGameDate, buildStandingsLookup } from '@/services/api';
+import { useSearchParams } from 'react-router-dom';
+import { fetchStandings, buildStandingsLookup } from '@/services/api';
 import { GameCard } from '@/components/sport/GameCard';
 import { DateNav } from '@/components/sport/DateNav';
+import { NextGameLink } from '@/components/sport/NextGameLink';
 import { PageState, Segmented } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
 import { useScoreboard } from '@/hooks/useScoreboard';
-import { todayET, addDaysISO, formatLongDay } from '@/lib/et';
+import { todayET, addDaysISO } from '@/lib/et';
 
 const statusOrder = { live: 0, halftime: 1, scheduled: 2, final: 3 };
 
@@ -31,8 +32,6 @@ export default function GamesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
-  // { status: 'loading' | 'ok' | 'error', date }: only an 'ok' null means nothing is scheduled.
-  const [next, setNext] = useState({ status: 'loading', date: null });
   const [filter, setFilter] = useState('all');
 
   const { playGlassClick } = useTheme();
@@ -42,8 +41,15 @@ export default function GamesPage() {
   const rawDate = searchParams.get('date');
   const dateStr = isValidISODate(rawDate) ? rawDate : today;
 
-  // Games come from the shared WS scoreboard channel (REST fallback when disconnected)
-  const { games: rawGames } = useScoreboard(dateStr);
+  // Games come from the shared WS scoreboard channel (REST fallback when disconnected).
+  // Until they have loaded the page shows the loading state, never "No games today";
+  // a failed load shows the error state with "Try again".
+  const {
+    games: rawGames,
+    loading: gamesLoading,
+    error: gamesError,
+    retry: retryGames,
+  } = useScoreboard(dateStr);
   const games = [...rawGames].sort((a, b) => (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4));
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
@@ -74,16 +80,6 @@ export default function GamesPage() {
     return () => { cancelled = true; };
   }, [dateStr, reloadKey]);
 
-  // Next game day after the selected date, for the empty state's next step.
-  useEffect(() => {
-    let cancelled = false;
-    setNext({ status: 'loading', date: null });
-    fetchNextGameDate(dateStr)
-      .then((d) => { if (!cancelled) setNext({ status: 'ok', date: d || null }); })
-      .catch(() => { if (!cancelled) setNext({ status: 'error', date: null }); });
-    return () => { cancelled = true; };
-  }, [dateStr]);
-
   const filteredGames = games.filter((g) => {
     if (filter === 'all') return true;
     if (filter === 'live') return g.status === 'live' || g.status === 'halftime';
@@ -100,26 +96,16 @@ export default function GamesPage() {
   const count = filteredGames.length;
 
   let content;
-  if (loading) {
+  if (loading || gamesLoading) {
     content = <PageState kind="loading" />;
+  } else if (gamesError) {
+    content = <PageState kind="error" title="Couldn't load games." onRetry={retryGames} />;
   } else if (games.length === 0) {
     content = (
       <PageState
         kind="empty"
         title={dateStr === today ? 'No games today.' : 'No games on this day.'}
-        action={
-          next.date ? (
-            <Link
-              to={`/scoreboard?date=${next.date}`}
-              onClick={() => playGlassClick()}
-              className="t-small text-accent hover:text-accent-hover"
-            >
-              Next game: {formatLongDay(next.date)} →
-            </Link>
-          ) : next.status === 'ok' ? (
-            <span className="t-small text-text-2">No games scheduled yet.</span>
-          ) : null
-        }
+        action={<NextGameLink after={dateStr} />}
       />
     );
   } else if (count === 0) {
@@ -143,7 +129,7 @@ export default function GamesPage() {
       </div>
 
       <div className="animate-boot flex flex-wrap items-center justify-between gap-3" style={{ animationDelay: '0.2s' }}>
-        <Segmented options={FILTERS} value={filter} onChange={handleFilterChange} />
+        <Segmented aria-label="Filter games" options={FILTERS} value={filter} onChange={handleFilterChange} />
         <span className="t-label text-text-3 tnum">{count} {count === 1 ? 'game' : 'games'}</span>
       </div>
 

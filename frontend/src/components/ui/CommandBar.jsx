@@ -123,12 +123,12 @@ export function CommandBar() {
             ref={inputRef}
             type="text"
             placeholder="Search teams, standings, or players... (Esc to close)"
-            className="flex-1 bg-transparent border-none t-body text-text-1 focus:outline-none placeholder-text-3"
+            className="flex-1 bg-transparent border-none t-body text-text-1 placeholder-text-3"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-surface-1 rounded-md transition-colors">
-            <X className="h-4 w-4 text-text-3" />
+          <button onClick={() => setIsOpen(false)} aria-label="Close search" className="p-1 hover:bg-surface-1 rounded-md transition-colors">
+            <X className="h-4 w-4 text-text-3" aria-hidden="true" />
           </button>
         </div>
 

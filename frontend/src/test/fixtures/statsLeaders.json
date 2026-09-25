@@ -1,5 +1,5 @@
 {
-  "_source": "GET https://api.lunara-app.com/stats/leaders?limit=10, captured 2026-09-25T16:55:30Z. Real stat leader data for the 2025-26 season.",
+  "_source": "GET https://api.lunara-app.com/stats/leaders?limit=10, captured 2026-09-25T16:55:30Z. Real stat leader data. The API requests ESPN season 2025, which is the 2024-25 regular season (ESPN names a season by its end year); the note here previously said 2025-26 in error.",
   "data": {
     "categories": {
       "pts": [

@@ -40,6 +40,7 @@ function gbLabel(gb) {
 // ─── Roster tab ─────────────────────────────────────────────
 
 function RosterTab({ roster, loading }) {
+  const { playGlassClick } = useTheme();
   if (loading) return <PageState kind="loading" />;
   if (roster.length === 0) return <PageState kind="empty" title="No roster listed yet." />;
 
@@ -52,7 +53,11 @@ function RosterTab({ roster, loading }) {
           key: 'name',
           label: 'Player',
           render: (p) => (
-            <Link to={`/player/${p.id}`} className="flex items-center gap-2 text-text-1 hover:text-accent">
+            <Link
+              to={`/player/${p.id}`}
+              onClick={() => playGlassClick()}
+              className="flex items-center gap-2 text-text-1 hover:text-accent"
+            >
               {p.headshot_url ? (
                 <img
                   src={getHeadshotUrl(p.headshot_url, 64)}
@@ -343,7 +348,7 @@ export default function TeamDetailPage() {
       </Card>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Segmented options={TABS} value={activeTab} onChange={handleTabChange} />
+        <Segmented aria-label="Team sections" options={TABS} value={activeTab} onChange={handleTabChange} />
         <p className="t-small text-text-2">Roster size: {roster.length || '—'}</p>
       </div>
 

@@ -1,3 +1,5 @@
+import { todayET, addDaysISO } from "@/lib/et";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export async function fetchGames(date) {
@@ -133,10 +135,8 @@ export async function fetchBoxScore(gameId) {
 }
 
 export async function fetchNextGame(abbrev) {
-  // Get tomorrow's games and find one involving this team
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const dateStr = tomorrow.toISOString().slice(0, 10);
+  // Get tomorrow's games (tomorrow in ET, where NBA dates live) and find one involving this team
+  const dateStr = addDaysISO(todayET(), 1);
   try {
     const games = await fetchGames(dateStr);
     return games.find(g => g.home_team === abbrev || g.away_team === abbrev) || null;

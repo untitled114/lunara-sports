@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Signal } from 'lucide-react';
 import clsx from 'clsx';
@@ -7,8 +6,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { useScoreboard } from '@/hooks/useScoreboard';
 import { useFormatTime } from '@/utils/formatTime';
 import { Badge, Skeleton } from '@/components/ui';
-import { todayET, formatLongDay } from '@/lib/et';
-import { fetchNextGameDate } from '@/services/api';
+import { todayET } from '@/lib/et';
+import { periodLabel } from '@/lib/gameMath';
+import { NextGameLink } from '@/components/sport/NextGameLink';
 
 function TickerItem({ game }) {
   const isLive = game.status === 'live' || game.status === 'halftime';
@@ -30,11 +30,11 @@ function TickerItem({ game }) {
       onClick={() => playGlassClick()}
       className={clsx(
         'relative flex items-stretch px-6 sm:px-8 border-r border-border hover:bg-surface-2 transition-colors min-w-[280px] h-full group',
-        isLive && 'bg-accent/5'
+        isLive && 'bg-live/5'
       )}
     >
-      {/* Live state accent */}
-      {isLive && <div className="absolute top-0 left-0 right-0 h-[3px] bg-accent z-20" />}
+      {/* Live state stripe: --live is the one live color (as on GameCard). */}
+      {isLive && <div className="absolute top-0 left-0 right-0 h-[3px] bg-live z-20" />}
 
       {/* Teams */}
       <div className="flex flex-col justify-center gap-4 py-5 relative z-10 flex-1">
@@ -91,14 +91,14 @@ function TickerItem({ game }) {
             <Badge variant="live" dot pulse>
               Live
             </Badge>
-            <span className="t-small tnum text-text-1">{game.status === 'halftime' ? 'Halftime' : `Q${game.quarter}`}</span>
+            <span className="t-small tnum text-text-1">{game.status === 'halftime' ? 'Halftime' : periodLabel(game.quarter)}</span>
             {game.clock && <span className="t-label tnum text-text-3">{game.clock}</span>}
           </>
         ) : isFinal ? (
           <>
             <span className="t-label text-text-3">Final</span>
             {game.quarter > 4 && (
-              <span className="t-label text-text-3">{game.quarter === 5 ? 'OT' : `${game.quarter - 4}OT`}</span>
+              <span className="t-label text-text-3">{periodLabel(game.quarter)}</span>
             )}
           </>
         ) : (
@@ -118,37 +118,31 @@ function TickerItem({ game }) {
   );
 }
 
-// Loaded, no games today: plain text plus a link to the next game day when
-// the read-only lookup resolves one.
-function EmptyTicker() {
-  const [next, setNext] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    // The next-game link is optional: a failed lookup just hides it.
-    fetchNextGameDate(todayET())
-      .catch(() => null)
-      .then((date) => {
-        if (!cancelled) setNext(date);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+// Loaded, no games today: plain text plus the shared next-game link (the same lookup,
+// copy and fallbacks as the scoreboard's empty state).
+function EmptyTicker({ today }) {
   return (
     <div className="h-[120px] flex items-center justify-center gap-3 border-b border-border bg-surface-1 px-8">
       <span className="t-small text-text-2">No games today.</span>
-      {next && (
-        // inline-flex + items-center: on mobile every link gets a 36px tap-target
-        // min-height, and this keeps its text centred on the "No games today" line.
-        <Link
-          to={`/scoreboard?date=${next}`}
-          className="inline-flex items-center t-small text-accent hover:text-accent-hover transition-colors"
-        >
-          Next game: {formatLongDay(next)} →
-        </Link>
-      )}
+      {/* inline-flex + items-center: on mobile every link gets a 36px tap-target
+          min-height, and this keeps its text centred on the "No games today" line. */}
+      <NextGameLink after={today} className="inline-flex items-center" />
+    </div>
+  );
+}
+
+// The games couldn't be loaded: say so (never "No games today") and offer a retry.
+function ErrorTicker({ onRetry }) {
+  return (
+    <div className="h-[120px] flex items-center justify-center gap-3 border-b border-border bg-surface-1 px-8">
+      <span className="t-small text-text-2">Couldn&rsquo;t load today&rsquo;s games.</span>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="inline-flex items-center t-small text-accent hover:text-accent-hover transition-colors"
+      >
+        Try again
+      </button>
     </div>
   );
 }
@@ -156,7 +150,7 @@ function EmptyTicker() {
 export function ScoreTicker() {
   const { playGlassClick } = useTheme();
   const todayStr = todayET();
-  const { games, loading } = useScoreboard(todayStr);
+  const { games, loading, error, retry } = useScoreboard(todayStr);
 
   if (loading) {
     return (
@@ -166,8 +160,12 @@ export function ScoreTicker() {
     );
   }
 
+  if (error) {
+    return <ErrorTicker onRetry={retry} />;
+  }
+
   if (games.length === 0) {
-    return <EmptyTicker />;
+    return <EmptyTicker today={todayStr} />;
   }
 
   // Sort: live first, then scheduled, then final
@@ -187,7 +185,7 @@ export function ScoreTicker() {
         <div className="flex flex-col items-start gap-2">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-md bg-accent/10 flex items-center justify-center border border-accent/20">
-              <Signal className={clsx('h-4 w-4', liveCount > 0 ? 'text-accent animate-pulse' : 'text-text-3')} />
+              <Signal className={clsx('h-4 w-4', liveCount > 0 ? 'text-live animate-pulse' : 'text-text-3')} />
             </div>
             <span className="t-body font-semibold text-text-1">Today&rsquo;s games</span>
           </div>

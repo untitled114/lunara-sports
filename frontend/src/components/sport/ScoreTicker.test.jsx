@@ -76,6 +76,32 @@ describe('ScoreTicker', () => {
     expect(screen.queryByRole('link', { name: /Next game/ })).toBeNull()
   })
 
+  it('error: says the games could not load (not "No games today.") and "Try again" retries', async () => {
+    const retry = vi.fn()
+    useScoreboardMock.mockReturnValue({ games: [], connected: false, loading: false, error: true, retry })
+    wrap(<ScoreTicker />)
+    expect(screen.getByText('Couldn’t load today’s games.')).toBeInTheDocument()
+    expect(screen.queryByText('No games today.')).toBeNull()
+    expect(screen.queryByRole('link', { name: /Next game/ })).toBeNull()
+    screen.getByRole('button', { name: 'Try again' }).click()
+    expect(retry).toHaveBeenCalledTimes(1)
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('empty with nothing scheduled: the shared next-game copy "No games scheduled yet."', async () => {
+    useScoreboardMock.mockReturnValue({ games: [], connected: false, loading: false })
+    global.fetch.mockResolvedValue({ ok: true, json: async () => ({ date: null }) })
+    wrap(<ScoreTicker />)
+    expect(await screen.findByText('No games scheduled yet.')).toBeInTheDocument()
+  })
+
+  it('live: the stripe uses the live color, not the accent', () => {
+    useScoreboardMock.mockReturnValue({ games: [liveGame], connected: true, loading: false })
+    const { container } = wrap(<ScoreTicker />)
+    expect(container.querySelector('.bg-live')).not.toBeNull()
+    expect(container.querySelector('.bg-accent')).toBeNull()
+  })
+
   it('scheduled: shows tip-off time and a "games today" status (not live, not all final)', () => {
     useScoreboardMock.mockReturnValue({ games: [scheduledGame], connected: false, loading: false })
     wrap(<ScoreTicker />)

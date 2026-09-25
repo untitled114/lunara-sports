@@ -1,13 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Clock, BarChart3, Bell, TrendingUp } from 'lucide-react';
+import { Home, Calendar, ListOrdered, BarChart3, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 
+// The same icon per destination as the top menu (AppLayout NAV_LINKS), so one icon
+// never means two places.
 const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: Home },
-  { to: '/scoreboard', label: 'Scoreboard', icon: Clock },
-  { to: '/standings', label: 'Standings', icon: BarChart3 },
+  { to: '/scoreboard', label: 'Scoreboard', icon: Calendar },
+  { to: '/standings', label: 'Standings', icon: ListOrdered },
   { to: '/picks', label: 'Picks', icon: TrendingUp },
-  { to: '/stats', label: 'Stats', icon: Bell },
+  { to: '/stats', label: 'Stats', icon: BarChart3 },
 ];
 
 export function BottomNav() {

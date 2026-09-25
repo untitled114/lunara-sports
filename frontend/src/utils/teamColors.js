@@ -32,7 +32,9 @@ export const TEAM_COLORS = {
 };
 
 export const getTeamColor = (abbrev) => {
-  return TEAM_COLORS[abbrev] || { primary: '#6366f1', secondary: '#1e293b', text: '#FFFFFF' };
+  // Unknown team: the design tokens (as ThemeContext's no-team default), not the retired
+  // #6366f1 indigo.
+  return TEAM_COLORS[abbrev] || { primary: 'var(--accent)', secondary: 'var(--surface-2)', text: 'var(--text-1)' };
 };
 
 export const getLogoUrl = (abbrev) => {
@@ -60,4 +62,15 @@ export const getHeadshotUrl = (url, size = 96) => {
   if (url.includes('/combiner/')) return url;
   const path = url.replace('https://a.espncdn.com', '');
   return `https://a.espncdn.com/combiner/i?img=${path}&w=${size}&h=${size}`;
+};
+
+/**
+ * The ESPN athlete id a headshot URL is named by (".../players/full/6477.png", raw or
+ * through the combiner), or null. The box score API sends no player id, and ESPN files
+ * every headshot under the athlete id that /players/:id uses, so this is the one
+ * reliable id a box-score row carries. No match means no link, never a guessed id.
+ */
+export const playerIdFromHeadshot = (url) => {
+  const m = typeof url === 'string' ? url.match(/\/players\/full\/(\d+)\.png/) : null;
+  return m ? m[1] : null;
 };

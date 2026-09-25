@@ -141,7 +141,7 @@ const Tabs = ({ tabs = [], activeTab, onChange, variant = 'underline', urlSync =
                 tab.disabled
                   ? 'text-text-3 cursor-not-allowed'
                   : isActive
-                    ? 'bg-surface-2 text-text-1'
+                    ? 'bg-accent-fill text-white' // one selected look site-wide (Segmented, nav, date strip)
                     : 'text-text-2 hover:text-text-1 cursor-pointer'
               )}
             >
@@ -152,7 +152,7 @@ const Tabs = ({ tabs = [], activeTab, onChange, variant = 'underline', urlSync =
                 <span
                   className={clsx(
                     't-label rounded-sm px-2 py-0.5',
-                    isActive ? 'bg-accent/20 text-accent' : 'bg-surface-1 text-text-2'
+                    isActive ? 'bg-accent-fill-hover text-white' : 'bg-surface-1 text-text-2'
                   )}
                 >
                   {tab.badge}

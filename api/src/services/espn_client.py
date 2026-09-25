@@ -89,11 +89,15 @@ async def get_team_roster(espn_id: int) -> dict | None:
     )
 
 
-async def get_stat_leaders(limit: int = 10) -> dict | None:
-    """Fetch league stat leaders from ESPN core API (seasonal per-game)."""
+async def get_stat_leaders(season: int, limit: int = 10) -> dict | None:
+    """Fetch league stat leaders (per-game) for one regular season from the ESPN core API.
+
+    `season` is ESPN's end-year (2026 = 2025-26); types/2 is the regular season.
+    """
     return await _cached_get(
-        f"espn:leaders:v2:{limit}",
-        "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2025/types/2/leaders",
+        f"espn:leaders:v3:{season}:{limit}",
+        "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/"
+        f"{season}/types/2/leaders",
         LEADERS_TTL,
         params={"limit": str(limit)},
     )

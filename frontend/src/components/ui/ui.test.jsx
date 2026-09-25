@@ -5,6 +5,18 @@ import { Card, Badge, Stat, Segmented, DataTable, TeamMark, PageState, SectionHe
 import Tabs from './Tabs'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+// Real captures only (e2e/fixtures/README.md, src/test/fixtures/*._source): no values
+// typed in by hand.
+import REAL_STANDINGS from '../../../e2e/fixtures/api/standings.json'
+import REAL_MIA from '../../../e2e/fixtures/api/teams_MIA.json'
+import REAL_MIA_ROSTER from '../../../e2e/fixtures/api/teams_MIA_roster.json'
+import statsLeaders from '@/test/fixtures/statsLeaders.json'
+
+const [PTS1, PTS2] = statsLeaders.data.categories.pts
+// The real gap between the top two scorers, as a Stat delta.
+const GAP = Number((Number(PTS1.value) - Number(PTS2.value)).toFixed(1))
+const [DET, BOS] = REAL_STANDINGS.eastern
+const BAM = REAL_MIA_ROSTER.find((p) => p.name === 'Bam Adebayo')
 
 describe('ui', () => {
   it('Card uses surface-1, border and 16px radius; live adds glow class', () => {
@@ -42,24 +54,32 @@ describe('ui', () => {
     expect(screen.getByText('Still').querySelector('.animate-ping')).toBeNull()
   })
   it('Stat renders tabular value and delta with an sr-only direction and a hidden glyph', () => {
-    const { rerender } = render(<Stat label="PTS" value="32.7" delta={1.2} />)
-    expect(screen.getByText('32.7')).toHaveClass('tnum')
+    expect(GAP).toBeGreaterThan(0)
+    const { rerender } = render(<Stat label="PTS" value={PTS1.value} delta={GAP} />)
+    expect(screen.getByText(PTS1.value)).toHaveClass('tnum')
     const upGlyph = screen.getByText(/▲/)
     expect(upGlyph).toBeInTheDocument()
     expect(upGlyph).toHaveAttribute('aria-hidden', 'true')
-    expect(screen.getByText('up 1.2')).toHaveClass('sr-only')
+    expect(screen.getByText(`up ${GAP}`)).toHaveClass('sr-only')
 
-    rerender(<Stat label="PTS" value="30.1" delta={-0.8} />)
+    rerender(<Stat label="PTS" value={PTS2.value} delta={-GAP} />)
     const downGlyph = screen.getByText(/▼/)
     expect(downGlyph).toHaveAttribute('aria-hidden', 'true')
-    expect(screen.getByText('down 0.8')).toHaveClass('sr-only')
+    expect(screen.getByText(`down ${GAP}`)).toHaveClass('sr-only')
   })
   it('Segmented calls onChange and marks the active option', async () => {
     const onChange = vi.fn()
     render(<Segmented options={[{ id: 'all', label: 'All' }, { id: 'live', label: 'Live' }]} value="all" onChange={onChange} />)
     expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true')
+    // One selected look site-wide: the accent fill, as on the top nav and date strip.
+    expect(screen.getByRole('tab', { name: 'All' })).toHaveClass('bg-accent-fill', 'text-white')
+    expect(screen.getByRole('tab', { name: 'Live' })).not.toHaveClass('bg-accent-fill')
     await userEvent.click(screen.getByRole('tab', { name: 'Live' }))
     expect(onChange).toHaveBeenCalledWith('live')
+  })
+  it('Segmented names its tablist when given an aria-label', () => {
+    render(<Segmented aria-label="Filter games" options={[{ id: 'all', label: 'All' }]} value="all" onChange={() => {}} />)
+    expect(screen.getByRole('tablist', { name: 'Filter games' })).toBeInTheDocument()
   })
   it('Segmented uses roving tabindex and moves focus + selection with arrow keys', async () => {
     const onChange = vi.fn()
@@ -95,12 +115,12 @@ describe('ui', () => {
     expect(final).toHaveFocus()
   })
   it('DataTable renders headers and tabular numeric cells', () => {
-    render(<DataTable columns={[{ key: 'team', label: 'Team' }, { key: 'w', label: 'W', numeric: true }]} rows={[{ team: 'DET', w: 60 }]} getKey={(r) => r.team} />)
+    render(<DataTable columns={[{ key: 'abbrev', label: 'Team' }, { key: 'w', label: 'W', numeric: true }]} rows={[DET]} getKey={(r) => r.abbrev} />)
     expect(screen.getByRole('columnheader', { name: 'W' })).toBeInTheDocument()
-    expect(screen.getByText('60')).toHaveClass('tnum')
+    expect(screen.getByText(String(DET.w))).toHaveClass('tnum')
   })
   it('DataTable is unsorted by default: no button, no aria-sort, when sortable is absent', () => {
-    render(<DataTable columns={[{ key: 'w', label: 'W', numeric: true }]} rows={[{ w: 60 }]} getKey={(r) => r.w} />)
+    render(<DataTable columns={[{ key: 'w', label: 'W', numeric: true }]} rows={[DET]} getKey={(r) => r.abbrev} />)
     const header = screen.getByRole('columnheader', { name: 'W' })
     expect(header).not.toHaveAttribute('aria-sort')
     expect(screen.queryByRole('button', { name: 'W' })).not.toBeInTheDocument()
@@ -108,12 +128,12 @@ describe('ui', () => {
   it('DataTable sortable columns render a button with aria-sort and report clicks via onSortChange', async () => {
     const onSortChange = vi.fn()
     const columns = [
-      { key: 'team', label: 'Team', sortable: true },
+      { key: 'abbrev', label: 'Team', sortable: true },
       { key: 'w', label: 'W', numeric: true, sortable: true },
     ]
-    const rows = [{ team: 'DET', w: 60 }, { team: 'BOS', w: 56 }]
+    const rows = [DET, BOS]
     const { rerender } = render(
-      <DataTable columns={columns} rows={rows} getKey={(r) => r.team} sort={{ key: 'w', dir: 'desc' }} onSortChange={onSortChange} />
+      <DataTable columns={columns} rows={rows} getKey={(r) => r.abbrev} sort={{ key: 'w', dir: 'desc' }} onSortChange={onSortChange} />
     )
     const wHeader = screen.getByRole('columnheader', { name: 'W' })
     expect(wHeader).toHaveAttribute('aria-sort', 'descending')
@@ -124,15 +144,15 @@ describe('ui', () => {
     expect(teamHeader).toHaveAttribute('aria-sort', 'none')
 
     await userEvent.click(screen.getByRole('button', { name: 'Team' }))
-    expect(onSortChange).toHaveBeenCalledWith('team')
+    expect(onSortChange).toHaveBeenCalledWith('abbrev')
 
     rerender(
-      <DataTable columns={columns} rows={rows} getKey={(r) => r.team} sort={{ key: 'w', dir: 'asc' }} onSortChange={onSortChange} />
+      <DataTable columns={columns} rows={rows} getKey={(r) => r.abbrev} sort={{ key: 'w', dir: 'asc' }} onSortChange={onSortChange} />
     )
     expect(screen.getByText('▲')).toHaveAttribute('aria-hidden', 'true')
   })
   it('TeamMark shows abbreviation and logo alt', () => {
-    render(<TeamMark abbrev="MIA" logoUrl="https://x/mia.png" />)
+    render(<TeamMark abbrev={REAL_MIA.abbrev} logoUrl={REAL_MIA.logo_url} />)
     expect(screen.getByText('MIA')).toBeInTheDocument()
     expect(screen.getByAltText('MIA logo')).toBeInTheDocument()
   })
@@ -188,14 +208,14 @@ describe('ui', () => {
           { key: 'height', label: 'Ht', nowrap: true },
           { key: 'weight', label: 'Wt', numeric: true },
         ]}
-        rows={[{ name: 'Bam Adebayo', height: '6\' 9"', weight: '260' }]}
-        getKey={(r) => r.name}
+        rows={[BAM]}
+        getKey={(r) => r.id}
       />
     )
-    expect(screen.getByText('6\' 9"')).toHaveClass('whitespace-nowrap')
-    expect(screen.getByText('6\' 9"')).not.toHaveClass('tnum')
-    expect(screen.getByText('260')).toHaveClass('whitespace-nowrap', 'tnum')
-    expect(screen.getByText('Bam Adebayo')).not.toHaveClass('whitespace-nowrap')
+    expect(screen.getByText(BAM.height)).toHaveClass('whitespace-nowrap')
+    expect(screen.getByText(BAM.height)).not.toHaveClass('tnum')
+    expect(screen.getByText(BAM.weight)).toHaveClass('whitespace-nowrap', 'tnum')
+    expect(screen.getByText(BAM.name)).not.toHaveClass('whitespace-nowrap')
   })
 
   it('SectionHeader right-aligns a caption that wraps', () => {

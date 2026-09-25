@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { scan } from '../../scripts/check-design.mjs'
@@ -72,6 +72,7 @@ describe('PlayersPage', () => {
   })
 
   it('search with no results shows the plain "no players match" copy', async () => {
+    // GET /players?search=zzz on the live API answers [] (checked 2026-09-25).
     api.fetchPlayers.mockResolvedValue([])
     renderWithRouter(<PlayersPage />)
 
@@ -98,20 +99,13 @@ describe('PlayersPage', () => {
 
 describe('PlayerProfilePage', () => {
   it('renders season averages as Stats with tabular values', async () => {
-    api.fetchPlayerDetail.mockResolvedValue({
-      id: '123',
-      name: 'Test Player',
-      team: 'Test Team',
-      team_abbrev: 'TST',
-      position: 'G',
-      jersey: '7',
-    })
-    api.fetchPlayerStats.mockResolvedValue({ ppg: '24.5', rpg: '5.1', apg: '3.2', gp: '40' })
-    api.fetchPlayerGameLog.mockResolvedValue([])
+    api.fetchPlayerDetail.mockResolvedValue(REAL_BAM)
+    api.fetchPlayerStats.mockResolvedValue(REAL_BAM_STATS)
+    api.fetchPlayerGameLog.mockResolvedValue(REAL_BAM_LOG)
 
-    renderWithRouter(<PlayerProfilePage />, { route: '/player/123', path: '/player/:id' })
+    renderWithRouter(<PlayerProfilePage />, { route: '/player/4066261', path: '/player/:id' })
 
-    const value = await screen.findByText('24.5')
+    const [value] = await screen.findAllByText(REAL_BAM_STATS.ppg)
     expect(value).toHaveClass('tnum')
     expect(screen.getByText('Points')).toBeInTheDocument()
   })
@@ -121,64 +115,45 @@ describe('PlayerProfilePage', () => {
     api.fetchPlayerStats.mockResolvedValue(null)
     api.fetchPlayerGameLog.mockResolvedValue([])
 
-    renderWithRouter(<PlayerProfilePage />, { route: '/player/123', path: '/player/:id' })
+    renderWithRouter(<PlayerProfilePage />, { route: '/player/4066261', path: '/player/:id' })
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     })
   })
 
-  // Real fixture shape, captured from GET /players/:id/log against the live
-  // API (ruling D9: restyle only, never drop the fields the old profile
-  // rendered — the pre-design-system page showed home/away, score, STL and
-  // BLK for every recent game and it still must).
+  // Real GET /players/4066261/log capture (ruling D9: restyle only, never drop the
+  // fields the old profile rendered — the pre-design-system page showed home/away,
+  // score, STL and BLK for every recent game and it still must).
   it('keeps the home/away marker, final score, and STL/BLK on every game row', async () => {
-    api.fetchPlayerDetail.mockResolvedValue({
-      id: '4701230',
-      name: 'Jalen Johnson',
-      team: 'Atlanta Hawks',
-      team_abbrev: 'ATL',
-      position: 'F',
-      jersey: '1',
-    })
-    api.fetchPlayerStats.mockResolvedValue({ ppg: '22.5', rpg: '10.3', apg: '7.9', gp: 72 })
-    api.fetchPlayerGameLog.mockResolvedValue([
-      {
-        date: '2026-04-30',
-        team: 'ATL',
-        opponent: 'NY',
-        home_away: 'vs',
-        pts: 21,
-        reb: 8,
-        ast: 6,
-        stl: 2,
-        blk: 1,
-        fg: '7-15',
-        three: '2-5',
-        min: '32',
-        result: 'L',
-        score: '140-89',
-      },
-    ])
+    api.fetchPlayerDetail.mockResolvedValue(REAL_BAM)
+    api.fetchPlayerStats.mockResolvedValue(REAL_BAM_STATS)
+    api.fetchPlayerGameLog.mockResolvedValue(REAL_BAM_LOG)
 
-    renderWithRouter(<PlayerProfilePage />, { route: '/player/123', path: '/player/:id' })
+    renderWithRouter(<PlayerProfilePage />, { route: '/player/4066261', path: '/player/:id' })
 
-    // opponent cell combines home/away + opponent, e.g. "vs NY" (was dropped
-    // entirely in a prior pass of this rollout)
-    await screen.findByText('vs NY')
+    // The real Apr 12 game: vs ATL, W 143-117, 3 STL, 2 BLK.
+    const game = REAL_BAM_LOG.find((g) => g.date === '2026-04-12')
+    expect([game.home_away, game.opponent, game.score, game.stl, game.blk]).toEqual(['vs', 'ATL', '143-117', 3, 2])
+    const score = await screen.findByText(game.score)
+    const tr = score.closest('tr')
+    const cells = within(tr)
 
+    // opponent cell combines home/away + opponent, e.g. "vs ATL"
+    expect(cells.getByText('vs ATL')).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Score' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'STL' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'BLK' })).toBeInTheDocument()
 
-    const score = screen.getByText('140-89')
     expect(score).toHaveClass('tnum')
-    const stl = screen.getByText('2')
-    expect(stl).toHaveClass('tnum')
-    const blk = screen.getByText('1')
-    expect(blk).toHaveClass('tnum')
+    const headers = [...tr.closest('table').querySelectorAll('th')].map((th) => th.textContent)
+    const cell = (label) => tr.querySelectorAll('td')[headers.indexOf(label)]
+    expect(cell('STL')).toHaveTextContent(String(game.stl))
+    expect(cell('STL')).toHaveClass('tnum')
+    expect(cell('BLK')).toHaveTextContent(String(game.blk))
+    expect(cell('BLK')).toHaveClass('tnum')
     // An ISO date never splits at its hyphens.
-    expect(screen.getByText('2026-04-30')).toHaveClass('whitespace-nowrap')
+    expect(cells.getByText(game.date)).toHaveClass('whitespace-nowrap')
   })
 
   it('loads the headshot at 2x its 80px size through the combiner, and the tabs never overflow', async () => {
