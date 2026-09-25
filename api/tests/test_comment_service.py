@@ -5,25 +5,38 @@ from __future__ import annotations
 import uuid
 
 from src.db.models import Comment
-from src.services.comment_service import get_game_comments
+from src.services.comment_service import create_comment, get_game_comments
 
 
 class TestCreateComment:
     async def test_creates_comment(self, seeded_session):
-        user_id = uuid.UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
-        comment = Comment(
-            id=100,
+        """create_comment() itself inserts, commits and refreshes the row."""
+        user_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        comment = await create_comment(
+            seeded_session,
             user_id=user_id,
             game_id="401810001",
             body="Great game!",
         )
-        seeded_session.add(comment)
-        await seeded_session.commit()
-        await seeded_session.refresh(comment)
+        assert comment.id is not None
         assert comment.body == "Great game!"
         assert comment.game_id == "401810001"
+        assert comment.user_id == uuid.UUID(user_id)
+        assert comment.play_id is None
 
     async def test_creates_comment_with_play_id(self, seeded_session):
+        user_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        comment = await create_comment(
+            seeded_session,
+            user_id=user_id,
+            game_id="401810001",
+            body="What a shot!",
+            play_id=1,
+        )
+        assert comment.play_id == 1
+
+    async def test_creates_comment_with_manual_row(self, seeded_session):
+        """Direct ORM insert (bypassing the service) still round-trips."""
         user_id = uuid.UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
         comment = Comment(
             id=101,

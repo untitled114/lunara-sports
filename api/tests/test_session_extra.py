@@ -48,3 +48,28 @@ class TestSeedTeams:
             await seed_teams()  # should not raise
         finally:
             mod._session_factory = old
+
+    async def test_inserts_30_teams_then_noop_on_second_call(self, session_factory):
+        """seed_teams() is idempotent: it inserts all 30 NBA teams once,
+        and a second call does not error or duplicate rows (uses
+        ON CONFLICT DO NOTHING on the abbrev unique index)."""
+        from sqlalchemy import select
+
+        import src.db.session as mod
+        from src.db.models import Team
+
+        old = mod._session_factory
+        mod._session_factory = session_factory
+        try:
+            await seed_teams()
+            async with session_factory() as s:
+                rows = (await s.execute(select(Team))).scalars().all()
+                assert len(rows) == 30
+                assert {t.abbrev for t in rows if t.abbrev == "BOS"} == {"BOS"}
+
+            await seed_teams()  # second call: no-op, no error, no duplicates
+            async with session_factory() as s:
+                rows = (await s.execute(select(Team))).scalars().all()
+                assert len(rows) == 30
+        finally:
+            mod._session_factory = old

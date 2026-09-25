@@ -52,6 +52,13 @@ class TestGetRecentPlays:
             result = await get_recent_plays("g1")
             assert result == []
 
+    async def test_returns_empty_list_for_game_with_no_plays(self, session_factory):
+        """No plays exist for this game_id: `if plays:` is False, so the
+        watermark update is skipped (133->136) and [] is returned."""
+        with patch("src.ws.play_poller.get_session_factory", return_value=session_factory):
+            plays = await get_recent_plays("no-such-game")
+            assert plays == []
+
     async def test_returns_plays(self, session_factory):
         # Seed some plays
         async with session_factory() as sess:

@@ -354,6 +354,23 @@ class TestScoreboardWebSocket:
                     pong = ws.receive_text()
                     assert json.loads(pong)["type"] == "pong"
 
+    def test_scoreboard_ws_responds_to_multiple_pings(self):
+        """A second ping after the first pong exercises the keep-alive loop
+        looping back to receive_text() again (line 229->227)."""
+        consumer_cls, _ = _mock_consumer()
+        extras = {
+            "src.main.get_cached_game_list": AsyncMock(return_value=None),
+        }
+
+        with _app_test_mocks(consumer_cls, extra_patches=extras):
+            with TestClient(app) as tc:
+                with tc.websocket_connect("/ws/scoreboard") as ws:
+                    ws.send_text("ping")
+                    assert json.loads(ws.receive_text())["type"] == "pong"
+
+                    ws.send_text("ping")
+                    assert json.loads(ws.receive_text())["type"] == "pong"
+
     def test_scoreboard_ws_disconnect(self):
         """Scoreboard WS handles clean disconnect."""
         consumer_cls, _ = _mock_consumer()

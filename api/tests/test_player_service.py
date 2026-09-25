@@ -162,6 +162,23 @@ class TestGetAllPlayers:
             result = await get_all_players()
             assert result == []
 
+    async def test_search_with_no_matches_returns_no_teams(self):
+        """When search matches nobody on any roster, every team is skipped
+        (players empty AND search truthy — line 97->81)."""
+        roster_data = {
+            "team": {
+                "displayName": "Boston Celtics",
+                "athletes": [
+                    {"id": "1", "displayName": "Jayson Tatum"},
+                    {"id": "2", "displayName": "Jaylen Brown"},
+                ],
+            }
+        }
+        with patch("src.services.player_service.espn_client") as mock:
+            mock.get_team_roster = AsyncMock(return_value=roster_data)
+            result = await get_all_players(search="NoSuchPlayerXYZ")
+            assert result == []
+
 
 @pytest.mark.asyncio
 class TestGetPlayerById:
@@ -199,3 +216,52 @@ class TestGetPlayerById:
             result = await get_player_by_id("42")
             assert result is not None
             assert result["name"] == "Player X"
+
+    async def test_v3_exception_falls_back_to_roster_scan(self):
+        """get_athlete_info() raising is caught and logged (122-123), then
+        the roster-scan fallback still finds the player."""
+        roster_data = {
+            "team": {
+                "displayName": "Lakers",
+                "athletes": [{"id": "42", "displayName": "Player X"}],
+            }
+        }
+        with patch("src.services.player_service.espn_client") as mock:
+            mock.get_athlete_info = AsyncMock(side_effect=RuntimeError("espn down"))
+            mock.get_team_roster = AsyncMock(return_value=roster_data)
+            result = await get_player_by_id("42")
+            assert result is not None
+            assert result["name"] == "Player X"
+
+    async def test_v3_athlete_without_id_or_name_falls_back(self):
+        """v3 data with neither an id nor displayName is treated as
+        useless and the function falls through to the roster scan
+        (line 120->126) instead of returning it."""
+        roster_data = {
+            "team": {
+                "displayName": "Lakers",
+                "athletes": [{"id": "42", "displayName": "Player X"}],
+            }
+        }
+        with patch("src.services.player_service.espn_client") as mock:
+            mock.get_athlete_info = AsyncMock(return_value={"athlete": {"team": {}}})
+            mock.get_team_roster = AsyncMock(return_value=roster_data)
+            result = await get_player_by_id("42")
+            assert result is not None
+            assert result["name"] == "Player X"
+
+    async def test_no_match_across_any_roster_returns_none(self):
+        """The player_id is not found on any team's roster: the inner loop
+        exhausts without matching (136->135) and the outer loop moves on
+        to the next team (135->126), ultimately returning None."""
+        roster_data = {
+            "team": {
+                "displayName": "Lakers",
+                "athletes": [{"id": "999", "displayName": "Someone Else"}],
+            }
+        }
+        with patch("src.services.player_service.espn_client") as mock:
+            mock.get_athlete_info = AsyncMock(return_value=None)
+            mock.get_team_roster = AsyncMock(return_value=roster_data)
+            result = await get_player_by_id("42")
+            assert result is None

@@ -127,6 +127,37 @@ class TestParseTeamBoxscore:
         result = _parse_team_boxscore(team_data)
         assert result.abbrev == "NY"
 
+    def test_non_basketball_stat_group_skipped_for_players(self):
+        """A statistics entry with a name other than "basketball" (and not
+        blank) is skipped when collecting player rows (line 73->72), but its
+        totals are still merged in the separate totals loop."""
+        team_data = {
+            "team": {"abbreviation": "BOS", "displayName": "Boston Celtics"},
+            "statistics": [
+                {
+                    "name": "miscellaneous",
+                    "labels": ["FASTBREAK_PTS"],
+                    "athletes": [
+                        {"athlete": {"displayName": "Should Not Appear"}, "stats": ["10"]},
+                    ],
+                    "totals": ["12"],
+                },
+                {
+                    "name": "basketball",
+                    "labels": ["MIN", "PTS"],
+                    "athletes": [
+                        {"athlete": {"displayName": "Player A"}, "stats": ["30", "25"]},
+                    ],
+                    "totals": ["240", "110"],
+                },
+            ],
+        }
+        result = _parse_team_boxscore(team_data)
+        assert len(result.players) == 1
+        assert result.players[0].name == "Player A"
+        # Both stat groups' totals get merged (independent loop, no name filter)
+        assert result.totals == {"FASTBREAK_PTS": "12", "MIN": "240", "PTS": "110"}
+
 
 @pytest.mark.asyncio
 class TestGetBoxscore:

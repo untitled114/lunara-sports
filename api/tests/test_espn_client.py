@@ -15,10 +15,14 @@ from src.services.espn_client import (
     _cached_get,
     _get_client,
     close_espn_client,
+    get_athlete_gamelog,
+    get_athlete_info,
+    get_athlete_stats,
     get_game_summary,
     get_game_summary_live,
     get_scoreboard,
     get_standings,
+    get_team_roster,
     init_espn_client,
 )
 
@@ -123,11 +127,45 @@ class TestGetGameSummaryLive:
         assert call_args is not None
 
 
+class TestUncachedWrapperFunctions:
+    """Thin wrapper functions that just delegate to _cached_get with their
+    own cache key / URL / TTL — previously never exercised at all."""
+
+    async def test_get_team_roster(self, mock_redis, mock_http):
+        _, resp = mock_http
+        resp.json.return_value = {"team": {"athletes": []}}
+        result = await get_team_roster(2)
+        assert result == {"team": {"athletes": []}}
+
+    async def test_get_athlete_stats(self, mock_redis, mock_http):
+        _, resp = mock_http
+        resp.json.return_value = {"categories": []}
+        result = await get_athlete_stats("12345")
+        assert result == {"categories": []}
+
+    async def test_get_athlete_gamelog(self, mock_redis, mock_http):
+        _, resp = mock_http
+        resp.json.return_value = {"events": {}}
+        result = await get_athlete_gamelog("12345")
+        assert result == {"events": {}}
+
+    async def test_get_athlete_info(self, mock_redis, mock_http):
+        _, resp = mock_http
+        resp.json.return_value = {"athlete": {"id": "12345"}}
+        result = await get_athlete_info("12345")
+        assert result == {"athlete": {"id": "12345"}}
+
+
 class TestClientLifecycle:
     def test_get_client_raises_if_not_initialized(self):
         with patch("src.services.espn_client._client", None):
             with pytest.raises(RuntimeError, match="not initialized"):
                 _get_client()
+
+    @pytest.mark.asyncio
+    async def test_close_when_never_initialized_is_noop(self):
+        with patch("src.services.espn_client._client", None):
+            await close_espn_client()  # must not raise
 
     def test_init_creates_client(self):
         with patch("src.services.espn_client._client", None):

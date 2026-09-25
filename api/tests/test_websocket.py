@@ -81,6 +81,26 @@ async def test_manager_broadcast_removes_dead():
 
 
 @pytest.mark.asyncio
+async def test_manager_broadcast_removes_socket_that_raises_on_send():
+    """A CONNECTED socket whose send_text() itself raises (not merely
+    disconnected) is caught and removed too (lines 62-63), and when it was
+    the only connection, the game_id entry is fully popped (line 70)."""
+    mgr = ConnectionManager()
+    ws_raises = AsyncMock()
+
+    from starlette.websockets import WebSocketState
+
+    ws_raises.client_state = WebSocketState.CONNECTED
+    ws_raises.send_text = AsyncMock(side_effect=RuntimeError("connection closed"))
+
+    await mgr.connect(ws_raises, "game1")
+    await mgr.broadcast("game1", {"type": "ping"})
+
+    assert mgr.connection_count("game1") == 0
+    assert "game1" not in mgr.active_games()
+
+
+@pytest.mark.asyncio
 async def test_manager_broadcast_no_subscribers():
     mgr = ConnectionManager()
     # Should not raise

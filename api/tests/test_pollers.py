@@ -101,6 +101,30 @@ class TestParseEvent:
         assert result["home_score"] == 0
         assert result["away_score"] == 0
 
+    def test_neither_competitor_marked_home_returns_none(self):
+        """Two competitors but neither has homeAway=="home" — home_team
+        stays None and the event is dropped (line 50)."""
+        event = {
+            "id": "1",
+            "competitions": [
+                {
+                    "competitors": [
+                        {"team": {"abbreviation": "BOS"}, "homeAway": "away", "score": "0"},
+                        {"team": {"abbreviation": "LAL"}, "homeAway": "away", "score": "0"},
+                    ]
+                }
+            ],
+            "status": {"type": {}},
+        }
+        assert _parse_event(event) is None
+
+    def test_malformed_event_missing_id_is_caught(self):
+        """A KeyError while parsing (missing "id", accessed via event["id"]
+        as the very first statement) is caught and logged, returning None
+        instead of raising (lines 94-96)."""
+        event = {"competitions": [], "status": {"type": {}}}
+        assert _parse_event(event) is None
+
 
 class TestEasternToday:
     def test_returns_date(self):

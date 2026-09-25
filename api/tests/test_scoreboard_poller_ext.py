@@ -101,6 +101,87 @@ class TestPollScoreboard:
                 },
             )
 
+    async def test_final_game_skips_live_broadcast_mixed_with_unparseable(self, session_factory):
+        """Two events: one unparseable (dropped, line 129) and one FINAL
+        game. Since status isn't live/halftime, the per-game cache/broadcast
+        block is skipped (168->126) — only the scoreboard-wide broadcast
+        fires."""
+        unparseable_event = {"id": "bad", "competitions": [{"competitors": []}]}
+        final_event = {
+            "id": "401810100",
+            "competitions": [
+                {
+                    "competitors": [
+                        {"team": {"abbreviation": "BOS"}, "homeAway": "home", "score": "110"},
+                        {"team": {"abbreviation": "LAL"}, "homeAway": "away", "score": "105"},
+                    ],
+                    "date": "2026-02-20T00:30:00Z",
+                    "venue": {"fullName": "TD Garden"},
+                }
+            ],
+            "status": {"type": {"state": "post", "description": ""}, "period": 4},
+        }
+
+        from src.db.models import Team
+
+        async with session_factory() as sess:
+            sess.add_all(
+                [
+                    Team(abbrev="BOS", name="Boston Celtics"),
+                    Team(abbrev="LAL", name="Los Angeles Lakers"),
+                ]
+            )
+            await sess.commit()
+
+        mock_broadcast = AsyncMock()
+        mock_cache_state = AsyncMock()
+        with (
+            patch("src.services.scoreboard_poller.espn_client") as mock_espn,
+            patch(
+                "src.services.scoreboard_poller.get_session_factory", return_value=session_factory
+            ),
+            patch("src.services.scoreboard_poller.cache_game_list", new_callable=AsyncMock),
+            patch("src.services.scoreboard_poller.cache_game_state", mock_cache_state),
+            patch("src.services.scoreboard_poller.manager") as mock_mgr,
+        ):
+            mock_espn.get_scoreboard = AsyncMock(
+                return_value={"events": [unparseable_event, final_event]}
+            )
+            mock_mgr.broadcast = mock_broadcast
+            await _poll_scoreboard()
+
+            # Only the scoreboard-wide broadcast — no per-game live update.
+            assert mock_broadcast.call_count == 1
+            mock_broadcast.assert_called_once_with(
+                "scoreboard",
+                {"type": "scoreboard_update", "data": mock_broadcast.call_args[0][1]["data"]},
+            )
+            mock_cache_state.assert_not_called()
+
+    async def test_all_events_unparseable_skips_final_broadcast(self, session_factory):
+        """Every event fails to parse: rows stays empty, so the trailing
+        `if rows:` block (cache_game_list + scoreboard broadcast) never
+        runs at all (181->exit)."""
+        unparseable_event = {"id": "bad", "competitions": [{"competitors": []}]}
+
+        mock_broadcast = AsyncMock()
+        mock_cache_list = AsyncMock()
+        with (
+            patch("src.services.scoreboard_poller.espn_client") as mock_espn,
+            patch(
+                "src.services.scoreboard_poller.get_session_factory", return_value=session_factory
+            ),
+            patch("src.services.scoreboard_poller.cache_game_list", mock_cache_list),
+            patch("src.services.scoreboard_poller.cache_game_state", new_callable=AsyncMock),
+            patch("src.services.scoreboard_poller.manager") as mock_mgr,
+        ):
+            mock_espn.get_scoreboard = AsyncMock(return_value={"events": [unparseable_event]})
+            mock_mgr.broadcast = mock_broadcast
+            await _poll_scoreboard()
+
+            mock_broadcast.assert_not_called()
+            mock_cache_list.assert_not_called()
+
 
 @pytest.mark.asyncio
 class TestRunScoreboardPoller:

@@ -58,6 +58,67 @@ class TestRunPickSyncPoller:
             with pytest.raises(asyncio.CancelledError):
                 await run_pick_sync_poller(settings)
 
+    async def test_factory_none_sleeps_and_continues(self):
+        """get_session_factory() returning None mid-loop sleeps and retries
+        rather than crashing (lines 47-48)."""
+        settings = MagicMock()
+        settings.sport_suite_predictions_dir = "/tmp/predictions"
+        settings.sport_suite_api_url = ""
+        settings.sport_suite_api_key = ""
+
+        call_count = 0
+
+        async def limited_sleep(seconds):
+            nonlocal call_count
+            call_count += 1
+            if call_count >= 2:
+                raise asyncio.CancelledError()
+
+        with (
+            patch("src.services.pick_sync_poller.get_session_factory", return_value=None),
+            patch("src.services.pick_sync_poller.sync_picks", new_callable=AsyncMock),
+            patch("src.services.pick_sync_poller.asyncio.sleep", side_effect=limited_sleep),
+        ):
+            with pytest.raises(asyncio.CancelledError):
+                await run_pick_sync_poller(settings)
+
+    async def test_logs_debug_when_no_picks_synced(self, capsys):
+        """sync_picks() returning 0 hits the else branch (line 62), not the
+        "synced" info log."""
+        settings = MagicMock()
+        settings.sport_suite_predictions_dir = "/tmp/predictions"
+        settings.sport_suite_api_url = ""
+        settings.sport_suite_api_key = ""
+
+        mock_session = AsyncMock()
+        mock_factory = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_session),
+                __aexit__=AsyncMock(return_value=False),
+            )
+        )
+
+        call_count = 0
+
+        async def limited_sleep(seconds):
+            nonlocal call_count
+            call_count += 1
+            if call_count >= 1:
+                raise asyncio.CancelledError()
+
+        with (
+            patch("src.services.pick_sync_poller.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.pick_sync_poller.sync_picks", new_callable=AsyncMock, return_value=0
+            ),
+            patch("src.services.pick_sync_poller.asyncio.sleep", side_effect=limited_sleep),
+        ):
+            with pytest.raises(asyncio.CancelledError):
+                await run_pick_sync_poller(settings)
+        out = capsys.readouterr().out
+        assert "pick_sync_poller.no_picks" in out
+        assert "pick_sync_poller.synced" not in out
+
     async def test_continues_on_error(self):
         settings = MagicMock()
         settings.sport_suite_predictions_dir = "/tmp/predictions"

@@ -86,6 +86,26 @@ class TestGetTeams:
         assert "Los Angeles Lakers" in names
         assert "Miami Heat" in names
 
+    async def test_last_game_lookup_error_is_swallowed(self, team_session):
+        """A failure looking up a team's last game is caught and the team
+        still appears in the result with last_game left empty."""
+        original_execute = team_session.execute
+        call_count = 0
+
+        async def flaky_execute(stmt, *args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                # First call is the `select(Team)` query — let it through.
+                return await original_execute(stmt, *args, **kwargs)
+            raise RuntimeError("db unavailable")
+
+        with patch.object(team_session, "execute", side_effect=flaky_execute):
+            teams = await get_teams(team_session)
+
+        assert len(teams) == 3
+        assert all(t["last_game"] == "" for t in teams)
+
     async def test_home_team_win_last_game(self, team_session):
         """BOS won g1 at home 110-105 vs LAL. But g3 is later (LAL@MIA)
         so BOS last final is g1: W 110-105 vs LAL."""
