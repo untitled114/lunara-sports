@@ -15,10 +15,14 @@ const EFFECT_OK = ['src/components/layout/AppLayout.jsx', 'src/styles/tokens.css
 // rgb()/rgba()/hsl()/hsla() literals: only the token file gets to define raw
 // color functions; everywhere else should reference a --token instead.
 const COLORFN_OK = ['src/styles/tokens.css']
-// "text-white" is only allowed when it's paired with "bg-accent" on the same
-// line (the accent button needs white text for contrast; every other
-// white-on-something case should use a --text token instead).
+// "text-white" is only allowed when it's paired with "bg-accent-fill" (the
+// filled-button token, #4F46E5 / --accent-fill) on the same line — that
+// button needs white text for contrast. Plain "bg-accent" does NOT grant the
+// exception: --accent is no longer a fill color, so a line pairing
+// text-white with bare bg-accent is stale and should still be flagged.
+// Every other white-on-something case should use a --text token instead.
 const PALETTE_WHITE_ON_ACCENT = /^text-white(\/\d+)?$/
+const ACCENT_FILL_LINE = 'bg-accent-fill'
 const PALETTE_PREFIX =
   'text|bg|border|ring|fill|stroke|from|via|to|outline|shadow|decoration|divide|placeholder'
 const PALETTE_COLOR =
@@ -72,7 +76,7 @@ export function scan(text, path) {
       const matches = line.match(re) || []
       const n =
         k === 'palette'
-          ? matches.filter((m) => !(PALETTE_WHITE_ON_ACCENT.test(m) && line.includes('bg-accent'))).length
+          ? matches.filter((m) => !(PALETTE_WHITE_ON_ACCENT.test(m) && line.includes(ACCENT_FILL_LINE))).length
           : matches.length
       add(k, n)
     }

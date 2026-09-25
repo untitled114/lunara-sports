@@ -86,14 +86,20 @@ describe('design check', () => {
       expect(scan('border-slate-200/50', 'src/pages/Z.jsx')).toEqual({ palette: 1 })
       expect(scan('bg-black/60', 'src/pages/Z.jsx')).toEqual({ palette: 1 })
     })
-    it('flags text-white when nothing pairs it with bg-accent', () => {
+    it('flags text-white when nothing pairs it with bg-accent-fill', () => {
       expect(scan('text-white', 'src/pages/Z.jsx')).toEqual({ palette: 1 })
     })
-    it('allows text-white only when bg-accent is on the same line (accent button contrast)', () => {
-      expect(scan('className="bg-accent text-white"', 'src/pages/Z.jsx')).toEqual({})
+    it('allows text-white only when bg-accent-fill is on the same line (filled-button contrast)', () => {
+      expect(scan('className="bg-accent-fill text-white"', 'src/pages/Z.jsx')).toEqual({})
     })
-    it('the bg-accent exception only covers text-white, not other palette hits on the same line', () => {
-      expect(scan('bg-accent text-white bg-red-500', 'src/pages/Z.jsx')).toEqual({ palette: 1 })
+    it('does NOT allow text-white paired with bare bg-accent (stale: --accent is no longer a fill)', () => {
+      expect(scan('className="bg-accent text-white"', 'src/pages/Z.jsx')).toEqual({ palette: 1 })
+    })
+    it('the bg-accent-fill exception only covers text-white, not other palette hits on the same line', () => {
+      expect(scan('bg-accent-fill text-white bg-red-500', 'src/pages/Z.jsx')).toEqual({ palette: 1 })
+    })
+    it('does not flag the accent-fill tokens themselves (bg-accent-fill, hover:bg-accent-fill-hover)', () => {
+      expect(scan('bg-accent-fill hover:bg-accent-fill-hover', 'src/pages/Z.jsx')).toEqual({})
     })
   })
 
