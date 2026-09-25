@@ -33,6 +33,19 @@ jobs:
   python-lint-test:
     runs-on: ubuntu-latest
     if: github.event_name != 'workflow_dispatch'
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lunara_it
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d lunara_it"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -71,6 +84,11 @@ jobs:
 
       - name: Test lumen-bot
         run: cd lumen-bot && pytest tests/ -q --cov --cov-report=term-missing
+
+      - name: Integration tests (real Postgres)
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/lunara_it
+        run: pytest tests/integration -q
 
   java-test:
     runs-on: ubuntu-latest
