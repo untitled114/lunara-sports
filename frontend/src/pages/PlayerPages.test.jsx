@@ -16,6 +16,7 @@ import REAL_PLAYERS from '../../e2e/fixtures/api/players.json'
 import REAL_BAM from '../../e2e/fixtures/api/players_4066261.json'
 import REAL_BAM_STATS from '../../e2e/fixtures/api/players_4066261_stats.json'
 import REAL_BAM_LOG from '../../e2e/fixtures/api/players_4066261_log.json'
+import REAL_NO_JERSEY from '@/test/fixtures/player-5107157.json'
 
 vi.mock('@/context/ThemeContext', () => ({
   useTheme: () => ({ playGlassClick: vi.fn(), playThud: vi.fn() }),
@@ -53,6 +54,21 @@ describe('PlayersPage', () => {
     expect(img).toHaveAttribute('src', getHeadshotUrl(first.headshot_url, 88))
     expect(document.querySelectorAll('img[src*="/i/headshots/"]:not([src*="/combiner/"])')).toHaveLength(0)
     expect(screen.getAllByText(first.height)[0]).toHaveClass('whitespace-nowrap')
+  })
+
+  it('renders no lone "#" for a player with no jersey, and centres number and name together', async () => {
+    api.fetchPlayers.mockResolvedValue(REAL_PLAYERS)
+    renderWithRouter(<PlayersPage />)
+    // Real roster rows: Dorian Finney-Smith has jersey "" in GET /players; Nickeil
+    // Alexander-Walker has "7".
+    const noNumber = await screen.findByRole('link', { name: 'Dorian Finney-Smith' })
+    const numberSlot = noNumber.previousElementSibling
+    expect(numberSlot).toHaveTextContent(/^$/)
+    expect(screen.queryAllByText('#', { exact: true })).toHaveLength(0)
+    const named = screen.getByRole('link', { name: 'Nickeil Alexander-Walker' })
+    expect(named.previousElementSibling).toHaveTextContent('#7')
+    expect(named).toHaveClass('inline-flex', 'items-center')
+    expect(named.parentElement).toHaveClass('flex', 'items-center')
   })
 
   it('search with no results shows the plain "no players match" copy', async () => {
@@ -175,6 +191,22 @@ describe('PlayerProfilePage', () => {
     const img = await screen.findByAltText('Bam Adebayo')
     expect(img).toHaveAttribute('src', getHeadshotUrl(REAL_BAM.headshot_url, 160))
     expect(screen.getByRole('tablist')).toHaveClass('max-w-full', 'overflow-x-auto', 'scrollbar-hide')
+    // Tab icons only from sm up, so the three labels fit at 390 without clipping.
+    for (const tab of screen.getAllByRole('tab')) {
+      const icon = tab.querySelector('svg')
+      expect(icon).toHaveClass('hidden', 'sm:block')
+    }
+  })
+
+  it('shows no invented jersey number when the player has none', async () => {
+    // Real GET /players/5107157 (Ryan Conwell, jersey ""): the old code printed "#00".
+    api.fetchPlayerDetail.mockResolvedValue(REAL_NO_JERSEY.data)
+    api.fetchPlayerStats.mockResolvedValue(null)
+    api.fetchPlayerGameLog.mockResolvedValue([])
+    renderWithRouter(<PlayerProfilePage />, { route: '/player/5107157', path: '/player/:id' })
+    await screen.findByRole('heading', { name: 'Ryan Conwell' })
+    expect(screen.queryByText(/#00/)).toBeNull()
+    expect(screen.queryByText(/^#/)).toBeNull()
   })
 })
 

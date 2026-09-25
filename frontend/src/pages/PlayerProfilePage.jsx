@@ -147,7 +147,7 @@ export default function PlayerProfilePage() {
 
         <div className="flex flex-col gap-2 min-w-0">
           <div className="flex items-center gap-3">
-            <span className="t-small tnum text-text-3">#{player.jersey || '00'}</span>
+            {player.jersey && <span className="t-small tnum text-text-3">#{player.jersey}</span>}
             <Badge variant="accent">{player.position}</Badge>
           </div>
           <h1 className="t-title text-text-1">{player.name}</h1>

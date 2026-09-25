@@ -1,0 +1,19 @@
+{
+  "_source": "GET https://api.lunara-app.com/players/5107157, captured 2026-09-25T14:23:19-0400 (ET). Real, unmodified player record with no jersey number.",
+  "data": {
+    "id": "5107157",
+    "name": "Ryan Conwell",
+    "jersey": "",
+    "position": "G",
+    "height": "6' 3\"",
+    "weight": "220",
+    "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5107157.png",
+    "age": 22,
+    "experience": "Rookie",
+    "college": "",
+    "draft": "2026: Rd 2, Pk 37 (OKC)",
+    "birthplace": "Indianapolis, IN",
+    "team": "Miami Heat",
+    "team_abbrev": "MIA"
+  }
+}

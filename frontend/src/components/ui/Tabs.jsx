@@ -145,7 +145,8 @@ const Tabs = ({ tabs = [], activeTab, onChange, variant = 'underline', urlSync =
                     : 'text-text-2 hover:text-text-1 cursor-pointer'
               )}
             >
-              {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
+              {/* Icons from sm up; below it the labels alone fit a 390px screen. */}
+              {Icon && <Icon className="hidden sm:block w-4 h-4 flex-shrink-0" aria-hidden="true" />}
               <span className="whitespace-nowrap">{tab.label}</span>
               {tab.badge !== undefined && tab.badge !== null && (
                 <span

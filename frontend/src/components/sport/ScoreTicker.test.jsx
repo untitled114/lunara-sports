@@ -42,35 +42,35 @@ describe('ScoreTicker', () => {
     useScoreboardMock.mockReturnValue({ games: [], connected: false, loading: true })
     const { container } = wrap(<ScoreTicker />)
     expect(container.querySelector('.animate-pulse')).not.toBeNull()
-    expect(screen.queryByText('No games today')).toBeNull()
+    expect(screen.queryByText('No games today.')).toBeNull()
   })
 
-  it('empty: plain "No games today" text plus a next-game link once the lookup resolves', async () => {
+  it('empty: plain "No games today." text plus a next-game link once the lookup resolves', async () => {
     useScoreboardMock.mockReturnValue({ games: [], connected: false, loading: false })
     global.fetch.mockResolvedValue({ ok: true, json: async () => gamesNext.data })
     wrap(<ScoreTicker />)
-    expect(screen.getByText('No games today')).toBeInTheDocument()
+    expect(screen.getByText('No games today.')).toBeInTheDocument()
     const label = `Next game: ${formatLongDay(gamesNext.data.date)} →`
     const link = await screen.findByRole('link', { name: label })
     expect(link).toHaveAttribute('href', `/scoreboard?date=${gamesNext.data.date}`)
   })
 
-  it('empty: the next-game link centres its text on the "No games today" line', async () => {
+  it('empty: the next-game link centres its text on the "No games today." line', async () => {
     useScoreboardMock.mockReturnValue({ games: [], connected: false, loading: false })
     global.fetch.mockResolvedValue({ ok: true, json: async () => gamesNext.data })
     wrap(<ScoreTicker />)
     const link = await screen.findByRole('link', { name: /Next game/ })
     // Mobile links get a 36px min-height; inline-flex + items-center keeps the text on
-    // the same line as the plain "No games today" text instead of 9px above it.
+    // the same line as the plain "No games today." text instead of 9px above it.
     expect(link).toHaveClass('inline-flex', 'items-center')
     expect(link.parentElement).toHaveClass('flex', 'items-center')
   })
 
-  it('empty: a failed next-game lookup keeps "No games today" and shows no link', async () => {
+  it('empty: a failed next-game lookup keeps "No games today." and shows no link', async () => {
     useScoreboardMock.mockReturnValue({ games: [], connected: false, loading: false })
     global.fetch.mockResolvedValue({ ok: false, json: async () => ({}) })
     wrap(<ScoreTicker />)
-    expect(screen.getByText('No games today')).toBeInTheDocument()
+    expect(screen.getByText('No games today.')).toBeInTheDocument()
     await waitFor(() => expect(global.fetch).toHaveBeenCalled())
     await Promise.resolve()
     expect(screen.queryByRole('link', { name: /Next game/ })).toBeNull()
