@@ -1,0 +1,17 @@
+[Unit]
+Description=Lunara ingestion (ESPN scoreboard + play-by-play collectors)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=lunara
+Group=lunara
+WorkingDirectory=/opt/lunara/ingestion
+EnvironmentFile=/etc/lunara/ingestion.env
+ExecStart=/opt/lunara/ingestion/.venv/bin/python -m src
+Restart=always
+RestartSec=5
+CPUWeight=400
+
+[Install]
+WantedBy=multi-user.target

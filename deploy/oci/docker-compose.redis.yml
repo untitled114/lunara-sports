@@ -1,0 +1,8 @@
+services:
+  lunara_redis:
+    image: redis:7-alpine
+    container_name: lunara_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save '' --appendonly no
+    ports:
+      - "127.0.0.1:6380:6379"

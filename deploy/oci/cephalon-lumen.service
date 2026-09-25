@@ -1,0 +1,16 @@
+[Unit]
+Description=Cephalon Lumen (Lunara Sports Discord bot)
+After=network-online.target lunara-api.service
+Wants=network-online.target
+
+[Service]
+User=lunara
+Group=lunara
+WorkingDirectory=/opt/lunara/lumen-bot
+EnvironmentFile=/etc/lunara/lumen.env
+ExecStart=/opt/lunara/lumen-bot/.venv/bin/python bot.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
