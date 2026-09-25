@@ -5,7 +5,6 @@ import {
   fetchTeamDetail,
   fetchTeamRoster,
   fetchTeamSchedule,
-  fetchTeamStats,
   fetchStandings,
   buildStandingsLookup,
 } from '@/services/api';
@@ -121,28 +120,43 @@ function ScheduleTab({ schedule, loading }) {
 }
 
 // ─── Stats tab ──────────────────────────────────────────────
+// Built from the standings row the page already loads for this team (D12) —
+// there is no per-player stats source (team_service.get_team_stats() has none,
+// owner-approved), so this is the team's season standings, not box-score stats.
 
-function StatsTab({ stats, loading }) {
-  if (loading) return <PageState kind="loading" />;
-  if (stats.length === 0) return <PageState kind="empty" title="No stats available yet." />;
+function StatsTab({ standingsTeam, seasonLabel, isPrevSeason, seed }) {
+  if (!standingsTeam) {
+    return <PageState kind="empty" title="Stats aren't available for this team yet." />;
+  }
+
+  const fields = [
+    { label: 'W', value: standingsTeam.w },
+    { label: 'L', value: standingsTeam.l },
+    { label: 'PCT', value: standingsTeam.pct },
+    { label: 'GB', value: standingsTeam.gb },
+    { label: 'Home', value: standingsTeam.home },
+    { label: 'Road', value: standingsTeam.road },
+    { label: 'L10', value: standingsTeam.l10 },
+  ];
+  if (!isPrevSeason) fields.push({ label: 'Streak', value: standingsTeam.streak });
 
   return (
-    <DataTable
-      getKey={(s) => s.player}
-      columns={[
-        { key: 'player', label: 'Player' },
-        { key: 'gp', label: 'GP', numeric: true },
-        { key: 'mpg', label: 'MPG', numeric: true },
-        { key: 'ppg', label: 'PPG', numeric: true },
-        { key: 'rpg', label: 'RPG', numeric: true },
-        { key: 'apg', label: 'APG', numeric: true },
-        { key: 'spg', label: 'SPG', numeric: true },
-        { key: 'bpg', label: 'BPG', numeric: true },
-        { key: 'fg_pct', label: 'FG%', numeric: true },
-        { key: 'three_pct', label: '3P%', numeric: true },
-      ]}
-      rows={stats}
-    />
+    <div className="space-y-4">
+      <SectionHeader title="Season stats" aside={seasonLabel} />
+      <Card>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+          {fields.map((f) => (
+            <Stat key={f.label} label={f.label} value={f.value || '—'} />
+          ))}
+        </div>
+      </Card>
+      {seed && (
+        <div className="flex items-center gap-2">
+          <span className="t-label text-text-3">Seed</span>
+          <Badge variant={seed.variant}>{seed.text}</Badge>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -163,19 +177,17 @@ export default function TeamDetailPage() {
 
   const [roster, setRoster] = useState([]);
   const [schedule, setSchedule] = useState([]);
-  const [stats, setStats] = useState([]);
   const [rosterLoading, setRosterLoading] = useState(false);
   const [scheduleLoading, setScheduleLoading] = useState(false);
-  const [statsLoading, setStatsLoading] = useState(false);
 
-  // Load team detail + standings (record, seed)
+  // Load team detail + standings (record, seed, and — D12 — the Stats tab's
+  // W/L/PCT/GB/Home/Road/L10/Streak, all from the standings row for this team)
   const loadTeam = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
     setRoster([]);
     setSchedule([]);
-    setStats([]);
 
     Promise.all([fetchTeamDetail(abbrev), fetchStandings().catch(() => null)])
       .then(([teamData, standingsData]) => {
@@ -185,11 +197,13 @@ export default function TeamDetailPage() {
         const lookup = buildStandingsLookup(standingsData);
         const entry = lookup[abbrev] || null;
         if (entry) {
-          // buildStandingsLookup doesn't carry the seed — pull it from the raw
-          // standings rows it was built from and merge it in.
+          // buildStandingsLookup doesn't carry seed/home/road — pull them from
+          // the raw standings rows it was built from and merge them in.
           const rawTeams = [...(standingsData?.eastern || []), ...(standingsData?.western || [])];
           const raw = rawTeams.find((t) => t.abbrev === abbrev);
           entry.seed = raw?.seed ?? null;
+          entry.home = raw?.home ?? '';
+          entry.road = raw?.road ?? '';
         }
         setStandingsTeam(entry);
         setSeasonLabel(standingsData?.season_label || '');
@@ -224,15 +238,11 @@ export default function TeamDetailPage() {
         .then(setSchedule)
         .catch(() => {})
         .finally(() => setScheduleLoading(false));
-    } else if (activeTab === 'stats' && stats.length === 0) {
-      setStatsLoading(true);
-      fetchTeamStats(abbrev)
-        .then(setStats)
-        .catch(() => {})
-        .finally(() => setStatsLoading(false));
     }
-    // roster/schedule/stats are read only to gate a one-time fetch per tab, not
-    // to retrigger it once loaded.
+    // The Stats tab needs no fetch of its own — it's derived from standings
+    // data loaded by loadTeam() above.
+    // roster/schedule are read only to gate a one-time fetch per tab, not to
+    // retrigger it once loaded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, abbrev, team]);
 
@@ -300,7 +310,9 @@ export default function TeamDetailPage() {
       <div key={activeTab}>
         {activeTab === 'roster' && <RosterTab roster={roster} loading={rosterLoading} />}
         {activeTab === 'schedule' && <ScheduleTab schedule={schedule} loading={scheduleLoading} />}
-        {activeTab === 'stats' && <StatsTab stats={stats} loading={statsLoading} />}
+        {activeTab === 'stats' && (
+          <StatsTab standingsTeam={standingsTeam} seasonLabel={seasonLabel} isPrevSeason={isPrevSeason} seed={seed} />
+        )}
       </div>
     </div>
   );

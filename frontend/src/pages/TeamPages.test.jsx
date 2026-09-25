@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -7,14 +8,7 @@ import { dirname, join } from 'node:path'
 import TeamsPage from './TeamsPage'
 import TeamDetailPage from './TeamDetailPage'
 import { scan } from '../../scripts/check-design.mjs'
-import {
-  fetchTeams,
-  fetchTeamDetail,
-  fetchTeamRoster,
-  fetchTeamSchedule,
-  fetchTeamStats,
-  fetchStandings,
-} from '@/services/api'
+import { fetchTeams, fetchTeamDetail, fetchTeamRoster, fetchTeamSchedule, fetchStandings } from '@/services/api'
 
 vi.mock('@/services/api', async () => {
   const actual = await vi.importActual('@/services/api')
@@ -24,7 +18,6 @@ vi.mock('@/services/api', async () => {
     fetchTeamDetail: vi.fn(),
     fetchTeamRoster: vi.fn(),
     fetchTeamSchedule: vi.fn(),
-    fetchTeamStats: vi.fn(),
     fetchStandings: vi.fn(),
   }
 })
@@ -78,6 +71,8 @@ function makeTeams() {
   }))
 }
 
+// Real StandingsTeam-shaped row for MIA (api/src/models/schemas.py StandingsTeam),
+// as returned inside a StandingsResponse from GET /standings.
 const STANDINGS_FIXTURE = {
   eastern: [
     {
@@ -89,9 +84,9 @@ const STANDINGS_FIXTURE = {
       pct: '.451',
       gb: '-',
       conf: '',
-      home: '',
-      road: '',
-      l10: '',
+      home: '22-18',
+      road: '15-27',
+      l10: '4-6',
       strk: 'L2',
       logo_url: '',
       seed: 9,
@@ -175,7 +170,6 @@ describe('TeamDetailPage', () => {
     fetchStandings.mockResolvedValue(STANDINGS_FIXTURE)
     fetchTeamRoster.mockResolvedValue(ROSTER_FIXTURE)
     fetchTeamSchedule.mockResolvedValue([])
-    fetchTeamStats.mockResolvedValue([])
 
     renderTeamDetail('MIA')
 
@@ -200,6 +194,68 @@ describe('TeamDetailPage', () => {
 
     await screen.findByText("Couldn't load this team.")
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('D12: Stats tab is built from the standings row already loaded for the team', async () => {
+    fetchTeamDetail.mockResolvedValue({
+      name: 'Miami Heat',
+      abbrev: 'MIA',
+      city: 'Miami, FL',
+      venue: 'Kaseya Center',
+      conference: 'Eastern',
+      division: 'Southeast',
+      color: '#98002E',
+      logo_url: '',
+    })
+    fetchStandings.mockResolvedValue(STANDINGS_FIXTURE)
+    fetchTeamRoster.mockResolvedValue(ROSTER_FIXTURE)
+    fetchTeamSchedule.mockResolvedValue([])
+
+    renderTeamDetail('MIA')
+    await screen.findByText('Miami Heat')
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Stats' }))
+
+    // SectionHeader aside = season_label.
+    expect(await screen.findByRole('heading', { name: 'Season stats' })).toBeInTheDocument()
+    expect(screen.getByText('2025–26 final')).toBeInTheDocument()
+
+    // W, L, PCT, GB, Home, Road, L10 from the standings row.
+    expect(screen.getByText('W')).toBeInTheDocument()
+    expect(screen.getByText('37')).toBeInTheDocument()
+    expect(screen.getByText('L')).toBeInTheDocument()
+    expect(screen.getByText('45')).toBeInTheDocument()
+    expect(screen.getByText('.451')).toBeInTheDocument()
+    expect(screen.getByText('22-18')).toBeInTheDocument()
+    expect(screen.getByText('15-27')).toBeInTheDocument()
+    expect(screen.getByText('4-6')).toBeInTheDocument()
+
+    // is_previous_season is true in the fixture: no stale "current streak".
+    expect(screen.queryByText('Streak')).not.toBeInTheDocument()
+    expect(screen.queryByText('L2')).not.toBeInTheDocument()
+
+    // Conference seed (seedBadge: 7-10 -> Play-in) — shown both in the hero
+    // header and the Stats tab's own seed line.
+    expect(screen.getAllByText('Play-in').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('D12: Stats tab shows PageState empty when the team has no standings row', async () => {
+    fetchTeamDetail.mockResolvedValue({
+      name: 'Miami Heat',
+      abbrev: 'MIA',
+      conference: 'Eastern',
+      division: 'Southeast',
+    })
+    fetchStandings.mockResolvedValue({ eastern: [], western: [], season_label: '', is_previous_season: false })
+    fetchTeamRoster.mockResolvedValue([])
+    fetchTeamSchedule.mockResolvedValue([])
+
+    renderTeamDetail('MIA')
+    await screen.findByText('Miami Heat')
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Stats' }))
+
+    expect(await screen.findByText("Stats aren't available for this team yet.")).toBeInTheDocument()
   })
 })
 
