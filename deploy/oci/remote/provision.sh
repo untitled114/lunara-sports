@@ -30,19 +30,23 @@ phase_base() {
     # Ubuntu 22.04 here ships python3.10 (no ensurepip) and python3.11 3.11.0~rc1 only.
     # uv installs a standalone CPython 3.12 under /opt/lunara/python; no apt changes.
     if [[ -x "$PY312" ]] && "$PY312" -c 'import sys; assert sys.version_info[:2] == (3, 12)'; then
-        info "present: $("$PY312" --version)"
+        info "present: $("$PY312" --version) ($(readlink -f "$PY312"))"
+        if [[ -x "$LUNARA_ROOT/.uv/bin/uv" ]]; then
+            info "uv: $(as_lunara "$LUNARA_ROOT/.uv/bin/uv" --version)"
+        fi
     else
         local uvenv="$LUNARA_ROOT/.uv"
-        sudo -u lunara -H python3.11 -m venv "$uvenv"
-        sudo -u lunara -H "$uvenv/bin/pip" install --no-cache-dir -q "uv==$UV_VERSION"
-        sudo -u lunara -H env UV_PYTHON_INSTALL_DIR="$LUNARA_ROOT/python" \
-            UV_CACHE_DIR="$LUNARA_ROOT/.cache/uv" "$uvenv/bin/uv" python install 3.12
+        as_lunara python3.11 -m venv "$uvenv"
+        as_lunara "$uvenv/bin/pip" install --no-cache-dir -q "uv==$UV_VERSION"
+        info "uv: $(as_lunara "$uvenv/bin/uv" --version)"
+        as_lunara UV_PYTHON_INSTALL_DIR="$LUNARA_ROOT/python" \
+            "$uvenv/bin/uv" python install 3.12
         local found
-        found="$(sudo -u lunara -H env UV_PYTHON_INSTALL_DIR="$LUNARA_ROOT/python" \
+        found="$(as_lunara UV_PYTHON_INSTALL_DIR="$LUNARA_ROOT/python" \
             UV_PYTHON_PREFERENCE=only-managed "$uvenv/bin/uv" python find 3.12)"
         [[ -x "$found" ]] || die "uv did not produce a python 3.12 interpreter"
         ln -sfn "$found" "$PY312"
-        info "installed: $("$PY312" --version)"
+        info "installed: $("$PY312" --version) at $found"
     fi
 }
 
@@ -235,7 +239,9 @@ describe() {
                 "   /opt/lunara/{deploy,migrations} root:root 0755; /etc/lunara root:lunara 0750" \
                 "2b. unless /opt/lunara/bin/python3.12 is 3.12: python3.11 -m venv /opt/lunara/.uv," \
                 "   pip install uv==$UV_VERSION, uv python install 3.12 into /opt/lunara/python," \
-                "   symlink /opt/lunara/bin/python3.12 (all as user lunara)"
+                "   symlink /opt/lunara/bin/python3.12; logs the uv and python versions. Every step runs" \
+                "   as lunara via as_lunara: cwd + HOME /opt/lunara, env -i, UV_NO_CONFIG=1, caches" \
+                "   under /opt/lunara/.cache (never the ssh user's HOME or cwd)"
             ;;
         finish)
             printf '%s\n' \

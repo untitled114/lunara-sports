@@ -22,8 +22,10 @@ pytestmark = pytest.mark.skipif(
 STUBS = r"""
 id() { return 0; }
 sudo() {
+    echo "sudo cwd=$PWD $*" >> "$ST/sudo_log"
     shift 2; [[ "$1" == -H ]] && shift
-    [[ "$1" == env ]] && { shift; while [[ "$1" == *=* ]]; do shift; done; }
+    [[ "$1" == env ]] && shift; [[ "$1" == -i ]] && shift
+    while [[ "$1" == *=* ]]; do shift; done
     if [[ "$*" == *"-m venv"* ]]; then
         mkdir -p "${@: -1}/bin"; ln -sf "$(command -v python3)" "${@: -1}/bin/python"
     fi
@@ -146,7 +148,7 @@ def make_release(box, ts):
 
 def deploy(box, ts, *flags):
     state = box / "state"
-    for name in ("gc", "deploy_restarted", "log"):
+    for name in ("gc", "deploy_restarted", "log", "sudo_log"):
         (state / name).unlink(missing_ok=True)
     for flag in flags:
         (state / flag).touch()
@@ -242,3 +244,61 @@ def test_first_deploy_failure_disables_units_it_enabled_and_removes_sites(box):
     assert not (box / "ngx/sites-enabled/api.lunara-app.com").exists()
     assert not (box / "ngx/sites-enabled/000-lunara-default-443").exists()
     assert not (box / "opt/api").exists()
+
+
+def test_venv_builds_run_as_lunara_with_its_own_home_and_cwd(box):
+    rc, out = deploy(box, "20260101T000000")
+    assert rc == 0, out
+    calls = (box / "state/sudo_log").read_text().splitlines()
+    assert len(calls) == 6  # venv + pip install, for each of the three services
+    for call in calls:
+        assert call.startswith(f"sudo cwd={box}/opt -u lunara -H env -i ")
+        assert f" HOME={box}/opt " in call and " UV_NO_CONFIG=1 " in call
+        assert f" PIP_CACHE_DIR={box}/opt/.cache/pip " in call
+    assert any(
+        c.endswith(f"install -q {box}/opt/releases/20260101T000000/api") for c in calls
+    )
+
+
+def test_every_lunara_user_command_goes_through_as_lunara():
+    for name in ("common.sh", "provision.sh", "deploy.sh"):
+        text = (OCI / "remote" / name).read_text()
+        raw = [ln for ln in text.splitlines() if "sudo -u lunara" in ln]
+        if name == "common.sh":
+            assert (
+                len(raw) == 1 and "env -i" in raw[0]
+            )  # the as_lunara definition itself
+        else:
+            assert raw == [], f"{name} runs sudo -u lunara outside as_lunara: {raw}"
+
+
+def test_as_lunara_sets_cwd_home_and_uv_isolation(tmp_path):
+    common = (
+        (OCI / "remote/common.sh")
+        .read_text()
+        .replace("readonly LUNARA_ROOT=/opt/lunara", f"readonly LUNARA_ROOT={tmp_path}")
+    )
+    script = (
+        common
+        + 'sudo() { echo "cwd=$PWD"; printf "%s\\n" "$@"; }\nas_lunara uv --version\n'
+    )
+    proc = subprocess.run(
+        ["bash", "-c", script],
+        capture_output=True,
+        text=True,
+        cwd="/",
+        timeout=10,
+        check=True,
+    )
+    lines = proc.stdout.splitlines()
+    assert lines[0] == f"cwd={tmp_path}"
+    assert lines[1:6] == ["-u", "lunara", "-H", "env", "-i"]
+    for want in (
+        f"HOME={tmp_path}",
+        "UV_NO_CONFIG=1",
+        f"UV_CACHE_DIR={tmp_path}/.cache/uv",
+        f"XDG_CONFIG_HOME={tmp_path}/.config",
+        "PIP_CONFIG_FILE=/dev/null",
+    ):
+        assert want in lines
+    assert lines[-2:] == ["uv", "--version"]

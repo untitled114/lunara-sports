@@ -35,6 +35,25 @@ die() {
     exit 1
 }
 
+# Run a command as the lunara user with lunara's own clean environment. `sudo -H` alone
+# is not enough: the ssh session's cwd is /home/ubuntu (unreadable for lunara) and uv
+# discovers uv.toml from the cwd upwards and from HOME (provision failed on exactly that).
+# So: cwd and HOME are /opt/lunara, env -i drops the caller's environment, no uv config
+# files are read, and uv/pip/XDG caches live under /opt/lunara/.cache. Extra VAR=value
+# words may precede the command (env syntax).
+as_lunara() {
+    (
+        cd "$LUNARA_ROOT" &&
+            sudo -u lunara -H env -i \
+                PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+                HOME="$LUNARA_ROOT" LANG=C.UTF-8 \
+                XDG_CONFIG_HOME="$LUNARA_ROOT/.config" XDG_CACHE_HOME="$LUNARA_ROOT/.cache" \
+                UV_NO_CONFIG=1 UV_CACHE_DIR="$LUNARA_ROOT/.cache/uv" \
+                PIP_CACHE_DIR="$LUNARA_ROOT/.cache/pip" PIP_CONFIG_FILE=/dev/null \
+                "$@"
+    )
+}
+
 # psql as the lunara_app role against the lunara database. SQL arrives on stdin only.
 # The password travels through the environment (docker exec -e NAME copies it from
 # this process), never through argv.

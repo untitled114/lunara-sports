@@ -192,9 +192,8 @@ build_venvs() {
         step "2. fresh venv for $svc in the release"
         d="$REL/$svc"
         [[ -f "$d/pyproject.toml" ]] || die "$d/pyproject.toml missing (rsync step)"
-        sudo -u lunara -H "$PY312" -m venv "$d/.venv"
-        (cd "$d" && sudo -u lunara -H env PIP_CACHE_DIR="$LUNARA_ROOT/.cache/pip" \
-            "$d/.venv/bin/pip" install -q .)
+        as_lunara "$PY312" -m venv "$d/.venv"
+        as_lunara "$d/.venv/bin/pip" install -q "$d"
         info "$svc: $("$d/.venv/bin/python" --version)"
     done
     # Lumen writes logs/game_context relative to its working directory: keep them across
@@ -399,7 +398,8 @@ describe() {
             printf '%s\n' \
                 "0. preflight again (same checks)" \
                 "1. release dir $RELEASES/<release>/{api,ingestion,lumen-bot,deploy,migrations} complete" \
-                "2. fresh venv per service IN THE RELEASE, as lunara: $PY312 -m venv .venv && pip install ." \
+                "2. fresh venv per service IN THE RELEASE, via as_lunara (cwd/HOME /opt/lunara, env -i):" \
+                "   $PY312 -m venv <svc>/.venv && <svc>/.venv/bin/pip install <svc>" \
                 "   (live /opt/lunara/<svc> untouched); lumen-bot/logs -> $LUNARA_ROOT/shared/lumen-bot-logs" \
                 "3. apply migrations from the release not yet in schema_migrations (as lunara_app)" \
                 "   -- a failure up to here changes nothing live (DB migrations are forward-only)" \
