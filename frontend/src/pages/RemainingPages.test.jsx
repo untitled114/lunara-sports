@@ -243,7 +243,7 @@ describe('StatsPage', () => {
     api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
     wrap(<StatsPage />)
     const [topScorer] = statsLeaders.data.categories.pts
-    await waitFor(() => expect(screen.getByText(topScorer.player)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText(topScorer.player).length).toBeGreaterThan(0))
     expect(screen.getAllByText(topScorer.team).length).toBeGreaterThan(0)
     expect(screen.getByText('League stats', { exact: false })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Offense' })).toBeInTheDocument()
@@ -253,16 +253,38 @@ describe('StatsPage', () => {
   })
 
   it('titles the page "Stats" and takes its season label only from the data', async () => {
-    // The real capture carries no season_label (the API adds it from ESPN's payload), so
-    // the page names no season rather than a hard-coded one.
-    expect(statsLeaders.data.season_label).toBeUndefined()
+    // The real capture carries the API's season_label ("2025–26 regular season").
+    const label = statsLeaders.data.season_label
+    expect(label).toBe('2025–26 regular season')
     api.fetchStatLeaders.mockResolvedValue(statsLeaders.data)
     api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
     wrap(<StatsPage />)
     expect(await screen.findByRole('heading', { name: 'Stats', level: 1 })).toBeInTheDocument()
     expect(screen.queryByText('Statistics')).toBeNull()
+    await waitFor(() => expect(document.body.textContent).toContain(label))
+    expect(screen.getByText('League stats', { exact: false }).textContent).toContain(label)
+  })
+
+  it('names no season when the data carries none', async () => {
+    const { season_label: _drop, ...unlabelled } = statsLeaders.data
+    api.fetchStatLeaders.mockResolvedValue(unlabelled)
+    api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
+    wrap(<StatsPage />)
+    await screen.findByRole('heading', { name: 'Stats', level: 1 })
     expect(screen.getByText('League stats').textContent).toBe('League stats')
     expect(document.body.textContent).not.toMatch(/20\d\d[-–]\d\d/)
+  })
+
+  it('shows the shooting leaders (FG%, 3P%, FT%) from the real capture', async () => {
+    api.fetchStatLeaders.mockResolvedValue(statsLeaders.data)
+    api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
+    wrap(<StatsPage />)
+    expect(await screen.findByRole('heading', { name: 'Shooting' })).toBeInTheDocument()
+    const { fg_pct, three_pct, ft_pct } = statsLeaders.data.categories
+    for (const [top] of [fg_pct, three_pct, ft_pct]) {
+      expect(screen.getAllByText(top.player).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(top.value).length).toBeGreaterThan(0)
+    }
   })
 
   it('loads leader headshots through the combiner at 2x the 48px avatar', async () => {

@@ -151,7 +151,7 @@
     "status": 200,
     "contentType": "application/json",
     "url": "https://api.lunara-app.com/stats/leaders?limit=5",
-    "capturedAtET": "Sep 25, 2026, 1:44:26 PM EDT"
+    "capturedAtET": "Sep 25, 2026, 3:37:22 PM EDT"
   },
   "/stats/teams": {
     "file": "stats_teams.json",
