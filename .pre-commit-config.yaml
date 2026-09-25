@@ -14,7 +14,7 @@ repos:
       # Full-page screenshot baselines (the home page's photos run ~600 KB at 1280px).
       - id: check-added-large-files
         name: check for added large files (e2e screenshot baselines)
-        args: ['--maxkb=1000']
+        args: ['--maxkb=1400']
         files: ^frontend/e2e/pages\.spec\.js-snapshots/
       - id: check-merge-conflict
 

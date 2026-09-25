@@ -43,12 +43,20 @@ const FREEZE_CSS = `
 // ever diff as noise, so it is hidden for the shots. Everything above it is real.
 const HIDE_GRAIN_CSS = `[data-testid='page-grain'] { visibility: hidden !important; }`
 
+// The arena backdrop (ruling D31) is fixed to the viewport in the app. Once the shell is let
+// out to page height for a full-page shot, it would stretch the photo over the whole page
+// (a 2,500px-tall leather texture, 1.5-2.3 MB PNGs). For the shot it keeps its real,
+// viewport-sized box at the top of the page; below that the page shows the backdrop color.
+// The photo and glow stay visible and are compared.
+const PIN_BACKDROP_CSS = `[data-testid='arena-backdrop'] { bottom: auto !important; height: 900px !important; }`
+
 // The app shell is a fixed, viewport-sized box with its own scroller, so the document
 // never grows and a fullPage shot would stop at the fold. For the screenshot only, the
 // shell is let out to its natural height so the whole page is captured. The grain is
 // hidden here too, so it only ever leaves the screenshots, never the assertions.
 async function unpinShell(page) {
   await page.addStyleTag({ content: HIDE_GRAIN_CSS })
+  await page.addStyleTag({ content: PIN_BACKDROP_CSS })
   await page.addStyleTag({
     content: 'html, body, #react-root { height: auto !important; overflow: visible !important; }',
   })
@@ -93,7 +101,9 @@ for (const width of [390, 1280]) {
       expect(overflow.doc, 'document scrollWidth').toBeLessThanOrEqual(overflow.inner)
       expect(overflow.scroller, 'app scroller scrollWidth').toBeLessThanOrEqual(overflow.scrollerClient)
 
-      // Uniformity: every non-live card has identical chrome.
+      // Uniformity: every non-live card has identical chrome. Cards are the translucent
+      // bg-surface-card over the arena backdrop (ruling D31); an opaque bg-surface-1 box with
+      // card radius is matched too, so a card that missed the switch fails here.
       const chromeOf = (selector) =>
         page.$$eval(selector, (els) =>
           els.map((e) => {
@@ -101,7 +111,9 @@ for (const width of [390, 1280]) {
             return [s.backgroundColor, s.borderTopColor, s.borderTopWidth, s.borderTopLeftRadius].join('|')
           }),
         )
-      const chrome = await chromeOf('.bg-surface-1.rounded-lg:not(.card-live)')
+      const chrome = await chromeOf(
+        ':is(.bg-surface-card, .bg-surface-1).rounded-lg:not(.card-live)',
+      )
       if (cards) expect(chrome.length, 'cards on the page').toBeGreaterThan(0)
       expect([...new Set(chrome)], 'distinct card chrome').toHaveLength(Math.min(chrome.length, 1))
       if (frames) {
@@ -150,7 +162,7 @@ for (const width of [390, 1280]) {
       expect(dimText, 'text dimmer than --text-3').toEqual([])
 
       // Tabular numbers on every score and every numeric table cell.
-      const proportional = await page.$$eval('.t-score, td.text-right', (els) =>
+      const proportional = await page.$$eval('.t-score, .t-score-display, td.text-right', (els) =>
         els
           .filter((e) => e.textContent.trim() && !getComputedStyle(e).fontVariantNumeric.includes('tabular-nums'))
           .map((e) => e.textContent.trim().slice(0, 20)),

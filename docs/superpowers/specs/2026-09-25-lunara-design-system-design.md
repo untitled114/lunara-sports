@@ -87,6 +87,43 @@ Team colors appear only in team marks and logos, never in chrome.
 
 No gradient sweeps or mirror/gloss effects on cards.
 
+#### Amendment (D31, owner, 2026-09-25)
+
+The owner found the flat redesign "soulless" and chose to bring the arena look back. This
+amends the Effects and Type rules above; the plain copy, nav terms, data fixes, AA contrast,
+uniform components, sounds and motion all stay.
+
+**Effects added**
+
+| Effect | Allowed on | Where it's defined |
+|---|---|---|
+| arena backdrop: `/branding/background-1-alt.webp` at 40%, darkened toward the bottom, three radial glow washes (`--glow-1` top-left, `--glow-2` top-right, `--glow-3` bottom-center), an edge vignette | the page background, behind everything | `AppLayout.jsx` (inline) |
+| translucent cards: every card is `bg-surface-card` (`--surface-1` at 85%) so the backdrop shows through faintly; table frames use the same fill | all card chrome | `--surface-card` in `tokens.css` |
+| team washes: each team's primary fades in from its own side | the game detail header only | `.team-wash` in `tokens.css`; colors and strength from `teamWash()` in `utils/teamColors.js` |
+
+- `--glow-1` is the default top-left color. A favorite team's primary replaces it, and on a
+  game page the home team's primary does (as before the redesign).
+- The "Background glow" setting (formerly "Background texture") drives the washes' opacity:
+  the setting times 0.7, with the same 1 s fade. At the default (40%) the brightest backdrop
+  spot stays near luminance 0.045, so `--text-2` holds 4.5:1 anywhere on it. The grain stays,
+  at a fixed 5%.
+- Straight on the backdrop, `--text-3` reads as `--text-2` (the photo alone is too bright for
+  `--text-3` at 4.5:1); any surface restores it. Accent text on the backdrop uses
+  `--accent-hover`.
+- `teamWash()` caps each team's wash so `--text-2` keeps 4.5:1 and the losing score
+  (`--text-3`, large) keeps 3:1 on it. Team colors still never appear in other chrome;
+  scoreboard game cards get no wash.
+
+**Type added:** one display class, `.display-wordmark`: Inter 900 italic, uppercase,
+`letter-spacing: -0.05em`, line height 0.9, silver gradient text fill (`#FFFFFF` → `#C8D0DC` →
+`#94A3B8`). It is used for "LUNARA SPORTS" on the landing hero and in the top bar, and nowhere
+else. The font load adds only Inter 900 italic. The game header's scores use
+`.t-score-display` (the score style at 44 px, 72 px from `sm`, still 700 and tabular).
+
+**Guardrail:** `check-design.mjs` allows heavy weight, italic and gradients only inside the
+`.display-wordmark` block of `tokens.css` (and gradients inside `.team-wash`), plus the
+backdrop in `AppLayout.jsx`. `tokens.css` is no longer allow-listed for effects as a whole.
+
 ### 2. Shared components (`frontend/src/components/ui/`)
 
 Existing `Badge`, `Table`, `Tabs`, `EmptyState`, `Skeleton` and `Alert` are rebuilt on the tokens. New components are added. Every page uses only these for the patterns below.

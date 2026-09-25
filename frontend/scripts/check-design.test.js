@@ -175,6 +175,61 @@ describe('design check', () => {
     })
   })
 
+  // Ruling D31: the display wordmark, the game-header team washes and the arena backdrop
+  // are the only places heavy type, italic and gradients are allowed, each scoped narrowly.
+  describe('D31 scoped effects: heavy/italic/gradient only where the ruling allows', () => {
+    const TOKENS = 'src/styles/tokens.css'
+    const wordmark = [
+      '.display-wordmark {',
+      '  font-weight: 900;',
+      '  font-style: italic;',
+      '  background: linear-gradient(180deg, #FFFFFF 0%, #94A3B8 100%);',
+      '}',
+    ].join('\n')
+    const wash = [
+      '.team-wash {',
+      '  background-image: linear-gradient(90deg, color-mix(in srgb, var(--wash-away) 30%, transparent) 0%, transparent 50%);',
+      '}',
+    ].join('\n')
+
+    it('allows heavy, italic and a gradient inside .display-wordmark in tokens.css', () => {
+      expect(scan(wordmark, TOKENS)).toEqual({})
+    })
+    it('allows only a gradient inside .team-wash in tokens.css (not heavy or italic)', () => {
+      expect(scan(wash, TOKENS)).toEqual({})
+      const heavyWash = '.team-wash {\n  font-weight: 900;\n  font-style: italic;\n}'
+      expect(scan(heavyWash, TOKENS)).toEqual({ heavy: 1, italic: 1 })
+    })
+    it('rejects the same declarations in tokens.css outside those blocks', () => {
+      const after = `${wordmark}\n.t-title {\n  font-weight: 900;\n  font-style: italic;\n  background: linear-gradient(red, blue);\n}`
+      expect(scan(after, TOKENS)).toEqual({ heavy: 1, italic: 1, effect: 1 })
+      // a one-line rule right after the block is outside it too
+      expect(scan(`${wash}\n.x { background: radial-gradient(red, blue); }`, TOKENS)).toEqual({ effect: 1 })
+    })
+    it('rejects the same block in any other css file', () => {
+      expect(scan(wordmark, 'src/styles.css')).toEqual({ heavy: 1, italic: 1, effect: 1, hex: 2 })
+      expect(scan(wash, 'src/styles.css')).toEqual({ effect: 1 })
+    })
+    it('rejects heavy/italic/gradient utilities and inline styles in pages and components', () => {
+      for (const f of ['src/pages/LandingPage.jsx', 'src/pages/GameDetailPage.jsx', 'src/components/ui/Card.jsx']) {
+        expect(scan('<h1 className="font-black italic bg-gradient-to-b">', f)).toEqual({ heavy: 1, italic: 1, effect: 1 })
+        expect(scan("style={{ fontWeight: 900, fontStyle: 'italic' }}", f)).toEqual({ heavy: 1, italic: 1 })
+        expect(scan("style={{ background: 'linear-gradient(90deg, var(--wash-away), transparent)' }}", f)).toEqual({ effect: 1 })
+      }
+    })
+    it('AppLayout may draw the backdrop gradients but still no heavy or italic type', () => {
+      const f = 'src/components/layout/AppLayout.jsx'
+      expect(scan("backgroundImage: 'radial-gradient(circle at 0% 0%, var(--glow-1) 0px, transparent 60%)'", f)).toEqual({})
+      expect(scan('<span className="font-black italic">Lunara</span>', f)).toEqual({ heavy: 1, italic: 1 })
+    })
+    it('tokens.css is no longer allow-listed for effects as a whole file', () => {
+      expect(scan('.x { backdrop-filter: none; } .y { background: linear-gradient(red, blue); }', TOKENS)).toEqual({ effect: 1 })
+    })
+    it('the real tokens.css passes, so the scoped blocks cover everything it uses', () => {
+      expect(check().filter((e) => e.startsWith(TOKENS))).toEqual([])
+    })
+  })
+
   describe('files(): directory traversal', () => {
     it('skips test/, tests/, and __tests__/ directories', () => {
       const root = mkdtempSync(join(tmpdir(), 'design-check-'))

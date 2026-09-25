@@ -36,7 +36,7 @@ export function BetTracker({ gameId }) {
   const wr = total > 0 ? Math.round((hits / total) * 100) : null;
 
   return (
-    <div className="rounded-lg border border-border bg-surface-1 overflow-hidden">
+    <div className="rounded-lg border border-border bg-surface-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <span className="t-label text-accent">Picks</span>

@@ -37,6 +37,36 @@ export const getTeamColor = (abbrev) => {
   return TEAM_COLORS[abbrev] || { primary: 'var(--accent)', secondary: 'var(--surface-2)', text: 'var(--text-1)' };
 };
 
+// The game header's per-side team wash (ruling D31). The wash is the team's primary mixed
+// into the header card, strongest at that team's edge. Its strength is capped per team so
+// the mixed background stays dark enough for --text-2 (#A3A9B7) at 4.5:1 and the loser's
+// --text-3 score at 3:1 (large text): the mix, taken over --surface-1 (#12151C), keeps a
+// relative luminance of at most WASH_MAX_LUMINANCE. A pale primary (SA's silver) gets a
+// faint wash; a dark one (DEN's navy) gets the full WASH_MAX_ALPHA. Unknown team: no wash.
+export const WASH_MAX_ALPHA = 0.35;
+export const WASH_MAX_LUMINANCE = 0.035;
+const WASH_BASE = '#12151C';
+
+const hexRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const channel = (v) => {
+  const x = v / 255;
+  return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+};
+export const luminance = ([r, g, b]) => 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+const mixRgb = (top, base, a) => top.map((v, i) => Math.round(base[i] + (v - base[i]) * a));
+
+export const teamWash = (abbrev) => {
+  const team = TEAM_COLORS[abbrev];
+  if (!team) return null;
+  const top = hexRgb(team.primary);
+  const base = hexRgb(WASH_BASE);
+  let alpha = WASH_MAX_ALPHA;
+  while (alpha > 0 && luminance(mixRgb(top, base, alpha)) > WASH_MAX_LUMINANCE) {
+    alpha = Math.round((alpha - 0.01) * 100) / 100;
+  }
+  return { color: team.primary, strength: `${Math.round(alpha * 100)}%` };
+};
+
 export const getLogoUrl = (abbrev) => {
   const map = {
     'WSH': 'was',

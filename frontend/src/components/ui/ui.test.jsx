@@ -21,7 +21,7 @@ const BAM = REAL_MIA_ROSTER.find((p) => p.name === 'Bam Adebayo')
 describe('ui', () => {
   it('Card uses surface-1, border and 16px radius; live adds glow class', () => {
     const { container, rerender } = render(<Card>x</Card>)
-    expect(container.firstChild).toHaveClass('bg-surface-1', 'border-border', 'rounded-lg')
+    expect(container.firstChild).toHaveClass('bg-surface-card', 'border-border', 'rounded-lg')
     rerender(<Card live>x</Card>)
     expect(container.firstChild).toHaveClass('card-live')
   })

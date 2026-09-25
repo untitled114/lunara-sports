@@ -85,7 +85,11 @@ export default function LandingPage() {
         <div className="relative z-10 flex flex-col items-center gap-8">
           <LiveNowBadge />
 
-          <h1 className="t-title text-text-1">Lunara Sports</h1>
+          {/* The display wordmark (ruling D31), as large as the pre-redesign hero. */}
+          <h1 className="display-wordmark text-5xl sm:text-6xl md:text-[10rem]">
+            <span className="block">Lunara</span>{' '}
+            <span className="block">Sports</span>
+          </h1>
 
           <p className="max-w-xl mx-auto t-body text-text-2">
             Live scores, real-time stats, and ML-powered picks

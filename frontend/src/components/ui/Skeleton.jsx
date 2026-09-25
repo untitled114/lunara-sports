@@ -65,7 +65,7 @@ Skeleton.Button = ({ className = '' }) => (
 );
 
 Skeleton.Card = ({ className = '' }) => (
-  <div className={clsx('rounded-lg border border-border bg-surface-1 p-6', className)}>
+  <div className={clsx('rounded-lg border border-border bg-surface-card p-6', className)}>
     <div className="flex items-center gap-4 mb-4">
       <Skeleton.Avatar />
       <div className="flex-1">
@@ -120,7 +120,7 @@ Skeleton.Dashboard = ({ className = '' }) => (
     {/* Stats Grid */}
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="rounded-lg bg-surface-1 p-6">
+        <div key={i} className="rounded-lg bg-surface-card p-6">
           <Skeleton variant="text" width="w-24" height="h-4" />
           <Skeleton variant="text" width="w-16" height="h-8" className="mt-2" />
         </div>

@@ -47,7 +47,7 @@ export function ReactionOverlay() {
       </div>
 
       {/* Reaction Picker Bar */}
-      <div className="bg-surface-1 border border-border flex items-center gap-2 p-1.5 rounded-lg shadow-2xl">
+      <div className="bg-surface-card border border-border flex items-center gap-2 p-1.5 rounded-lg shadow-2xl">
         {EMOJIS.map((emoji) => (
           <button
             key={emoji}

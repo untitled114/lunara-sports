@@ -42,7 +42,7 @@ export function PredictionSlip({ game, standings = {} }) {
   const rewardPoints = basePoints + Math.round(edge * 10);
 
   return (
-    <div className="bg-surface-1 rounded-lg border border-border shadow-2xl overflow-hidden mb-6">
+    <div className="bg-surface-card rounded-lg border border-border shadow-2xl overflow-hidden mb-6">
       <div className="px-6 py-4 border-b border-border bg-surface-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-warn" />

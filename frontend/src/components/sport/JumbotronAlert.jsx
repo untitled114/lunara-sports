@@ -19,7 +19,7 @@ export function JumbotronAlert({ message, subtext }) {
 
   return (
     <div className="fixed bottom-24 right-8 z-[150] w-full max-w-md px-4 animate-slideInRight">
-      <div className="bg-surface-1 rounded-lg border border-accent/30 overflow-hidden shadow-2xl group">
+      <div className="bg-surface-card rounded-lg border border-accent/30 overflow-hidden shadow-2xl group">
         <div className="h-1 w-full bg-accent-fill animate-pulse opacity-50" />
 
         <div className="p-6 relative">

@@ -309,7 +309,8 @@ export default function StandingsPage() {
         </div>
       </div>
 
-      <Link to="/stats" className="t-small inline-flex items-center gap-1 text-accent hover:text-accent-hover">
+      {/* On the arena backdrop (ruling D31): --accent-hover holds 4.5:1 over the glow, --accent doesn't. */}
+      <Link to="/stats" className="t-small inline-flex items-center gap-1 text-accent-hover hover:text-text-1">
         Stats
       </Link>
     </div>
