@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -90,10 +90,7 @@ class TestGetPlayerSeasonStats:
                 }
             ],
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
             result = await get_player_season_stats("123")
             assert result is not None
@@ -103,19 +100,13 @@ class TestGetPlayerSeasonStats:
             assert result.apg == "4.5"
 
     async def test_returns_none_when_no_data(self):
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(return_value=None)
             result = await get_player_season_stats("999")
             assert result is None
 
     async def test_returns_none_on_espn_error(self):
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(side_effect=Exception("fail"))
             result = await get_player_season_stats("123")
             assert result is None
@@ -130,10 +121,7 @@ class TestGetPlayerSeasonStats:
                 }
             ],
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
             result = await get_player_season_stats("123")
             assert result is None
@@ -199,10 +187,7 @@ class TestGetPlayerGameLog:
                 }
             ],
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_gamelog = AsyncMock(return_value=gamelog_data)
             result = await get_player_game_log("123")
             assert len(result) == 1
@@ -211,10 +196,7 @@ class TestGetPlayerGameLog:
             assert result[0]["date"] == "2026-02-15"
 
     async def test_empty_on_no_data(self):
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_gamelog = AsyncMock(return_value=None)
             result = await get_player_game_log("123")
             assert result == []
@@ -262,10 +244,7 @@ class TestGetStatLeaders:
                 }
             ],
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_stat_leaders = AsyncMock(return_value=espn_data)
             mock_espn.get_team_roster = AsyncMock(return_value=None)
             mock_espn.get_athlete_info = AsyncMock(
@@ -276,10 +255,7 @@ class TestGetStatLeaders:
             assert len(result.categories["pts"]) == 1
 
     async def test_empty_categories_on_failure(self):
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_stat_leaders = AsyncMock(return_value=None)
             result = await get_stat_leaders()
             assert result.categories == {}
@@ -287,23 +263,8 @@ class TestGetStatLeaders:
 
 @pytest.mark.asyncio
 class TestGetTeamStatsList:
-    async def test_empty_without_pool(self):
-        with patch("src.services.stats_service.get_teams_pool", return_value=None):
-            result = await get_team_stats_list()
-            assert result == []
-
-    async def test_empty_on_error(self):
-        mock_pool = AsyncMock()
-        mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(side_effect=Exception("DB error"))
-
-        async def _acquire():
-            return mock_conn
-
-        mock_ctx = AsyncMock()
-        mock_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_pool.acquire = MagicMock(return_value=mock_ctx)
-        with patch("src.services.stats_service.get_teams_pool", return_value=mock_pool):
-            result = await get_team_stats_list()
-            assert result == []
+    async def test_always_empty(self):
+        """No data source since the Sport-suite DB pools were retired
+        (owner-approved); always returns empty."""
+        result = await get_team_stats_list()
+        assert result == []

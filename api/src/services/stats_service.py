@@ -1,13 +1,11 @@
-"""Stats service — league leaders and team stats from Sport-suite databases."""
+"""Stats service — league leaders from ESPN; team stats leaderboard retired."""
 
 from __future__ import annotations
 
 import structlog
 
-from ..db.sport_suite import get_players_pool, get_teams_pool
 from ..models.schemas import PlayerSeasonStats, StatLeader, StatLeadersResponse, TeamStatsRow
 from . import espn_client
-from .team_mapping import from_sport_suite_abbrev
 
 logger = structlog.get_logger(__name__)
 
@@ -38,55 +36,7 @@ def _safe_float(val: str, default: str = "0.0") -> str:
 
 
 async def get_player_season_stats(player_id: str) -> PlayerSeasonStats | None:
-    """Fetch season stats — tries Sport-suite first, falls back to ESPN athlete stats."""
-    # Try Sport-suite DB first
-    pool = get_players_pool()
-    if pool:
-        try:
-            async with pool.acquire() as conn:
-                row = await conn.fetchrow(
-                    """
-                    SELECT
-                        COUNT(*) as gp,
-                        ROUND(AVG(points)::numeric, 1) as ppg,
-                        ROUND(AVG(rebounds)::numeric, 1) as rpg,
-                        ROUND(AVG(assists)::numeric, 1) as apg,
-                        ROUND(AVG(steals)::numeric, 1) as spg,
-                        ROUND(AVG(blocks)::numeric, 1) as bpg,
-                        CASE WHEN SUM(fg_attempted) > 0
-                            THEN ROUND((SUM(fg_made)::numeric / SUM(fg_attempted) * 100), 1)
-                            ELSE 0 END as fg_pct,
-                        CASE WHEN SUM(three_pt_attempted) > 0
-                            THEN ROUND((SUM(three_pointers_made)::numeric / SUM(three_pt_attempted) * 100), 1)
-                            ELSE 0 END as three_pct,
-                        CASE WHEN SUM(ft_attempted) > 0
-                            THEN ROUND((SUM(ft_made)::numeric / SUM(ft_attempted) * 100), 1)
-                            ELSE 0 END as ft_pct
-                    FROM player_game_logs
-                    WHERE player_id = $1::integer
-                      AND game_date >= '2024-10-01'
-                """,
-                    int(player_id) if player_id.isdigit() else 0,
-                )
-
-                if row and row["gp"] > 0:
-                    return PlayerSeasonStats(
-                        gp=row["gp"],
-                        ppg=str(row["ppg"]),
-                        rpg=str(row["rpg"]),
-                        apg=str(row["apg"]),
-                        spg=str(row["spg"]),
-                        bpg=str(row["bpg"]),
-                        fg_pct=f"{row['fg_pct']}%",
-                        three_pct=f"{row['three_pct']}%",
-                        ft_pct=f"{row['ft_pct']}%",
-                    )
-        except Exception as e:
-            logger.warning(
-                "player_season_stats.sport_suite_failed", player_id=player_id, error=str(e)
-            )
-
-    # Fallback: ESPN athlete stats endpoint
+    """Fetch season stats from the ESPN athlete stats endpoint."""
     try:
         data = await espn_client.get_athlete_stats(player_id)
         if not data:
@@ -137,57 +87,7 @@ async def get_player_season_stats(player_id: str) -> PlayerSeasonStats | None:
 
 
 async def get_player_game_log(player_id: str) -> list[dict]:
-    """Fetch recent game logs — tries Sport-suite first, falls back to ESPN gamelog."""
-    # Try Sport-suite DB first
-    pool = get_players_pool()
-    if pool:
-        try:
-            async with pool.acquire() as conn:
-                rows = await conn.fetch(
-                    """
-                    SELECT
-                        game_date as date,
-                        team_abbrev as team,
-                        opponent_abbrev as opponent,
-                        is_home,
-                        points,
-                        rebounds,
-                        assists,
-                        steals,
-                        blocks,
-                        fg_made,
-                        fg_attempted,
-                        three_pointers_made as tpm,
-                        three_pt_attempted as tpa
-                    FROM player_game_logs
-                    WHERE player_id = $1::integer
-                    ORDER BY game_date DESC
-                    LIMIT 10
-                """,
-                    int(player_id) if player_id.isdigit() else 0,
-                )
-
-                if rows:
-                    return [
-                        {
-                            "date": r["date"].strftime("%Y-%m-%d"),
-                            "team": from_sport_suite_abbrev(r["team"]),
-                            "opponent": from_sport_suite_abbrev(r["opponent"]),
-                            "home_away": "vs" if r["is_home"] else "@",
-                            "pts": r["points"],
-                            "reb": r["rebounds"],
-                            "ast": r["assists"],
-                            "stl": r["steals"],
-                            "blk": r["blocks"],
-                            "fg": f"{r['fg_made']}-{r['fg_attempted']}",
-                            "three": f"{r['tpm']}-{r['tpa']}",
-                        }
-                        for r in rows
-                    ]
-        except Exception as e:
-            logger.warning("player_game_log.sport_suite_failed", player_id=player_id, error=str(e))
-
-    # Fallback: ESPN gamelog endpoint
+    """Fetch recent game logs from the ESPN gamelog endpoint."""
     try:
         data = await espn_client.get_athlete_gamelog(player_id)
         if not data:
@@ -304,232 +204,60 @@ async def _resolve_athlete(aid: str, athlete_map: dict) -> dict:
     return {"name": f"Player {aid}", "abbrev": ""}
 
 
-# Stat categories to query from player_game_logs
-_LEADER_CATEGORIES = {
-    "pts": {"col": "points", "label": "Points Per Game"},
-    "reb": {"col": "rebounds", "label": "Rebounds Per Game"},
-    "ast": {"col": "assists", "label": "Assists Per Game"},
-    "stl": {"col": "steals", "label": "Steals Per Game"},
-    "blk": {"col": "blocks", "label": "Blocks Per Game"},
-    "threes": {"col": "three_pointers_made", "label": "3PM Per Game"},
-}
-
-# Percentage categories — require SUM(made)/SUM(attempted) with minimum attempts
-_PCT_CATEGORIES = {
-    "fg_pct": {"made": "fg_made", "att": "fg_attempted", "min_att": 200},
-    "three_pct": {"made": "three_pointers_made", "att": "three_pt_attempted", "min_att": 75},
-    "ft_pct": {"made": "ft_made", "att": "ft_attempted", "min_att": 75},
-}
-
-
 async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
-    """Get league stat leaders from Sport-suite player_game_logs with ESPN fallback."""
-    pool = get_players_pool()
+    """Get league stat leaders from the ESPN core API."""
     categories = {}
 
-    if pool:
-        try:
-            async with pool.acquire() as conn:
-                # Average-based categories (PPG, RPG, APG, etc.)
-                for key, cfg in _LEADER_CATEGORIES.items():
-                    col = cfg["col"]
-                    try:
-                        rows = await conn.fetch(
-                            f"""
-                            SELECT
-                                pp.full_name,
-                                pp.player_id,
-                                pp.headshot_url,
-                                pgl.team_abbrev,
-                                COUNT(*) as gp,
-                                ROUND(AVG(pgl.{col})::numeric, 1) as avg_val
-                            FROM player_game_logs pgl
-                            JOIN player_profile pp ON pp.player_id = pgl.player_id
-                            WHERE pgl.game_date >= '2025-01-01'
-                            GROUP BY pp.full_name, pp.player_id, pp.headshot_url, pgl.team_abbrev
-                            HAVING COUNT(*) >= 1
-                            ORDER BY AVG(pgl.{col}) DESC
-                            LIMIT $1
-                        """,
-                            limit,
+    try:
+        espn_data = await espn_client.get_stat_leaders(limit=limit)
+        if espn_data:
+            # Build athlete lookup from cached rosters
+            athlete_map = await _build_athlete_lookup()
+
+            key_map = {
+                "pointsPerGame": "pts",
+                "reboundsPerGame": "reb",
+                "assistsPerGame": "ast",
+                "stealsPerGame": "stl",
+                "blocksPerGame": "blk",
+                "3PointsMadePerGame": "threes",
+                "fieldGoalPct": "fg_pct",
+                "freeThrowPct": "ft_pct",
+                "threePointPct": "three_pct",
+            }
+            for cat in espn_data.get("categories", []):
+                cat_name = cat.get("name")
+                key = key_map.get(cat_name)
+                if not key:
+                    continue
+                leaders = []
+                for i, leader in enumerate(cat.get("leaders", [])):
+                    # Extract athlete ID from $ref URL
+                    ref = leader.get("athlete", {}).get("$ref", "")
+                    aid = ref.split("/athletes/")[-1].split("?")[0] if "/athletes/" in ref else ""
+                    # Resolve athlete name (with fallback to v3 endpoint)
+                    info = await _resolve_athlete(aid, athlete_map)
+                    leaders.append(
+                        StatLeader(
+                            rank=i + 1,
+                            player=info.get("name", f"Player {aid}"),
+                            player_id=aid,
+                            team=info.get("abbrev", ""),
+                            value=str(leader.get("displayValue", "0.0")),
+                            headshot_url=f"https://a.espncdn.com/i/headshots/nba/players/full/{aid}.png"
+                            if aid
+                            else "",
                         )
-
-                        leaders = []
-                        for i, r in enumerate(rows):
-                            abbrev = from_sport_suite_abbrev(r["team_abbrev"])
-                            leaders.append(
-                                StatLeader(
-                                    rank=i + 1,
-                                    player=r["full_name"],
-                                    player_id=str(r["player_id"]),
-                                    team=abbrev,
-                                    value=str(r["avg_val"]),
-                                    headshot_url=r["headshot_url"] or "",
-                                )
-                            )
-
-                        if leaders:
-                            categories[key] = leaders
-                    except Exception as cat_e:
-                        logger.warning(
-                            "stat_leaders.category_failed", category=key, error=str(cat_e)
-                        )
-
-                # Percentage-based categories (FG%, 3P%, FT%)
-                for key, cfg in _PCT_CATEGORIES.items():
-                    made, att, min_att = cfg["made"], cfg["att"], cfg["min_att"]
-                    try:
-                        rows = await conn.fetch(
-                            f"""
-                            SELECT
-                                pp.full_name,
-                                pp.player_id,
-                                pp.headshot_url,
-                                pgl.team_abbrev,
-                                COUNT(*) as gp,
-                                ROUND(
-                                    SUM(pgl.{made})::numeric
-                                    / NULLIF(SUM(pgl.{att}), 0) * 100, 1
-                                ) as avg_val
-                            FROM player_game_logs pgl
-                            JOIN player_profile pp ON pp.player_id = pgl.player_id
-                            WHERE pgl.game_date >= '2025-01-01'
-                            GROUP BY pp.full_name, pp.player_id, pp.headshot_url, pgl.team_abbrev
-                            HAVING SUM(pgl.{att}) >= {min_att}
-                            ORDER BY SUM(pgl.{made})::numeric
-                                     / NULLIF(SUM(pgl.{att}), 0) DESC
-                            LIMIT $1
-                        """,
-                            limit,
-                        )
-
-                        leaders = []
-                        for i, r in enumerate(rows):
-                            abbrev = from_sport_suite_abbrev(r["team_abbrev"])
-                            val = r["avg_val"]
-                            leaders.append(
-                                StatLeader(
-                                    rank=i + 1,
-                                    player=r["full_name"],
-                                    player_id=str(r["player_id"]),
-                                    team=abbrev,
-                                    value=f"{val}%" if val is not None else "0.0%",
-                                    headshot_url=r["headshot_url"] or "",
-                                )
-                            )
-
-                        if leaders:
-                            categories[key] = leaders
-                    except Exception as cat_e:
-                        logger.warning(
-                            "stat_leaders.pct_category_failed", category=key, error=str(cat_e)
-                        )
-        except Exception as e:
-            logger.warning("stat_leaders.query_failed", error=str(e))
-
-    # Fallback to ESPN core API if no categories from Sport-suite
-    if not categories:
-        try:
-            espn_data = await espn_client.get_stat_leaders(limit=limit)
-            if espn_data:
-                # Build athlete lookup from cached rosters
-                athlete_map = await _build_athlete_lookup()
-
-                key_map = {
-                    "pointsPerGame": "pts",
-                    "reboundsPerGame": "reb",
-                    "assistsPerGame": "ast",
-                    "stealsPerGame": "stl",
-                    "blocksPerGame": "blk",
-                    "3PointsMadePerGame": "threes",
-                    "fieldGoalPct": "fg_pct",
-                    "freeThrowPct": "ft_pct",
-                    "threePointPct": "three_pct",
-                }
-                for cat in espn_data.get("categories", []):
-                    cat_name = cat.get("name")
-                    key = key_map.get(cat_name)
-                    if not key:
-                        continue
-                    leaders = []
-                    for i, leader in enumerate(cat.get("leaders", [])):
-                        # Extract athlete ID from $ref URL
-                        ref = leader.get("athlete", {}).get("$ref", "")
-                        aid = (
-                            ref.split("/athletes/")[-1].split("?")[0] if "/athletes/" in ref else ""
-                        )
-                        # Resolve athlete name (with fallback to v3 endpoint)
-                        info = await _resolve_athlete(aid, athlete_map)
-                        leaders.append(
-                            StatLeader(
-                                rank=i + 1,
-                                player=info.get("name", f"Player {aid}"),
-                                player_id=aid,
-                                team=info.get("abbrev", ""),
-                                value=str(leader.get("displayValue", "0.0")),
-                                headshot_url=f"https://a.espncdn.com/i/headshots/nba/players/full/{aid}.png"
-                                if aid
-                                else "",
-                            )
-                        )
-                    if leaders:
-                        categories[key] = leaders[:limit]
-        except Exception as espn_e:
-            logger.warning("stat_leaders.espn_failed", error=str(espn_e))
+                    )
+                if leaders:
+                    categories[key] = leaders[:limit]
+    except Exception as espn_e:
+        logger.warning("stat_leaders.espn_failed", error=str(espn_e))
 
     return StatLeadersResponse(categories=categories)
 
 
 async def get_team_stats_list() -> list[TeamStatsRow]:
-    """Get team stats from Sport-suite team_season_stats."""
-    pool = get_teams_pool()
-    if not pool:
-        return []
-
-    _SQL_CURRENT = (
-        "SELECT team_abbrev, wins, losses,"
-        " ROUND(pace::numeric, 1) as pace,"
-        " ROUND(offensive_rating::numeric, 1) as ortg,"
-        " ROUND(defensive_rating::numeric, 1) as drtg,"
-        " ROUND(net_rating::numeric, 1) as net_rtg,"
-        " ROUND(true_shooting_pct::numeric * 100, 1) as ts_pct,"
-        " ROUND(rebounding_pct::numeric * 100, 1) as reb_pct"
-        " FROM team_season_stats WHERE season = 2026"
-        " ORDER BY net_rating DESC"
-    )
-    _SQL_FALLBACK = (
-        "SELECT team_abbrev, wins, losses,"
-        " ROUND(pace::numeric, 1) as pace,"
-        " ROUND(offensive_rating::numeric, 1) as ortg,"
-        " ROUND(defensive_rating::numeric, 1) as drtg,"
-        " ROUND(net_rating::numeric, 1) as net_rtg,"
-        " ROUND(true_shooting_pct::numeric * 100, 1) as ts_pct,"
-        " ROUND(rebounding_pct::numeric * 100, 1) as reb_pct"
-        " FROM team_season_stats"
-        " WHERE season = (SELECT MAX(season) FROM team_season_stats)"
-        " ORDER BY net_rating DESC"
-    )
-    try:
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(_SQL_CURRENT)
-
-            if not rows:
-                rows = await conn.fetch(_SQL_FALLBACK)
-
-            return [
-                TeamStatsRow(
-                    rank=i + 1,
-                    team=r["team_abbrev"],
-                    abbrev=from_sport_suite_abbrev(r["team_abbrev"]),
-                    record=f"{r['wins']}-{r['losses']}",
-                    ortg=str(r["ortg"]),
-                    drtg=str(r["drtg"]),
-                    net_rtg=str(r["net_rtg"]),
-                    pace=str(r["pace"]),
-                    ts_pct=f"{r['ts_pct']}%",
-                )
-                for i, r in enumerate(rows)
-            ]
-    except Exception as e:
-        logger.warning("team_stats_list.sport_suite_failed", error=str(e))
-        return []
+    """Team stats leaderboard — no data source since the Sport-suite DB pools were
+    retired (owner-approved); always returns empty pending a replacement source."""
+    return []

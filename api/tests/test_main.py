@@ -25,9 +25,6 @@ def _make_settings(**overrides):
         redis_url="redis://localhost:6379/0",
         api_host="0.0.0.0",
         api_port=8000,
-        sport_suite_db_user="",
-        sport_suite_db_password="",
-        sport_suite_db_host="localhost",
         sport_suite_predictions_dir="",
         sport_suite_api_url="",
         sport_suite_api_key="",
@@ -53,10 +50,8 @@ def _lifespan_mocks(settings):
         "src.main.seed_teams": AsyncMock(),
         "src.main.init_redis": AsyncMock(),
         "src.main.init_espn_client": MagicMock(),
-        "src.main.init_sport_suite": AsyncMock(),
         "src.main.populate_team_logos": AsyncMock(),
         "src.main.close_espn_client": AsyncMock(),
-        "src.main.close_sport_suite": AsyncMock(),
         "src.main.close_redis": AsyncMock(),
         "src.main.close_db": AsyncMock(),
         "src.main.run_play_poller": AsyncMock(),
@@ -96,11 +91,9 @@ def _app_test_mocks(extra_patches=None):
         "src.main.seed_teams": AsyncMock(),
         "src.main.init_redis": AsyncMock(),
         "src.main.init_espn_client": MagicMock(),
-        "src.main.init_sport_suite": AsyncMock(),
         "src.main.populate_team_logos": AsyncMock(),
         # Lifespan shutdown mocks
         "src.main.close_espn_client": AsyncMock(),
-        "src.main.close_sport_suite": AsyncMock(),
         "src.main.close_redis": AsyncMock(),
         "src.main.close_db": AsyncMock(),
         # Health-check mocks
@@ -141,12 +134,10 @@ class TestLifespan:
                 mocks["src.main.seed_teams"].assert_awaited_once()
                 mocks["src.main.init_redis"].assert_awaited_once()
                 mocks["src.main.init_espn_client"].assert_called_once()
-                mocks["src.main.init_sport_suite"].assert_awaited_once()
                 mocks["src.main.populate_team_logos"].assert_awaited_once()
 
             # Shutdown
             mocks["src.main.close_espn_client"].assert_awaited_once()
-            mocks["src.main.close_sport_suite"].assert_awaited_once()
             mocks["src.main.close_redis"].assert_awaited_once()
             mocks["src.main.close_db"].assert_awaited_once()
 

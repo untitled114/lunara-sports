@@ -16,11 +16,6 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 
-    # Sport-suite database credentials (optional, for enrichment)
-    sport_suite_db_user: str = ""
-    sport_suite_db_password: str = ""
-    sport_suite_db_host: str = "localhost"
-
     # Sport-suite predictions directory (deprecated — use API instead)
     sport_suite_predictions_dir: str = ""
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from src.services.stats_service import (
     _build_athlete_lookup,
@@ -28,59 +28,6 @@ class TestSafeFloat:
 
 
 class TestGetPlayerSeasonStatsDB:
-    async def test_from_sport_suite(self):
-        mock_row = {
-            "gp": 70,
-            "ppg": 25.3,
-            "rpg": 7.2,
-            "apg": 8.1,
-            "spg": 1.5,
-            "bpg": 0.8,
-            "fg_pct": 52.1,
-            "three_pct": 38.5,
-            "ft_pct": 85.2,
-        }
-        mock_conn = AsyncMock()
-        mock_conn.fetchrow = AsyncMock(return_value=mock_row)
-        mock_pool = MagicMock()
-        mock_pool.acquire.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("src.services.stats_service.get_players_pool", return_value=mock_pool):
-            result = await get_player_season_stats("12345")
-            assert result is not None
-            assert result.gp == 70
-            assert result.ppg == "25.3"
-
-    async def test_from_sport_suite_no_games(self):
-        mock_row = {"gp": 0}
-        mock_conn = AsyncMock()
-        mock_conn.fetchrow = AsyncMock(return_value=mock_row)
-        mock_pool = MagicMock()
-        mock_pool.acquire.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
-
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=mock_pool),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
-            mock_espn.get_athlete_stats = AsyncMock(return_value=None)
-            result = await get_player_season_stats("12345")
-            assert result is None
-
-    async def test_from_sport_suite_error_falls_to_espn(self):
-        mock_pool = MagicMock()
-        mock_pool.acquire.return_value.__aenter__ = AsyncMock(side_effect=Exception("DB error"))
-        mock_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
-
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=mock_pool),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
-            mock_espn.get_athlete_stats = AsyncMock(return_value=None)
-            result = await get_player_season_stats("12345")
-            assert result is None
-
     async def test_espn_fallback(self):
         espn_data = {
             "categories": [
@@ -134,10 +81,7 @@ class TestGetPlayerSeasonStatsDB:
             ]
         }
 
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
             result = await get_player_season_stats("12345")
             assert result is not None
@@ -149,19 +93,13 @@ class TestGetPlayerSeasonStatsDB:
                 {"displayName": "Regular Season Totals", "labels": [], "statistics": []},
             ]
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
             result = await get_player_season_stats("12345")
             assert result is None
 
     async def test_espn_error(self):
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(side_effect=Exception("ESPN down"))
             result = await get_player_season_stats("12345")
             assert result is None
@@ -174,10 +112,7 @@ class TestGetPlayerSeasonStatsDB:
                 {"displayName": "Regular Season Averages", "labels": ["GP"], "statistics": []},
             ]
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
             result = await get_player_season_stats("12345")
             assert result is None
@@ -194,10 +129,7 @@ class TestGetPlayerSeasonStatsDB:
                 },
             ]
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
             result = await get_player_season_stats("12345")
             assert result is None
@@ -215,10 +147,7 @@ class TestGetPlayerSeasonStatsDB:
                 },
             ]
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
             result = await get_player_season_stats("12345")
             assert result is not None
@@ -227,51 +156,6 @@ class TestGetPlayerSeasonStatsDB:
 
 
 class TestGetPlayerGameLogDB:
-    async def test_from_sport_suite(self):
-        from datetime import date as dt_date
-
-        mock_rows = [
-            {
-                "date": dt_date(2026, 3, 20),
-                "team": "GSW",
-                "opponent": "NOP",
-                "is_home": True,
-                "points": 30,
-                "rebounds": 5,
-                "assists": 8,
-                "steals": 2,
-                "blocks": 1,
-                "fg_made": 12,
-                "fg_attempted": 22,
-                "tpm": 3,
-                "tpa": 8,
-            }
-        ]
-        mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(return_value=mock_rows)
-        mock_pool = MagicMock()
-        mock_pool.acquire.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("src.services.stats_service.get_players_pool", return_value=mock_pool):
-            result = await get_player_game_log("12345")
-            assert len(result) == 1
-            assert result[0]["pts"] == 30
-            assert result[0]["home_away"] == "vs"
-
-    async def test_from_sport_suite_error_falls_to_espn(self):
-        mock_pool = MagicMock()
-        mock_pool.acquire.return_value.__aenter__ = AsyncMock(side_effect=Exception("DB error"))
-        mock_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
-
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=mock_pool),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
-            mock_espn.get_athlete_gamelog = AsyncMock(return_value=None)
-            result = await get_player_game_log("12345")
-            assert result == []
-
     async def test_espn_fallback(self):
         espn_data = {
             "labels": [
@@ -330,46 +214,9 @@ class TestGetPlayerGameLogDB:
                 },
             ],
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_gamelog = AsyncMock(return_value=espn_data)
             result = await get_player_game_log("12345")
-            assert len(result) == 1
-            assert result[0]["pts"] == 30
-
-    async def test_sport_suite_empty_rows_falls_to_espn(self):
-        """The Sport-suite query runs without error but returns zero rows
-        — `if rows:` is False (line 170->191), so the ESPN fallback still
-        runs (rather than raising or returning [])."""
-        mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(return_value=[])
-        mock_pool = MagicMock()
-        mock_pool.acquire.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=False)
-
-        espn_data = {
-            "labels": ["PTS"],
-            "events": {
-                "ev1": {
-                    "gameDate": "2026-03-20T02:30:00Z",
-                    "opponent": {"abbreviation": "LAL"},
-                    "team": {"abbreviation": "BOS"},
-                    "atVs": "vs",
-                },
-            },
-            "seasonTypes": [
-                {"categories": [{"events": [{"eventId": "ev1", "stats": ["30"]}]}]},
-            ],
-        }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=mock_pool),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
-            mock_espn.get_athlete_gamelog = AsyncMock(return_value=espn_data)
-            result = await get_player_game_log("12345")
-            mock_conn.fetch.assert_awaited_once()
             assert len(result) == 1
             assert result[0]["pts"] == 30
 
@@ -401,10 +248,7 @@ class TestGetPlayerGameLogDB:
                 },
             ],
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_gamelog = AsyncMock(return_value=espn_data)
             result = await get_player_game_log("12345")
             assert len(result) == 1
@@ -427,10 +271,7 @@ class TestGetPlayerGameLogDB:
                 {"categories": [{"events": [{"eventId": "ev1", "stats": ["30"]}]}]},
             ],
         }
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_gamelog = AsyncMock(return_value=espn_data)
             result = await get_player_game_log("12345")
             assert len(result) == 1
@@ -439,10 +280,7 @@ class TestGetPlayerGameLogDB:
             assert result[0]["fg"] == "0-0"  # defaulted string field
 
     async def test_espn_error(self):
-        with (
-            patch("src.services.stats_service.get_players_pool", return_value=None),
-            patch("src.services.stats_service.espn_client") as mock_espn,
-        ):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_gamelog = AsyncMock(side_effect=Exception("ESPN down"))
             result = await get_player_game_log("12345")
             assert result == []

@@ -7,7 +7,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models import Game, Team
-from ..db.sport_suite import get_players_pool
 from ..models.schemas import (
     RosterPlayer,
     TeamDetailResponse,
@@ -197,62 +196,6 @@ async def get_team_schedule(abbrev: str, session: AsyncSession) -> list[TeamSche
 
 
 async def get_team_stats(abbrev: str) -> list[TeamPlayerStats]:
-    """Get player stats for a team from Sport-suite DB, fallback to empty."""
-    pool = get_players_pool()
-    if not pool:
-        return []
-
-    # Map to Sport-suite abbreviation format if needed
-    from .team_mapping import PBP_TO_SPORT_SUITE
-
-    ss_abbrev = PBP_TO_SPORT_SUITE.get(abbrev, abbrev)
-
-    try:
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
-                SELECT
-                    pp.full_name,
-                    COUNT(*) as gp,
-                    ROUND(AVG(pgl.minutes_played)::numeric, 1) as mpg,
-                    ROUND(AVG(pgl.points)::numeric, 1) as ppg,
-                    ROUND(AVG(pgl.rebounds)::numeric, 1) as rpg,
-                    ROUND(AVG(pgl.assists)::numeric, 1) as apg,
-                    ROUND(AVG(pgl.steals)::numeric, 1) as spg,
-                    ROUND(AVG(pgl.blocks)::numeric, 1) as bpg,
-                    CASE WHEN SUM(pgl.fg_attempted) > 0
-                        THEN ROUND((SUM(pgl.fg_made)::numeric / SUM(pgl.fg_attempted) * 100), 1)
-                        ELSE 0 END as fg_pct,
-                    CASE WHEN SUM(pgl.three_pt_attempted) > 0
-                        THEN ROUND((SUM(pgl.three_pointers_made)::numeric / SUM(pgl.three_pt_attempted) * 100), 1)
-                        ELSE 0 END as three_pct
-                FROM player_game_logs pgl
-                JOIN player_profile pp ON pp.player_id = pgl.player_id
-                WHERE pgl.team_abbrev = $1
-                  AND pgl.game_date >= '2025-10-01'
-                GROUP BY pp.full_name
-                HAVING COUNT(*) >= 5
-                ORDER BY AVG(pgl.points) DESC
-                LIMIT 15
-            """,
-                ss_abbrev,
-            )
-
-            return [
-                TeamPlayerStats(
-                    player=r["full_name"],
-                    gp=r["gp"],
-                    mpg=float(r["mpg"]),
-                    ppg=float(r["ppg"]),
-                    rpg=float(r["rpg"]),
-                    apg=float(r["apg"]),
-                    spg=float(r["spg"]),
-                    bpg=float(r["bpg"]),
-                    fg_pct=f"{r['fg_pct']}%",
-                    three_pct=f"{r['three_pct']}%",
-                )
-                for r in rows
-            ]
-    except Exception as e:
-        logger.warning("team_stats.sport_suite_failed", abbrev=abbrev, error=str(e))
-        return []
+    """Per-team player stats — no data source since the Sport-suite DB pools were
+    retired (owner-approved); always returns empty pending a replacement source."""
+    return []

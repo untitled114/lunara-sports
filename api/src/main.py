@@ -15,7 +15,6 @@ from starlette.responses import Response
 from .config import Settings
 from .db.redis import close_redis, get_cached_game_list, init_redis, redis_ping
 from .db.session import close_db, create_tables, db_ping, init_db, seed_teams
-from .db.sport_suite import close_sport_suite, init_sport_suite
 from .metrics import instrumentator
 from .models.schemas import HealthResponse
 from .routers import (
@@ -55,7 +54,6 @@ async def lifespan(app: FastAPI):
     await seed_teams()
     await init_redis(settings)
     init_espn_client()
-    await init_sport_suite(settings)
     await populate_team_logos()
     logger.info("api.started", host=settings.api_host, port=settings.api_port)
 
@@ -99,7 +97,6 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     await close_espn_client()
-    await close_sport_suite()
     await close_redis()
     await close_db()
     logger.info("api.stopped")
