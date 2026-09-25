@@ -20,7 +20,7 @@ export function Badge({
   return (
     <span
       className={clsx(
-        't-label inline-flex items-center gap-1 rounded-sm px-2 py-0.5',
+        't-label inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-sm px-2 py-0.5',
         V[variant] ?? V.neutral,
         className
       )}

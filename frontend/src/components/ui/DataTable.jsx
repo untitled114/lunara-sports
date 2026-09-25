@@ -46,7 +46,7 @@ export function DataTable({ columns, rows, getKey, className, sort, onSortChange
           {rows.map((r) => (
             <tr key={getKey(r)} className="border-t border-border">
               {columns.map((c) => (
-                <td key={c.key} className={clsx('px-3 py-2 text-text-1', c.numeric && 'tnum text-right')}>
+                <td key={c.key} className={clsx('px-3 py-2 text-text-1', c.numeric && 'tnum text-right whitespace-nowrap')}>
                   {c.render ? c.render(r) : r[c.key]}
                 </td>
               ))}
