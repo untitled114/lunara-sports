@@ -1,35 +1,59 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Search, Settings, Volume2, VolumeX, Sun, X as CloseIcon, Cpu, Activity, Wifi, Shield, Zap, Globe, Layers, FileText, ChevronRight, Monitor, Eye, TrendingUp } from 'lucide-react';
+import {
+  Search, Settings, Volume2, VolumeX, Sun, X as CloseIcon, Eye, FileText, ChevronRight,
+  Shield, Wifi, Monitor, Home, Calendar, ListOrdered, TrendingUp, BarChart3, Users, User
+} from 'lucide-react';
 import { BottomNav } from '@/components/sport/BottomNav';
 import { ScoreTicker } from '@/components/sport/ScoreTicker';
 import { CommandBar } from '@/components/ui/CommandBar';
 import { JumbotronAlert } from '@/components/sport/JumbotronAlert';
+import { Segmented } from '@/components/ui/Segmented';
 import { useTheme } from '@/context/ThemeContext';
 import { BRANDING_IMAGES } from '@/constants/branding';
 import { TEAM_COLORS } from '@/utils/teamColors';
 
 const ALL_TEAMS = Object.keys(TEAM_COLORS);
 
-function SegmentedControl({ options, value, onChange }) {
-  return (
-    <div className="flex rounded-xl overflow-hidden border border-white/10">
-      {options.map(opt => (
-        <button
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          className={`flex-1 py-2.5 px-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
-            value === opt.value
-              ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]'
-              : 'bg-white/5 text-white/30 hover:text-white/60 hover:bg-white/10'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+const NAV_LINKS = [
+  { path: '/', label: 'Home', icon: Home },
+  { path: '/scoreboard', label: 'Scoreboard', icon: Calendar },
+  { path: '/standings', label: 'Standings', icon: ListOrdered },
+  { path: '/picks', label: 'Picks', icon: TrendingUp },
+  { path: '/stats', label: 'Stats', icon: BarChart3 },
+  { path: '/teams', label: 'Teams', icon: Users },
+  { path: '/players', label: 'Players', icon: User }
+];
+
+const FONT_SIZE_OPTIONS = [
+  { id: 'sm', label: 'S' },
+  { id: 'md', label: 'M' },
+  { id: 'lg', label: 'L' }
+];
+
+const REFRESH_OPTIONS = [
+  { id: 15, label: '15s' },
+  { id: 30, label: '30s' },
+  { id: 60, label: '60s' }
+];
+
+const TIMEZONE_OPTIONS = [
+  { id: 'local', label: 'Local' },
+  { id: 'ET', label: 'ET' },
+  { id: 'CT', label: 'CT' },
+  { id: 'MT', label: 'MT' },
+  { id: 'PT', label: 'PT' }
+];
+
+// The page grain sits on top of the arena backdrop at a fixed, faint opacity. The
+// "Background glow" setting (arenaIntensity, 0..1) drives the glow washes instead, as it
+// did before the redesign (ruling D31).
+const GRAIN_OPACITY = 0.05;
+// The glow washes' opacity is the setting times this cap: base drew them at the raw setting
+// (0.4 by default), which put the brightest backdrop spots near luminance 0.058, too bright
+// for --text-2 at 4.5:1. At 0.7 the default (40%) peaks near 0.045 and holds AA; the
+// slider still reaches a brighter glow when a viewer asks for it.
+const GLOW_SCALE = 0.7;
 
 const AppLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -56,7 +80,7 @@ const AppLayout = () => {
     timezone,
     updateTimezone
   } = useTheme();
-  const [activeAlert, setActiveAlert] = useState(null);
+  const [activeAlert] = useState(null);
 
   // Close menus on route change
   useEffect(() => {
@@ -65,117 +89,88 @@ const AppLayout = () => {
   }, [location.pathname]);
 
   const isActive = (path) => location.pathname === path;
-  const isGameDetail = false; // Always show top nav
 
   const handleNavClick = () => {
     playGlassClick();
   };
 
-  const NAV_LINKS = [
-    { path: '/', label: 'Home', icon: Cpu },
-    { path: '/scoreboard', label: 'Scores', icon: Activity },
-    { path: '/standings', label: 'Grid', icon: Shield },
-    { path: '/teams', label: 'Nodes', icon: Globe },
-    { path: '/stats', label: 'Data', icon: Zap },
-    { path: '/picks', label: 'Picks', icon: TrendingUp }
-  ];
-
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#000105' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--backdrop)' }}>
 
       {/* Skip to Content */}
       <a href="#main-content" className="skip-to-content">Skip to content</a>
 
-      {/* Background layers — absolute within fixed shell */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none' }}>
+      {/* Arena backdrop (ruling D31), as base fb7b2d1 drew it: the leather arena photo at
+          40%, darkened toward the bottom, three glow washes (top-left follows the favorite
+          or home team) whose strength is the "Background glow" setting, a faint grain and
+          an edge vignette. Fixed behind the scroller; nothing here takes pointer events. */}
+      <div data-testid="arena-backdrop" aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', backgroundColor: 'var(--backdrop)' }}>
         <img src="/branding/background-1-alt.webp" alt="" width={1920} height={1080} className="w-full h-full object-cover opacity-40" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#000105]/30 via-[#000105]/60 to-[#000105]" />
+        <div
+          className="absolute inset-0"
+          style={{ backgroundImage: 'linear-gradient(to bottom, color-mix(in srgb, var(--backdrop) 30%, transparent), color-mix(in srgb, var(--backdrop) 60%, transparent), var(--backdrop))' }}
+        />
+        <div
+          data-testid="arena-glow"
+          className="absolute inset-0"
+          style={{
+            opacity: arenaIntensity * GLOW_SCALE,
+            transition: 'opacity 1s',
+            backgroundImage: `radial-gradient(circle at 0% 0%, ${accentColors?.primary || 'var(--glow-1)'} 0px, transparent 60%), radial-gradient(circle at 100% 0%, var(--glow-2) 0px, transparent 60%), radial-gradient(at 50% 100%, var(--glow-3) 0px, transparent 50%)`
+          }}
+        />
+        <div
+          data-testid="page-grain"
+          className="page-grain absolute inset-0 mix-blend-overlay"
+          style={{ opacity: GRAIN_OPACITY }}
+        />
+        <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 150px color-mix(in srgb, var(--backdrop) 90%, transparent)' }} />
       </div>
-      <div
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', opacity: arenaIntensity, transition: 'opacity 1s',
-          backgroundImage: `radial-gradient(circle at 0% 0%, ${accentColors.primary} 0px, transparent 60%), radial-gradient(circle at 100% 0%, var(--accent-alt) 0px, transparent 60%), radial-gradient(at 50% 100%, var(--accent-warm) 0px, transparent 50%)`
-        }}
-      />
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.03 }} className="texture-grain mix-blend-overlay" />
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.1 }} className="texture-mesh" />
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', boxShadow: 'inset 0 0 150px rgba(0,0,0,0.9)' }} />
 
       {/* Cinematic Transition Overlay */}
       {isTransitioning && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200 }} className="bg-white animate-flash flex flex-col items-center justify-center">
-           <div className="absolute inset-0 z-0 overflow-hidden">
-              <img
-                src={transitionImage || BRANDING_IMAGES.transitions.main1}
-                alt=""
-                className="w-full h-full object-cover animate-scaleIn transition-transform duration-1000"
-              />
-              <div className="absolute inset-0 bg-white/40 mix-blend-overlay" />
-           </div>
-           <div className="flex flex-col items-center gap-8 animate-fadeIn relative z-10">
-              <div className="h-32 w-32 rounded-[2.5rem] bg-black flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.2)] border border-white/10 overflow-hidden relative">
-                 <img src={BRANDING_IMAGES.logos.general} alt="Lunara" className="absolute inset-0 w-full h-full object-cover opacity-80" />
-                 <span className="relative z-10 text-white font-black text-6xl italic mix-blend-difference">L</span>
+        <div
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200, backgroundColor: 'var(--text-1)' }}
+          className="animate-flash flex flex-col items-center justify-center"
+        >
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <img
+              src={transitionImage || BRANDING_IMAGES.transitions.main1}
+              alt=""
+              className="w-full h-full object-cover animate-scaleIn transition-transform duration-1000"
+            />
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--text-1)', opacity: 0.4, mixBlendMode: 'overlay' }} />
+          </div>
+          <div className="flex flex-col items-center gap-8 animate-fadeIn relative z-10">
+            <div className="h-32 w-32 rounded-lg bg-surface-2 border border-border flex items-center justify-center overflow-hidden relative">
+              <img src={BRANDING_IMAGES.logos.general} alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" />
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <span className="t-section" style={{ color: 'var(--surface-0)' }}>Lunara Sports</span>
+              <div className="h-1 w-48 rounded-sm overflow-hidden" style={{ backgroundColor: 'color-mix(in srgb, var(--surface-0) 20%, transparent)' }}>
+                <div className="h-full animate-progress" style={{ backgroundColor: 'var(--surface-0)' }} />
               </div>
-              <div className="flex flex-col items-center gap-2">
-                 <span className="text-[11px] font-black text-black uppercase tracking-[1em] ml-4 drop-shadow-xl">Lunara Sports</span>
-                 <div className="h-1 w-48 bg-black/20 rounded-full overflow-hidden backdrop-blur-md">
-                    <div className="h-full bg-black animate-progress" />
-                 </div>
-              </div>
-           </div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* SCROLLABLE CONTENT — everything scrolls together */}
       <div style={{ flex: '1 1 0%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'relative', zIndex: 30, WebkitOverflowScrolling: 'touch' }}>
 
-        {/* UPPER NAV — scrolls with content */}
+        {/* UPPER NAV — scrolls with content. Frosted glass is allowed here (top bar). */}
         <div style={{ position: 'relative', zIndex: 40, padding: '8px 12px 0' }}>
           <div className="max-w-[1800px] mx-auto">
-            <div className="relative group/header">
-              <div className="absolute inset-0 bg-[#050a18]/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
-                <div className="absolute inset-0 texture-mesh opacity-5" />
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent" />
-                <div className="absolute top-4 left-4 flex gap-1 opacity-20">
-                  <div className="h-1 w-1 rounded-full bg-white" />
-                  <div className="h-1 w-1 rounded-full bg-white" />
-                </div>
-                <div className="absolute top-4 right-4 flex gap-1 opacity-20">
-                  <div className="h-1 w-1 rounded-full bg-white" />
-                  <div className="h-1 w-1 rounded-full bg-white" />
-                </div>
-                <div className="absolute bottom-4 left-4 flex gap-1 opacity-20">
-                  <div className="h-1 w-1 rounded-full bg-white" />
-                  <div className="h-1 w-1 rounded-full bg-white" />
-                </div>
-                <div className="absolute bottom-4 right-4 flex gap-1 opacity-20">
-                  <div className="h-1 w-1 rounded-full bg-white" />
-                  <div className="h-1 w-1 rounded-full bg-white" />
-                </div>
-              </div>
-
+            <div className="relative bg-surface-1/90 backdrop-blur-xl border border-border rounded-lg">
               <div className="relative h-14 sm:h-20 px-4 sm:px-8 flex items-center justify-between">
-                <Link to="/" onClick={handleNavClick} className="flex items-center gap-3 sm:gap-5 group/logo">
-                  <div className="relative">
-                    <div className="absolute -inset-2 bg-indigo-500/20 blur-xl opacity-0 group-hover/logo:opacity-100 transition-opacity" />
-                    <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-black border border-white/10 flex items-center justify-center shadow-2xl relative overflow-hidden ring-1 ring-white/5">
-                      <img src={BRANDING_IMAGES.logos.general} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />
-                      <span className="relative z-10 text-white font-black italic text-xl sm:text-2xl mix-blend-difference">L</span>
-                    </div>
+                <Link to="/" onClick={handleNavClick} className="flex items-center gap-3 sm:gap-4">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md bg-surface-2 border border-border flex items-center justify-center overflow-hidden shrink-0">
+                    <img src={BRANDING_IMAGES.logos.general} alt="" className="w-full h-full object-cover opacity-80" />
                   </div>
-                  <div className="flex flex-col leading-none">
-                    <div className="flex items-baseline gap-1.5 sm:gap-2 group-hover:text-indigo-400 transition-colors">
-                      <span className="text-xl sm:text-2xl font-black text-white tracking-tighter uppercase italic">Lunara</span>
-                      <span className="text-base sm:text-xl font-black text-white/80 tracking-tighter uppercase italic">Sports</span>
-                    </div>
-                    <div className="hidden sm:flex items-center gap-2 mt-1">
-                      <div className="h-1 w-1 rounded-full bg-indigo-500 animate-pulse" />
-                      <span className="text-[10px] font-black text-white/70 uppercase tracking-[0.5em]">Intelligence Station</span>
-                    </div>
-                  </div>
+                  <span className="display-wordmark text-xl sm:text-2xl">Lunara Sports</span>
                 </Link>
 
-                <nav className="hidden lg:flex items-center gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-inner">
+                <nav aria-label="Primary" className="hidden lg:flex items-center gap-1 bg-surface-0/40 p-1 rounded-md border border-border">
                   {NAV_LINKS.map(link => {
                     const active = isActive(link.path);
                     return (
@@ -183,56 +178,38 @@ const AppLayout = () => {
                         key={link.path}
                         to={link.path}
                         onClick={handleNavClick}
-                        className={`relative h-12 px-8 flex items-center gap-3 rounded-xl transition-colors duration-500 group/nav ${
-                          active ? 'bg-white text-black shadow-2xl' : 'text-white/40 hover:text-white hover:bg-white/5'
-                        }`}
+                        className={`h-10 px-4 flex items-center gap-2 rounded-md t-small transition-colors duration-500 ${active ? 'bg-accent-fill text-white' : 'text-text-2 hover:text-text-1 hover:bg-surface-2'}`}
                       >
-                        <link.icon className={`h-4 w-4 ${active ? 'text-black' : 'text-indigo-400/60 group-hover/nav:text-indigo-400'} transition-colors`} />
-                        <span className="text-[13px] font-black uppercase tracking-widest">{link.label}</span>
-                        {active && (
-                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white shadow-[0_0_10px_white]" />
-                        )}
+                        <link.icon className="h-4 w-4" />
+                        <span>{link.label}</span>
                       </Link>
                     );
                   })}
                 </nav>
 
-                <div className="flex items-center gap-3 sm:gap-6">
-                  <div className="hidden xl:flex flex-col items-end border-r border-white/5 pr-6">
-                    <span className="text-[9px] font-black text-white/70 uppercase tracking-[0.4em] mb-1">System Frequency</span>
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-0.5">
-                        {[1,2,3,4].map(i => <div key={i} className={`h-2.5 w-0.5 rounded-full ${i <= 3 ? 'bg-indigo-500' : 'bg-white/10'}`} />)}
-                      </div>
-                      <span className="text-xs font-black text-indigo-400 tabular-nums">142.8 MHZ</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <button
-                      aria-label="Open search"
-                      onClick={() => { playGlassClick(); window.dispatchEvent(new KeyboardEvent('keydown', { 'metaKey': true, 'key': 'k' })); }}
-                      className="h-9 w-9 sm:h-12 sm:w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl"
-                    >
-                      <Search className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </button>
-                    <button
-                      aria-label="Open settings"
-                      onClick={() => { playGlassClick(); setSettingsOpen(true); }}
-                      className="h-9 w-9 sm:h-12 sm:w-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/30 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors shadow-xl group/settings"
-                    >
-                      <Settings className={`h-4 w-4 sm:h-5 sm:w-5 group-hover/settings:rotate-180 transition-transform duration-[1.5s] ${settingsOpen ? 'text-indigo-400' : ''}`} />
-                    </button>
-                  </div>
-
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <button
+                    aria-label="Open search"
+                    onClick={() => { playGlassClick(); window.dispatchEvent(new KeyboardEvent('keydown', { 'metaKey': true, 'key': 'k' })); }}
+                    className="h-9 w-9 sm:h-11 sm:w-11 flex items-center justify-center rounded-md bg-surface-2 border border-border text-text-3 hover:text-text-1 transition-colors"
+                  >
+                    <Search className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                  <button
+                    aria-label="Open settings"
+                    onClick={() => { playGlassClick(); setSettingsOpen(true); }}
+                    className="group/settings h-9 w-9 sm:h-11 sm:w-11 flex items-center justify-center rounded-md bg-surface-2 border border-border text-text-3 hover:text-text-1 transition-colors"
+                  >
+                    <Settings className={`h-4 w-4 sm:h-5 sm:w-5 group-hover/settings:rotate-180 transition-transform duration-[1.5s] ${settingsOpen ? 'text-accent' : ''}`} />
+                  </button>
                   <button
                     aria-label="Toggle navigation menu"
-                    className="lg:hidden h-9 w-9 sm:h-12 sm:w-12 flex flex-col items-center justify-center gap-1.5 rounded-xl bg-white/5 border border-white/5"
+                    className="lg:hidden h-9 w-9 sm:h-11 sm:w-11 flex flex-col items-center justify-center gap-1.5 rounded-md bg-surface-2 border border-border"
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   >
-                    <div className={`h-0.5 w-6 bg-white/60 transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`} />
-                    <div className={`h-0.5 bg-white/60 transition-opacity ${mobileMenuOpen ? 'opacity-0 w-4' : 'w-4'}`} />
-                    <div className={`h-0.5 w-6 bg-white/60 transition-transform ${mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+                    <div className={`h-0.5 w-5 bg-text-2 transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+                    <div className={`h-0.5 bg-text-2 transition-opacity ${mobileMenuOpen ? 'opacity-0 w-4' : 'w-4'}`} />
+                    <div className={`h-0.5 w-5 bg-text-2 transition-transform ${mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
                   </button>
                 </div>
               </div>
@@ -243,202 +220,164 @@ const AppLayout = () => {
         {/* SCORE TICKER — scrolls with content */}
         <div style={{ position: 'relative', zIndex: 40, padding: '4px 12px 8px' }}>
           <div className="max-w-[1800px] mx-auto">
-            <div className="relative">
-              <div className="absolute inset-0 bg-[#050a18]/90 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
-                <div className="absolute inset-0 texture-mesh opacity-[0.02]" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/[0.02] to-transparent" />
-              </div>
-              <div className="relative">
-                <ScoreTicker />
-              </div>
-            </div>
+            <ScoreTicker />
           </div>
         </div>
+
         {/* Settings Drawer */}
         {settingsOpen && (
           <>
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] animate-fadeIn" onClick={() => setSettingsOpen(false)} aria-hidden="true" />
-            <div className="fixed top-0 right-0 bottom-0 w-80 bg-[#050a18] z-[210] shadow-2xl border-l border-white/10 animate-slideInRight flex flex-col" role="dialog" aria-label="Settings" aria-modal="true">
-              <div className="p-10 border-b border-white/5 flex items-center justify-between bg-white/5 relative overflow-hidden">
-                 <img src={BRANDING_IMAGES.logos.general} alt="" width={320} height={80} loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-10" />
-                 <div className="flex items-center gap-4 relative z-10">
-                    <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                       <Settings className="h-4 w-4 text-indigo-400" />
-                    </div>
-                    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">Console</h2>
-                 </div>
-                 <button onClick={() => setSettingsOpen(false)} className="p-2 hover:bg-white/5 rounded-xl transition-colors relative z-10">
-                    <CloseIcon className="h-5 w-5 text-white/20" />
-                 </button>
+            <div className="fixed inset-0 z-[200] bg-surface-0/60 animate-fadeIn" onClick={() => setSettingsOpen(false)} aria-hidden="true" />
+            <div className="fixed top-0 right-0 bottom-0 w-80 bg-surface-1 z-[210] shadow-2xl border-l border-border animate-slideInRight flex flex-col" role="dialog" aria-label="Settings" aria-modal="true">
+              <div className="p-6 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-md bg-accent/10 flex items-center justify-center">
+                    <Settings className="h-4 w-4 text-accent" />
+                  </div>
+                  <h2 className="t-section text-text-1">Settings</h2>
+                </div>
+                <button onClick={() => setSettingsOpen(false)} aria-label="Close menu" className="p-2 hover:bg-surface-2 rounded-md transition-colors">
+                  <CloseIcon className="h-5 w-5 text-text-3" />
+                </button>
               </div>
 
-              <div className="p-10 flex-1 overflow-y-auto space-y-12 scrollbar-hide">
+              <div className="p-6 flex-1 overflow-y-auto space-y-8 scrollbar-thin">
 
-                 {/* 1. Display */}
-                 <section className="space-y-6">
-                    <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Display</span>
-                       <Monitor className="h-3 w-3 text-indigo-400/40" />
+                {/* 1. Display */}
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="t-label text-text-3">Display</span>
+                    <Monitor className="h-3.5 w-3.5 text-text-3" />
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="t-label text-text-3 block mb-2">Font size</span>
+                      <Segmented aria-label="Font size" options={FONT_SIZE_OPTIONS} value={fontSize} onChange={updateFontSize} />
                     </div>
-                    <div className="space-y-4">
-                       <div>
-                          <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest block mb-3">Font Size</span>
-                          <SegmentedControl
-                            options={[
-                              { value: 'sm', label: 'S' },
-                              { value: 'md', label: 'M' },
-                              { value: 'lg', label: 'L' },
-                            ]}
-                            value={fontSize}
-                            onChange={updateFontSize}
-                          />
-                       </div>
-                       <button
-                         onClick={toggleReducedMotion}
-                         className="w-full flex items-center justify-between p-4 rounded-xl deboss hover:border-indigo-500/30 transition-colors group"
-                       >
-                         <div className="flex items-center gap-3">
-                            <Eye className="h-4 w-4 text-white/30" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Reduced Motion</span>
-                         </div>
-                         <div className={`h-2 w-2 rounded-full ${reducedMotion ? 'bg-indigo-500 shadow-[0_0_10px_indigo]' : 'bg-white/10'}`} />
-                       </button>
-                    </div>
-                 </section>
-
-                 {/* 2. Audio Hardware */}
-                 <section className="space-y-6">
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Audio Hardware</span>
                     <button
-                      onClick={toggleSound}
-                      className="w-full flex items-center justify-between p-5 rounded-[1.5rem] deboss hover:border-indigo-500/30 transition-colors group"
+                      onClick={toggleReducedMotion}
+                      className="w-full flex items-center justify-between p-3 rounded-md border border-border bg-surface-2 hover:border-border-strong transition-colors"
                     >
-                      <div className="flex items-center gap-4">
-                         <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
-                            {soundEnabled ? <Volume2 className="h-5 w-5 text-indigo-400" /> : <VolumeX className="h-5 w-5 text-red-400" />}
-                         </div>
-                         <span className="text-xs font-bold uppercase tracking-widest text-white">{soundEnabled ? 'Active' : 'Muted'}</span>
+                      <div className="flex items-center gap-3">
+                        <Eye className="h-4 w-4 text-text-3" />
+                        <span className="t-small text-text-2">Reduced motion</span>
                       </div>
-                      <div className={`h-2 w-2 rounded-full ${soundEnabled ? 'bg-indigo-500 shadow-[0_0_10px_indigo] animate-pulse' : 'bg-white/10'}`} />
+                      <div className={`h-2 w-2 rounded-sm ${reducedMotion ? 'bg-accent' : 'bg-border-strong'}`} />
                     </button>
-                 </section>
+                  </div>
+                </section>
 
-                 {/* 3. Visual Intensity */}
-                 <section className="space-y-6">
-                    <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Visual Intensity</span>
-                       <Sun className="h-3 w-3 text-indigo-400/40" />
+                {/* 2. Sound */}
+                <section className="space-y-3">
+                  <span className="t-label text-text-3">Sound</span>
+                  <button
+                    onClick={toggleSound}
+                    className="w-full flex items-center justify-between p-3 rounded-md border border-border bg-surface-2 hover:border-border-strong transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-md bg-surface-1 border border-border flex items-center justify-center">
+                        {soundEnabled ? <Volume2 className="h-4 w-4 text-accent" /> : <VolumeX className="h-4 w-4 text-loss" />}
+                      </div>
+                      <span className="t-small text-text-1">{soundEnabled ? 'On' : 'Muted'}</span>
                     </div>
-                    <div className="p-8 rounded-[1.5rem] deboss border-white/5">
-                       <input
-                          type="range" min="0" max="1" step="0.1"
-                          value={arenaIntensity}
-                          onChange={(e) => updateIntensity(parseFloat(e.target.value))}
-                          className="w-full accent-indigo-500 cursor-pointer"
-                       />
-                       <div className="flex justify-between mt-6 text-[9px] font-black uppercase text-white/20 tracking-widest tabular-nums">
-                          <span>0%</span>
-                          <span className="text-indigo-400">{(arenaIntensity * 100).toFixed(0)}% POWER</span>
-                          <span>100%</span>
-                       </div>
-                    </div>
-                 </section>
+                    <div className={`h-2 w-2 rounded-sm ${soundEnabled ? 'bg-accent' : 'bg-border-strong'}`} />
+                  </button>
+                </section>
 
-                 {/* 4. Node Affinity — all 30 teams */}
-                 <section className="space-y-6">
-                    <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Node Affinity</span>
-                       {favoriteTeam && (
-                          <button
-                            onClick={() => selectFavoriteTeam(null)}
-                            className="text-[9px] font-bold uppercase tracking-widest text-red-400/60 hover:text-red-400 transition-colors"
-                          >
-                            Clear
-                          </button>
-                       )}
+                {/* 3. Background glow — the arena backdrop's glow washes (ruling D31) */}
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="t-label text-text-3" id="bg-glow-label">Background glow</span>
+                    <Sun className="h-3.5 w-3.5 text-text-3" />
+                  </div>
+                  <div className="p-4 rounded-md border border-border bg-surface-2">
+                    <input
+                      type="range" min="0" max="1" step="0.1"
+                      aria-labelledby="bg-glow-label"
+                      value={arenaIntensity}
+                      onChange={(e) => updateIntensity(parseFloat(e.target.value))}
+                      className="w-full cursor-pointer accent-[var(--accent)]"
+                    />
+                    <div className="flex justify-between mt-3 t-label text-text-3">
+                      <span className="tnum">0%</span>
+                      <span className="text-accent tnum">{(arenaIntensity * 100).toFixed(0)}%</span>
+                      <span className="tnum">100%</span>
                     </div>
-                    <div className="grid grid-cols-6 gap-2">
-                       {ALL_TEAMS.map(team => (
-                          <button
-                            key={team}
-                            onClick={() => selectFavoriteTeam(team)}
-                            className={`h-10 rounded-lg border flex items-center justify-center text-[9px] font-black transition-colors ${favoriteTeam === team ? 'bg-white text-black border-white shadow-2xl scale-110' : 'bg-white/5 border-white/5 text-white/20 hover:border-white/20'}`}
-                          >
-                            {team}
-                          </button>
-                       ))}
-                    </div>
-                 </section>
+                  </div>
+                </section>
 
-                 {/* 5. Data Uplink */}
-                 <section className="space-y-6">
-                    <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Data Uplink</span>
-                       <Wifi className="h-3 w-3 text-indigo-400/40" />
-                    </div>
-                    <div className="space-y-4">
-                       <div>
-                          <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest block mb-3">Refresh Interval</span>
-                          <SegmentedControl
-                            options={[
-                              { value: 15, label: '15s' },
-                              { value: 30, label: '30s' },
-                              { value: 60, label: '60s' },
-                            ]}
-                            value={refreshInterval}
-                            onChange={updateRefreshInterval}
-                          />
-                       </div>
-                       <div>
-                          <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest block mb-3">Timezone</span>
-                          <SegmentedControl
-                            options={[
-                              { value: 'local', label: 'Local' },
-                              { value: 'ET', label: 'ET' },
-                              { value: 'CT', label: 'CT' },
-                              { value: 'MT', label: 'MT' },
-                              { value: 'PT', label: 'PT' },
-                            ]}
-                            value={timezone}
-                            onChange={updateTimezone}
-                          />
-                       </div>
-                    </div>
-                 </section>
+                {/* 4. Favorite team — all 30 teams */}
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="t-label text-text-3">Favorite team</span>
+                    {favoriteTeam && (
+                      <button
+                        onClick={() => selectFavoriteTeam(null)}
+                        className="t-label text-loss hover:text-loss"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-6 gap-2">
+                    {ALL_TEAMS.map(team => (
+                      <button
+                        key={team}
+                        onClick={() => selectFavoriteTeam(team)}
+                        className={`h-10 rounded-md border t-label transition-colors ${favoriteTeam === team ? 'bg-accent-fill text-white border-transparent' : 'bg-surface-2 border-border text-text-3 hover:border-border-strong hover:text-text-2'}`}
+                      >
+                        {team}
+                      </button>
+                    ))}
+                  </div>
+                </section>
 
-                 {/* 6. System Protocols */}
-                 <section className="space-y-6">
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">System Protocols</span>
-                    <div className="space-y-2">
-                       <Link
-                         to="/terms"
-                         onClick={() => setSettingsOpen(false)}
-                         className="flex items-center justify-between p-4 rounded-xl deboss hover:bg-white/5 transition-colors group"
-                       >
-                         <div className="flex items-center gap-3">
-                            <FileText className="h-4 w-4 text-white/30 group-hover:text-indigo-400 transition-colors" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/60 group-hover:text-white transition-colors">Terms & Conditions</span>
-                         </div>
-                         <ChevronRight className="h-4 w-4 text-white/10 group-hover:text-white/30 transition-colors" />
-                       </Link>
-                       <Link
-                         to="/privacy"
-                         onClick={() => setSettingsOpen(false)}
-                         className="flex items-center justify-between p-4 rounded-xl deboss hover:bg-white/5 transition-colors group"
-                       >
-                         <div className="flex items-center gap-3">
-                            <Shield className="h-4 w-4 text-white/30 group-hover:text-indigo-400 transition-colors" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/60 group-hover:text-white transition-colors">Privacy Policy</span>
-                         </div>
-                         <ChevronRight className="h-4 w-4 text-white/10 group-hover:text-white/30 transition-colors" />
-                       </Link>
+                {/* 5. Data */}
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="t-label text-text-3">Data</span>
+                    <Wifi className="h-3.5 w-3.5 text-text-3" />
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="t-label text-text-3 block mb-2">Refresh interval</span>
+                      <Segmented aria-label="Refresh interval" options={REFRESH_OPTIONS} value={refreshInterval} onChange={updateRefreshInterval} />
                     </div>
-                 </section>
-              </div>
+                    <div>
+                      <span className="t-label text-text-3 block mb-2">Timezone</span>
+                      <Segmented aria-label="Timezone" options={TIMEZONE_OPTIONS} value={timezone} onChange={updateTimezone} />
+                    </div>
+                  </div>
+                </section>
 
-              <div className="p-8 bg-black/40 border-t border-white/5 relative overflow-hidden">
-                 <img src={BRANDING_IMAGES.transitions.brand2} alt="" width={320} height={60} loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-5" />
-                 <p className="relative z-10 text-[9px] font-black uppercase tracking-[0.5em] text-white/10 text-center italic">Hardware V1.04.2</p>
+                {/* 6. Settings */}
+                <section className="space-y-3">
+                  <span className="t-label text-text-3">Settings</span>
+                  <div className="space-y-2">
+                    <Link
+                      to="/terms"
+                      onClick={() => setSettingsOpen(false)}
+                      className="flex items-center justify-between p-3 rounded-md hover:bg-surface-2 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-4 w-4 text-text-3 group-hover:text-accent transition-colors" />
+                        <span className="t-small text-text-2 group-hover:text-text-1 transition-colors">Terms &amp; Conditions</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-text-3 group-hover:text-text-2 transition-colors" />
+                    </Link>
+                    <Link
+                      to="/privacy"
+                      onClick={() => setSettingsOpen(false)}
+                      className="flex items-center justify-between p-3 rounded-md hover:bg-surface-2 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-4 w-4 text-text-3 group-hover:text-accent transition-colors" />
+                        <span className="t-small text-text-2 group-hover:text-text-1 transition-colors">Privacy Policy</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-text-3 group-hover:text-text-2 transition-colors" />
+                    </Link>
+                  </div>
+                </section>
               </div>
             </div>
           </>
@@ -448,42 +387,32 @@ const AppLayout = () => {
         {mobileMenuOpen && (
           <>
             <div
-              className="fixed inset-0 bg-black/80 backdrop-blur-md lg:hidden z-[60] animate-fadeIn"
+              className="fixed inset-0 lg:hidden z-[60] bg-surface-0/70 animate-fadeIn"
               onClick={() => setMobileMenuOpen(false)}
             ></div>
 
-            <div className="fixed top-0 right-0 bottom-0 w-[85vw] bg-[#050a18] lg:hidden z-[70] shadow-2xl animate-slideInRight border-l border-white/10">
-              <div className="flex items-center justify-between p-8 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                   <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 font-black italic text-sm">L</div>
-                   <h2 className="text-sm font-black text-white uppercase tracking-[0.3em]">Menu</h2>
-                </div>
+            <div className="fixed top-0 right-0 bottom-0 w-[85vw] bg-surface-1 lg:hidden z-[70] shadow-2xl animate-slideInRight border-l border-border">
+              <div className="flex items-center justify-between p-6 border-b border-border">
+                <h2 className="t-section text-text-1">Menu</h2>
                 <button
+                  aria-label="Close menu"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-xl hover:bg-white/5 transition"
+                  className="p-2 rounded-md hover:bg-surface-2 transition"
                 >
-                  <CloseIcon className="h-6 w-6 text-white/20" />
+                  <CloseIcon className="h-5 w-5 text-text-3" />
                 </button>
               </div>
 
-              <nav className="flex flex-col p-6 space-y-3">
-                {[
-                  { path: '/', label: 'Home' },
-                  { path: '/scoreboard', label: 'Scoreboard' },
-                  { path: '/standings', label: 'Standings' },
-                  { path: '/teams', label: 'Teams' },
-                  { path: '/stats', label: 'Stats' },
-                  { path: '/picks', label: 'Picks' }
-                ].map(link => (
+              <nav className="flex flex-col p-4 space-y-2">
+                {NAV_LINKS.map(link => (
                   <Link
                     key={link.path}
                     to={link.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`text-xl p-6 rounded-2xl transition-colors uppercase tracking-widest font-black ${
-                      isActive(link.path) ? 'bg-white text-black shadow-2xl translate-x-2' : 'text-white/20 hover:text-white hover:bg-white/5'
-                    }`}
+                    className={`flex items-center gap-3 t-body p-4 rounded-md transition-colors ${isActive(link.path) ? 'bg-accent-fill text-white' : 'text-text-2 hover:text-text-1 hover:bg-surface-2'}`}
                   >
-                    {link.label}
+                    <link.icon className="h-4 w-4" />
+                    <span>{link.label}</span>
                   </Link>
                 ))}
               </nav>
@@ -501,7 +430,7 @@ const AppLayout = () => {
         {/* Main Content Area */}
         <main
           id="main-content"
-          className={`flex-1 relative z-30 pb-24 md:pb-10`}
+          className="flex-1 relative z-30 pb-24 md:pb-10"
         >
           {location.pathname === '/' ? (
             <Outlet />

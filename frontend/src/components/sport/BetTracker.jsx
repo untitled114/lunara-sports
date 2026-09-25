@@ -1,19 +1,13 @@
-import { useEffect, useState } from "react";
-import { fetchModelPicks } from "@/services/api";
-import { Badge } from "@/components/ui";
-
-const TIER_STYLE = {
-  X: "bg-yellow-500/15 text-yellow-400",
-  Z: "bg-blue-500/15 text-blue-400",
-  META: "bg-purple-500/15 text-purple-400",
-  A: "bg-[var(--bg-card-alt)] text-[var(--text-muted)]",
-};
+import { useEffect, useState } from 'react';
+import { fetchModelPicks } from '@/services/api';
+import { Badge } from '@/components/ui';
+import clsx from 'clsx';
 
 const TIER_VARIANT = {
-  X: "warning",
-  Z: "info",
-  META: "primary",
-  A: "gray",
+  X: 'warn',
+  Z: 'accent',
+  META: 'accent',
+  A: 'neutral',
 };
 
 export function BetTracker({ gameId }) {
@@ -23,10 +17,16 @@ export function BetTracker({ gameId }) {
   useEffect(() => {
     let cancelled = false;
     fetchModelPicks(gameId)
-      .then((data) => { if (!cancelled) setPicks(data); })
+      .then((data) => {
+        if (!cancelled) setPicks(data);
+      })
       .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [gameId]);
 
   const hits = picks.filter((p) => p.is_hit === true).length;
@@ -36,16 +36,16 @@ export function BetTracker({ gameId }) {
   const wr = total > 0 ? Math.round((hits / total) * 100) : null;
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
+    <div className="rounded-lg border border-border bg-surface-card overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2.5">
-        <span className="text-sm font-bold uppercase tracking-wider text-[var(--accent)]">Picks</span>
+      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+        <span className="t-label text-accent">Picks</span>
         {!loading && picks.length > 0 && (
-          <div className="flex items-center gap-2 text-sm tabular-nums">
-            {wr !== null && <span className={`font-bold ${wr >= 60 ? "text-[var(--green)]" : "text-[var(--text-secondary)]"}`}>{wr}%</span>}
-            <span className="text-[var(--green)]">{hits}W</span>
-            <span className="text-[var(--red)]">{misses}L</span>
-            {pending > 0 && <span className="text-[var(--text-muted)]">{pending}P</span>}
+          <div className="flex items-center gap-2 t-small tnum">
+            {wr !== null && <span className={clsx('font-semibold', wr >= 60 ? 'text-live' : 'text-text-2')}>{wr}%</span>}
+            <span className="text-live">{hits}W</span>
+            <span className="text-loss">{misses}L</span>
+            {pending > 0 && <span className="text-text-3">{pending}P</span>}
           </div>
         )}
       </div>
@@ -53,49 +53,47 @@ export function BetTracker({ gameId }) {
       {/* Body */}
       <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
         {loading ? (
-          <div className="p-4"><div className="h-20 animate-pulse rounded-lg bg-[var(--bg-card-alt)]" /></div>
+          <div className="p-4">
+            <div className="h-20 animate-pulse rounded-md bg-surface-2" />
+          </div>
         ) : picks.length === 0 ? (
-          <p className="py-10 text-center text-sm text-[var(--text-muted)]">No picks for this game</p>
+          <p className="py-10 text-center t-small text-text-3">No picks for this game.</p>
         ) : (
-          <div className="divide-y divide-[var(--border)]">
+          <div className="divide-y divide-border">
             {picks.map((pick) => (
-              <div
-                key={pick.id}
-                className="flex items-center gap-2.5 px-4 py-2.5"
-              >
+              <div key={pick.id} className="flex items-center gap-2.5 px-4 py-2.5">
                 {/* Tier */}
-                <Badge variant={TIER_VARIANT[pick.tier] ?? "gray"} size="sm">
-                  {pick.tier ?? "\u2013"}
-                </Badge>
+                <Badge variant={TIER_VARIANT[pick.tier] ?? 'neutral'}>{pick.tier ?? '–'}</Badge>
 
                 {/* Player + line */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{pick.player_name}</p>
-                  <p className="text-sm text-[var(--text-muted)]">
+                  <p className="t-small font-medium text-text-1 truncate">{pick.player_name}</p>
+                  <p className="t-small text-text-3">
                     {pick.market} {pick.prediction} {pick.line}
-                    <span className="ml-1 text-[var(--text-muted)]">&middot; {pick.book}</span>
+                    <span className="ml-1 text-text-3">&middot; {pick.book}</span>
                   </p>
                 </div>
 
                 {/* Actual + edge */}
                 <div className="flex-shrink-0 text-right">
                   {pick.actual_value !== null ? (
-                    <span className="text-sm tabular-nums font-semibold text-white">{pick.actual_value}</span>
+                    <span className="t-small tnum font-semibold text-text-1">{pick.actual_value}</span>
                   ) : (
-                    <span className="text-sm text-[var(--text-muted)]">&ndash;</span>
+                    <span className="t-small text-text-3">&ndash;</span>
                   )}
-                  <p className="text-[13px] tabular-nums text-[var(--text-muted)]">
+                  <p className="t-small tnum text-text-3">
                     {pick.model_version?.toUpperCase()} +{pick.edge}%
                   </p>
                 </div>
 
                 {/* Result */}
-                <span className={`flex-shrink-0 text-sm font-bold ${
-                  pick.is_hit === true ? "text-[var(--green)]"
-                    : pick.is_hit === false ? "text-[var(--red)]"
-                    : "text-[var(--text-muted)]"
-                }`}>
-                  {pick.is_hit === true ? "W" : pick.is_hit === false ? "L" : "\u00B7"}
+                <span
+                  className={clsx(
+                    'flex-shrink-0 t-small font-semibold',
+                    pick.is_hit === true ? 'text-live' : pick.is_hit === false ? 'text-loss' : 'text-text-3'
+                  )}
+                >
+                  {pick.is_hit === true ? 'W' : pick.is_hit === false ? 'L' : '·'}
                 </span>
               </div>
             ))}

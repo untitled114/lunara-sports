@@ -1,83 +1,65 @@
-import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { BarChart3, Activity, LineChart } from "lucide-react";
+import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { Segmented, PageState } from '@/components/ui';
 
-const ADMIN_BASE = "https://admin.lunara-app.com";
+const ADMIN_BASE = 'https://admin.lunara-app.com';
 
 const TABS = [
   {
-    key: "analytics",
-    label: "Analytics",
-    icon: BarChart3,
+    key: 'analytics',
+    label: 'Analytics',
     src: `${ADMIN_BASE}/metabase/public/dashboard/ff0a078f-d71c-4ced-a28c-79d9c12f976a`,
   },
   {
-    key: "pipeline",
-    label: "Pipeline Ops",
-    icon: Activity,
+    key: 'pipeline',
+    label: 'Pipeline ops',
     src: `${ADMIN_BASE}/grafana/d/pipeline-ops/pipeline-operations?orgId=1&kiosk`,
   },
   {
-    key: "models",
-    label: "Model Performance",
-    icon: LineChart,
+    key: 'models',
+    label: 'Model performance',
     src: `${ADMIN_BASE}/grafana/d/model-perf/model-performance?orgId=1&kiosk`,
   },
 ];
 
 export default function AdminPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("analytics");
+  const [activeTab, setActiveTab] = useState('analytics');
   const current = TABS.find((t) => t.key === activeTab);
 
   // Guard: only show to authenticated users (add role check if needed)
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-white/40 text-sm">Sign in to access the admin dashboard.</p>
+        <h1 className="sr-only">Admin</h1>
+        <PageState kind="empty" title="Sign in required" message="Sign in to access the admin dashboard." />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-4 p-4 max-w-[1600px] mx-auto w-full">
+      <h1 className="t-title text-text-1">Admin</h1>
       {/* Tab bar */}
       <div className="flex gap-2 items-center">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const active = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                active
-                  ? "bg-white/10 text-white border border-white/10"
-                  : "text-white/30 hover:text-white/50 border border-transparent"
-              }`}
-            >
-              <Icon size={14} />
-              {tab.label}
-            </button>
-          );
-        })}
+        <Segmented aria-label="Admin section" options={TABS.map((tab) => ({ id: tab.key, label: tab.label }))} value={activeTab} onChange={setActiveTab} />
         <a
           href={ADMIN_BASE}
           target="_blank"
           rel="noopener noreferrer"
-          className="ml-auto text-[10px] text-white/20 hover:text-white/40 transition-colors"
+          className="ml-auto t-label text-text-3 hover:text-text-2 transition-colors"
         >
           Open full dashboard
         </a>
       </div>
 
       {/* Embedded iframe */}
-      <div className="liquid-mirror rounded-2xl border border-white/5 overflow-hidden" style={{ height: "calc(100vh - 180px)" }}>
+      <div className="bg-surface-card rounded-lg border border-border overflow-hidden" style={{ height: 'calc(100vh - 180px)' }}>
         <iframe
           src={current.src}
           title={current.label}
           className="w-full h-full border-0"
-          style={{ background: "#1a1a2e" }}
+          style={{ background: 'var(--surface-1)' }}
           allow="fullscreen"
         />
       </div>

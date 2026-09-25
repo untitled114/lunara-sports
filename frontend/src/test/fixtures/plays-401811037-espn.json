@@ -1,0 +1,34 @@
+{
+  "_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=401811037",
+  "_note": "Two real plays (sequenceNumber 27 and 30) verbatim from ESPN's plays[] for this real, completed game. Mapped to our PlayResponse shape the same way ingestion/src/collectors/playbyplay.py's _parse_play does: quarter <- period.number, clock <- clock.displayValue, event_type <- _normalize_event_type(type.text), description <- text (verbatim), player_name <- _extract_player_name(text), team <- team_map[team.id] built from header.competitions[0].competitors, home_score/away_score <- homeScore/awayScore. Verified by importing and running the real _normalize_event_type/_extract_player_name/_build_team_map functions from that module against this fetched response. `id` is ESPN's own play id (as a number); `created_at` is ESPN's `wallclock` timestamp for the play. Our own live API does not retain historical play-by-play (see GameDetailPage.test.jsx comments) — this is why ESPN is the source here instead of frontend/src/services/api.js's /games/{id}/plays.",
+  "plays": [
+    {
+      "id": 40181103727,
+      "game_id": "401811037",
+      "sequence_number": 27,
+      "quarter": 1,
+      "clock": "10:28",
+      "event_type": "jump_shot",
+      "description": "Aaron Wiggins makes 26-foot three point jumper",
+      "team": "OKC",
+      "player_name": "Aaron Wiggins",
+      "home_score": 2,
+      "away_score": 4,
+      "created_at": "2026-04-11T01:13:45Z"
+    },
+    {
+      "id": 40181103730,
+      "game_id": "401811037",
+      "sequence_number": 30,
+      "quarter": 1,
+      "clock": "10:09",
+      "event_type": "cutting_finger_roll_layup_shot",
+      "description": "Julian Strawther makes layup (Bruce Brown assists)",
+      "team": "DEN",
+      "player_name": "Julian Strawther",
+      "home_score": 4,
+      "away_score": 4,
+      "created_at": "2026-04-11T01:14:04Z"
+    }
+  ]
+}

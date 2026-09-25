@@ -1,248 +1,158 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, MapPin, Clock, Zap } from 'lucide-react';
-import { getTeamColor, getLogoUrl } from '@/utils/teamColors';
+import clsx from 'clsx';
+import { ChevronRight, MapPin } from 'lucide-react';
+import { getLogoUrl } from '@/utils/teamColors';
 import { useTheme } from '@/context/ThemeContext';
 import { useFormatTime } from '@/utils/formatTime';
+import { Badge, Card, TeamMark } from '@/components/ui';
+import { seedBadge, winProbability, recordLine, periodLabel } from '@/lib/gameMath';
 
 function StatusBadge({ game, fmt }) {
-  if (game.status === "live") {
+  if (game.status === 'live') {
     return (
-      <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--green)]/10 border border-[var(--green)]/20">
-        <div className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--green)] opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--green)]"></span>
-        </div>
-        <span className="text-sm font-black text-[var(--green)] uppercase tracking-widest">
-          Q{game.quarter} {game.clock}
-        </span>
-      </div>
+      <Badge variant="live" dot>
+        <span className="tnum">{[periodLabel(game.quarter), game.clock].filter(Boolean).join(' ')}</span>
+      </Badge>
     );
   }
-  if (game.status === "halftime") {
-    return (
-      <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20">
-        <Zap className="h-3 w-3 text-yellow-400 fill-yellow-400/30" />
-        <span className="text-sm font-black text-yellow-400 uppercase tracking-widest">Halftime</span>
-      </div>
-    );
-  }
-  if (game.status === "final") {
-    return (
-      <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5">
-        <span className="text-sm font-black text-white/50 uppercase tracking-widest">Final</span>
-      </div>
-    );
-  }
+  if (game.status === 'halftime') return <Badge variant="warn">Halftime</Badge>;
+  if (game.status === 'final') return <Badge variant="neutral">Final</Badge>;
   return (
-    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-      <Clock className="h-3 w-3 text-[var(--accent)]" />
-      <span className="text-sm font-black text-[var(--accent)] uppercase tracking-widest">
-        {fmt(game.start_time)}
-      </span>
-    </div>
+    <Badge variant="accent">
+      <span className="tnum">{fmt(game.start_time)}</span>
+    </Badge>
   );
 }
 
-function TeamStrip({ fullName, abbrev, score, isWinner, isScheduled, record, rank, conf, colors, side }) {
-  const logoUrl = getLogoUrl(abbrev);
+function TeamRow({ abbrev, fullName, score, dim, isScheduled, standing, fallbackRecord, standingsMeta }) {
+  const badge = seedBadge(standing, standingsMeta.isPrev);
+  const record = standing
+    ? recordLine(standing, standingsMeta.seasonLabel, standingsMeta.isPrev)
+    : fallbackRecord;
   return (
-    <div className="flex items-center justify-between group/team">
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        {/* Team badge with color accent */}
-        <div className="relative shrink-0">
-          <div
-            className="h-14 w-14 rounded-2xl flex flex-col items-center justify-center border shadow-lg relative z-10 overflow-hidden bg-[#050a18] p-2"
-            style={{
-              borderColor: `${colors.primary}40`,
-            }}
-          >
-            {rank && (
-              <span className="absolute top-1 left-1.5 text-[13px] font-black uppercase tracking-tight opacity-40" style={{ color: colors.primary }}>
-                #{rank}
-              </span>
-            )}
-            <img src={logoUrl} alt={abbrev} className="w-full h-full object-contain drop-shadow-md group-hover/team:scale-110 transition-transform duration-500" />
-          </div>
-          <div
-            className="absolute -inset-2 rounded-2xl blur-xl opacity-15 group-hover/team:opacity-30 transition-opacity"
-            style={{ backgroundColor: colors.primary }}
-          />
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <TeamMark abbrev={abbrev} logoUrl={getLogoUrl(abbrev)} />
+          {badge && (
+            <Badge
+              variant={badge.variant}
+              title={badge.prev ? `${standingsMeta.seasonLabel} seeding` : undefined}
+            >
+              {badge.text}
+            </Badge>
+          )}
         </div>
-
-        {/* Team info */}
-        <div className="min-w-0 flex-1">
-          <p className={`text-base font-black uppercase tracking-tight truncate transition-colors ${isWinner || isScheduled ? 'text-white' : 'text-white/40'}`}>
-            {fullName || abbrev}
-          </p>
-          <div className="flex items-center gap-2 mt-0.5">
-            {record && (
-              <span className="text-sm font-bold text-white/50 tabular-nums">{record}</span>
-            )}
-            {rank && rank <= 10 && (
-              <span className={`text-[13px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                rank <= 6 ? 'text-[var(--green)] bg-[var(--green)]/10' : 'text-yellow-500 bg-yellow-500/10'
-              }`}>
-                {conf ? `${conf} ` : ''}{rank <= 6 ? `#${rank}` : 'Play-In'}
-              </span>
-            )}
-          </div>
+        <div className="mt-1 flex items-center gap-2 min-w-0">
+          {fullName && fullName !== abbrev && (
+            <span className="t-small text-text-2 truncate">{fullName}</span>
+          )}
+          {record && <span className="t-small text-text-3 tnum shrink-0">{record}</span>}
         </div>
       </div>
 
-      {/* Score */}
       {!isScheduled && (
-        <div className="shrink-0 ml-3">
-          <span className={`text-4xl font-black tabular-nums tracking-tighter ${isWinner ? 'text-white' : 'text-white/15'}`}>
-            {score}
-          </span>
-        </div>
+        <span className={clsx('t-score shrink-0', dim ? 'text-text-3' : 'text-text-1')}>{score}</span>
       )}
     </div>
   );
 }
 
-export function GameCard({ game, standings = {} }) {
-  const isFinal = game.status === "final";
-  const isLive = game.status === "live" || game.status === "halftime";
+export function GameCard({ game, standings = {}, standingsMeta = { seasonLabel: '', isPrev: false } }) {
+  const isFinal = game.status === 'final';
+  const isLive = game.status === 'live' || game.status === 'halftime';
+  const isScheduled = game.status === 'scheduled';
   const awayWin = isFinal && game.away_score > game.home_score;
   const homeWin = isFinal && game.home_score > game.away_score;
-  const isScheduled = game.status === "scheduled";
   const { playGlassClick } = useTheme();
   const fmt = useFormatTime();
 
   const awaySt = standings[game.away_team];
   const homeSt = standings[game.home_team];
 
-  const homeColors = getTeamColor(game.home_team);
-  const awayColors = getTeamColor(game.away_team);
-
-  // Derive win probability from standings win percentages
-  const homePct = homeSt ? parseFloat(homeSt.pct) : 0.5;
-  const awayPct = awaySt ? parseFloat(awaySt.pct) : 0.5;
-  const total = homePct + awayPct || 1;
-  const homeProb = Math.round((homePct / total) * 100);
-  const awayProb = 100 - homeProb;
-
-  // Determine point diff for live/final
-  const diff = (game.home_score || 0) - (game.away_score || 0);
-  const isClose = Math.abs(diff) <= 5 && (isLive || isFinal);
+  // Standings-based estimate; null (no bar) when either side has no games on record.
+  const wp = winProbability(homeSt, awaySt);
+  const seasonShort = (standingsMeta.seasonLabel || '').replace(' final', '');
 
   return (
-    <div
-      className={`group relative rounded-[2.5rem] liquid-mirror gloss-sweep transition-all duration-700 hover:border-white/20 active:scale-[0.98] h-full overflow-hidden ${isLive ? 'ring-1 ring-[var(--green)]/20' : ''}`}
-    >
-      {/* Team color ambient glow — subtle */}
-      <div
-        className="absolute inset-0 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-1000 pointer-events-none"
-        style={{
-          background: `radial-gradient(circle at 20% 30%, ${awayColors.primary} 0%, transparent 50%), radial-gradient(circle at 80% 70%, ${homeColors.primary} 0%, transparent 50%)`
-        }}
-      />
-
-      {/* Live game top accent bar */}
-      {isLive && (
-        <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[var(--green)] to-transparent opacity-60" />
-      )}
-
-      <Link to={`/game/${game.id}`} onClick={() => playGlassClick()} className="block p-8 relative z-10 flex flex-col h-full">
-        {/* Header: Status + Venue */}
-        <div className="mb-6 flex items-center justify-between">
+    <Card live={isLive} className="group h-full p-0 active:scale-[0.98] transition-all duration-700">
+      <Link to={`/game/${game.id}`} onClick={() => playGlassClick()} className="flex flex-col h-full p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <StatusBadge game={game} fmt={fmt} />
           {game.venue && (
-            <div className="flex items-center gap-1.5 text-[13px] font-bold text-white/50 uppercase tracking-wider">
-              <MapPin className="h-3 w-3" />
-              <span className="truncate max-w-[80px]">{game.venue}</span>
-            </div>
+            <span className="t-small text-text-3 flex items-center gap-1 min-w-0">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate">{game.venue}</span>
+            </span>
           )}
         </div>
 
-        {/* Matchup */}
-        <div className="space-y-4 mb-6 flex-1">
-          <TeamStrip
-            fullName={game.away_team_full || game.away_team}
+        <div className="flex-1 space-y-3 mb-4">
+          <TeamRow
             abbrev={game.away_team}
+            fullName={game.away_team_full}
             score={game.away_score}
-            isWinner={awayWin}
+            dim={isFinal && !awayWin}
             isScheduled={isScheduled}
-            record={awaySt?.record || game.away_record}
-            rank={awaySt?.rank}
-            conf={awaySt?.conf}
-            colors={awayColors}
-            side="away"
+            standing={awaySt}
+            fallbackRecord={game.away_record}
+            standingsMeta={standingsMeta}
           />
-
-          {/* Divider with @ */}
-          <div className="flex items-center gap-3 px-2 opacity-30">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/50" />
-            <span className="text-[13px] font-black text-white/60 uppercase tracking-[0.3em]">at</span>
-            <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/50" />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-border" />
+            <span className="t-label text-text-3">at</span>
+            <div className="flex-1 h-px bg-border" />
           </div>
-
-          <TeamStrip
-            fullName={game.home_team_full || game.home_team}
+          <TeamRow
             abbrev={game.home_team}
+            fullName={game.home_team_full}
             score={game.home_score}
-            isWinner={homeWin}
+            dim={isFinal && !homeWin}
             isScheduled={isScheduled}
-            record={homeSt?.record || game.home_record}
-            rank={homeSt?.rank}
-            conf={homeSt?.conf}
-            colors={homeColors}
-            side="home"
+            standing={homeSt}
+            fallbackRecord={game.home_record}
+            standingsMeta={standingsMeta}
           />
         </div>
 
-        {/* Win Probability Bar */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[13px] font-black text-white/40 uppercase tracking-wider tabular-nums">
-              {awayProb}%
-            </span>
-            <span className="text-[13px] font-black text-white/15 uppercase tracking-[0.3em]">
-              {isClose && isLive ? 'Tight Game' : 'Win Prob'}
-            </span>
-            <span className="text-[13px] font-black text-white/40 uppercase tracking-wider tabular-nums">
-              {homeProb}%
-            </span>
+        {wp && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="t-small text-text-2 tnum">
+                <span className="sr-only">{game.away_team} </span>{wp.away}%
+              </span>
+              <span className="t-label text-text-3">
+                {standingsMeta.isPrev ? `Based on ${seasonShort} records` : 'Win probability'}
+              </span>
+              <span className="t-small text-text-2 tnum">
+                <span className="sr-only">{game.home_team} </span>{wp.home}%
+              </span>
+            </div>
+            <div aria-hidden="true" className="h-1.5 w-full rounded-sm overflow-hidden flex bg-surface-2">
+              <div className="h-full transition-all duration-1000 bg-text-3" style={{ width: `${wp.away}%` }} />
+              <div className="h-full transition-all duration-1000 bg-accent-fill" style={{ width: `${wp.home}%` }} />
+            </div>
           </div>
-          <div className="h-1.5 w-full rounded-full overflow-hidden flex bg-white/5 border border-white/5 shadow-inner">
-            <div
-              className="h-full rounded-l-full transition-all duration-1000 bg-white/30"
-              style={{ width: `${awayProb}%` }}
-            />
-            <div
-              className="h-full rounded-r-full transition-all duration-1000 bg-[var(--accent)] shadow-[0_0_8px_rgba(99,102,241,0.4)]"
-              style={{ width: `${homeProb}%` }}
-            />
-          </div>
-        </div>
+        )}
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-5 border-t border-white/5">
-          <div className="flex items-center gap-4">
-            {/* Streaks */}
-            {awaySt?.streak && (
-              <div className="flex items-center gap-1.5">
-                <div className={`h-1 w-1 rounded-full ${awaySt.streak.startsWith('W') ? 'bg-[var(--green)]' : 'bg-[var(--red)]'}`} />
-                <span className="text-[13px] font-black text-white/50 uppercase">{game.away_team} {awaySt.streak}</span>
-              </div>
+        <div className="flex items-center justify-between pt-4 border-t border-border">
+          <div className="flex items-center gap-4 min-w-0">
+            {/* Streaks are only meaningful for the season in progress. */}
+            {!standingsMeta.isPrev && awaySt?.streak && (
+              <span className="t-small text-text-2 tnum">{game.away_team} {awaySt.streak}</span>
             )}
-            {homeSt?.streak && (
-              <div className="flex items-center gap-1.5">
-                <div className={`h-1 w-1 rounded-full ${homeSt.streak.startsWith('W') ? 'bg-[var(--green)]' : 'bg-[var(--red)]'}`} />
-                <span className="text-[13px] font-black text-white/50 uppercase">{game.home_team} {homeSt.streak}</span>
-              </div>
+            {!standingsMeta.isPrev && homeSt?.streak && (
+              <span className="t-small text-text-2 tnum">{game.home_team} {homeSt.streak}</span>
             )}
-            {!awaySt?.streak && !homeSt?.streak && (
-              <span className="text-[13px] font-black text-white/15 uppercase tracking-widest">Gamecast</span>
+            {(standingsMeta.isPrev || (!awaySt?.streak && !homeSt?.streak)) && (
+              <span className="t-small text-text-2">Gamecast</span>
             )}
           </div>
-
-          <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black text-white/50 transition-all duration-500 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+          <span className="h-9 w-9 rounded-md border border-border bg-surface-2 flex items-center justify-center text-text-2 group-hover:text-text-1 group-hover:border-border-strong transition-all duration-500">
             <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
-          </div>
+          </span>
         </div>
       </Link>
-    </div>
+    </Card>
   );
 }

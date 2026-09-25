@@ -87,6 +87,22 @@ class TestBuildTeamMap:
         result = _build_team_map(header)
         assert result == {"2": "BOS", "13": "LAL"}
 
+    def test_normalizes_espn_long_form_abbreviations(self):
+        """Plays must be tagged with the canonical (games) abbreviation, never
+        ESPN's raw 'UTAH' — the same live UTAH/UTA consistency bug as scoreboard."""
+        header = {
+            "competitions": [
+                {
+                    "competitors": [
+                        {"homeAway": "home", "team": {"id": "26", "abbreviation": "UTAH"}},
+                        {"homeAway": "away", "team": {"id": "9", "abbreviation": "GSW"}},
+                    ]
+                }
+            ]
+        }
+        result = _build_team_map(header)
+        assert result == {"26": "UTA", "9": "GS"}
+
     def test_empty_header(self):
         assert _build_team_map({}) == {}
         assert _build_team_map({"competitions": []}) == {}

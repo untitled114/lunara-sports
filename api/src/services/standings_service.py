@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
 import structlog
 
 from ..models.schemas import StandingsResponse, StandingsTeam
 from . import espn_client
-from .team_mapping import ABBREV_BY_ESPN_ID
+from .team_mapping import ABBREV_BY_ESPN_ID, from_espn_abbrev
 
 logger = structlog.get_logger(__name__)
 
@@ -37,20 +39,9 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
         espn_id = int(team_info.get("id", 0))
         abbrev = team_info.get("abbreviation", ABBREV_BY_ESPN_ID.get(espn_id, "???"))
 
-        # Map ESPN abbreviations to our local ones
-        abbrev_map = {
-            "GS": "GS",
-            "GSW": "GS",
-            "WSH": "WSH",
-            "WAS": "WSH",
-            "NY": "NY",
-            "NYK": "NY",
-            "NO": "NO",
-            "NOP": "NO",
-            "SA": "SA",
-            "SAS": "SA",
-        }
-        abbrev = abbrev_map.get(abbrev, abbrev)
+        # Same ESPN-abbreviation normalization games use (e.g. "UTAH" -> "UTA"),
+        # so standings and games agree on team abbreviations.
+        abbrev = from_espn_abbrev(abbrev)
 
         wins = int(_get_stat(entry, "wins") or _get_stat(entry, "W") or 0)
         losses = int(_get_stat(entry, "losses") or _get_stat(entry, "L") or 0)
@@ -58,6 +49,9 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
         pct = f".{int(wins / total * 1000):03d}" if total > 0 else ".000"
         gb = _get_stat(entry, "gamesBehind") or _get_stat(entry, "GB") or "-"
         streak = _get_stat(entry, "streak") or ""
+
+        seed_raw = _get_stat(entry, "playoffSeed")
+        seed = int(seed_raw) if seed_raw.isdigit() and int(seed_raw) > 0 else None
 
         # Try to get record breakdowns
         conf_record = ""
@@ -92,6 +86,7 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
                 l10=l10_record,
                 strk=streak,
                 logo_url=logo_url,
+                seed=seed,
             )
         )
 
@@ -103,24 +98,91 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
     return teams
 
 
-async def get_standings() -> StandingsResponse:
-    """Fetch and parse NBA standings from ESPN."""
-    data = await espn_client.get_standings()
-    if not data:
-        return StandingsResponse(eastern=[], western=[])
+def _season_years(data: dict, index: int) -> tuple[int | None, str]:
+    """Return (end-year, display years) for the season at `index` in ESPN's seasons[] list."""
+    seasons = data.get("seasons") or []
+    if len(seasons) <= index:
+        return None, ""
+    s = seasons[index]
+    return s.get("year"), (s.get("seasonYears") or s.get("displayName") or "")
 
-    eastern = []
-    western = []
 
-    # ESPN structure: children[] contains conference groups
-    children = data.get("children", [])
-    for child in children:
-        conf_name = child.get("name", "").lower()
-        if "east" in conf_name:
+def _label(years: str, final: bool) -> str:
+    """Render a season-years string (e.g. "2025-26") as a display label."""
+    if not years:
+        return ""  # ESPN sent no season name: no label rather than " final"
+    pretty = years.replace("-", "–")
+    return f"{pretty} final" if final else pretty
+
+
+def _parse(data: dict) -> tuple[list[StandingsTeam], list[StandingsTeam]]:
+    """Parse ESPN standings payload children[] into (eastern, western) team lists."""
+    eastern: list[StandingsTeam] = []
+    western: list[StandingsTeam] = []
+    for child in data.get("children", []):
+        name = child.get("name", "").lower()
+        if "east" in name:
             eastern = _parse_conference(child)
-        elif "west" in conf_name:
+        elif "west" in name:
             western = _parse_conference(child)
+    return eastern, western
 
-    season = data.get("seasons", [{}])[0].get("displayName", "") if data.get("seasons") else ""
 
-    return StandingsResponse(eastern=eastern, western=western, season=season)
+@dataclass
+class SeasonChoice:
+    """Which regular season to show, decided once for standings and stat leaders.
+
+    `year` is ESPN's end-year for that season (2026 = 2025-26), `years` its display
+    years ("2025-26"), `is_previous` whether it is last season's (the current one has
+    no regular-season games yet). `eastern`/`western` are that season's parsed
+    standings.
+    """
+
+    year: int | None
+    years: str
+    is_previous: bool
+    eastern: list[StandingsTeam] = field(default_factory=list)
+    western: list[StandingsTeam] = field(default_factory=list)
+
+
+async def choose_regular_season() -> SeasonChoice | None:
+    """The current regular season once any regular-season game is played; before that,
+    the previous completed regular season. None when ESPN has no standings at all.
+
+    ESPN's default standings are the regular season (seasonType 2), so preseason games
+    never count. If the previous season can't be loaded (or has no conferences), the
+    current season is used.
+    """
+    data = await espn_client.get_standings(season=None)
+    if not data:
+        return None
+
+    eastern, western = _parse(data)
+    cur_year, cur_years = _season_years(data, 0)
+    current = SeasonChoice(cur_year, cur_years, False, eastern, western)
+    if any(t.w + t.l for t in eastern + western):
+        return current
+
+    prev_year, prev_years = _season_years(data, 1)
+    prev = await espn_client.get_standings(season=prev_year) if prev_year else None
+    if not prev:
+        return current
+    p_east, p_west = _parse(prev)
+    if not (p_east or p_west):
+        # A previous-season payload with no conferences is no fallback at all.
+        return current
+    return SeasonChoice(prev_year, prev_years, True, p_east, p_west)
+
+
+async def get_standings() -> StandingsResponse:
+    """Current standings; before the regular season starts, last season's final standings."""
+    choice = await choose_regular_season()
+    if choice is None:
+        return StandingsResponse(eastern=[], western=[])
+    return StandingsResponse(
+        eastern=choice.eastern,
+        western=choice.western,
+        season=choice.years,
+        season_label=_label(choice.years, final=choice.is_previous),
+        is_previous_season=choice.is_previous,
+    )

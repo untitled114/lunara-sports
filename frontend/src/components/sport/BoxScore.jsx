@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { fetchPlays, fetchBoxScore } from "@/services/api";
-import { Skeleton } from "@/components/ui";
+import { Skeleton, Card, DataTable, TeamMark, PageState } from "@/components/ui";
 import { useTheme } from "@/context/ThemeContext";
-import { getLogoUrl, getHeadshotUrl } from "@/utils/teamColors";
+import { getLogoUrl, getHeadshotUrl, playerIdFromHeadshot } from "@/utils/teamColors";
 
 /* ─── On-Court Tracking ─── */
 
@@ -47,228 +47,231 @@ function getOnCourtNames(plays, boxData, homeTeam, awayTeam) {
 
 /* ─── Components ─── */
 
+// A box-score player's name: a link to their profile when the row carries a real ESPN
+// id (from its headshot URL), otherwise plain text. Never a made-up id.
+function PlayerName({ player, className, linkClassName, onClick }) {
+  const id = player.id || playerIdFromHeadshot(player.headshot_url);
+  if (!id) return <span className={className}>{player.name}</span>;
+  return (
+    <Link to={`/player/${id}`} onClick={onClick} className={`${className} ${linkClassName}`}>
+      {player.name}
+    </Link>
+  );
+}
+
+// Stable row key: two players can share a name, not a name and a jersey number.
+const playerKey = (p) => `${p.name}#${p.jersey ?? ''}`;
+
 function StatBlock({ label, value, isPrimary = false }) {
   return (
-    <div className="flex flex-col items-center min-w-[32px]">
-      <span className={`tabular-nums leading-none mb-1.5 ${isPrimary ? 'text-[15px] sm:text-[16px] lg:text-[18px] font-black text-white' : 'text-[12px] sm:text-[13px] lg:text-[15px] font-bold text-white/80'}`}>
+    <div className="flex flex-col items-center min-w-0">
+      <span className={`tnum leading-none mb-1 ${isPrimary ? 't-body font-semibold text-text-1' : 't-small text-text-2'}`}>
         {value}
       </span>
-      <span className="text-[8px] font-black text-white/40 uppercase tracking-tighter">
-        {label}
-      </span>
+      <span className="t-label text-text-3">{label}</span>
     </div>
   );
 }
 
 function PlayerRow({ player, teamAbbrev }) {
   const { playGlassClick } = useTheme();
-  const teamLogo = getLogoUrl(teamAbbrev);
+  const headshot = player.headshot_url ? getHeadshotUrl(player.headshot_url) : null;
+  const teamLogo = teamAbbrev ? getLogoUrl(teamAbbrev) : null;
 
   return (
-    <div className="group relative py-3 px-4 sm:py-4 sm:px-5 lg:py-5 lg:px-6 border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-      <div className="flex items-center gap-4 sm:gap-5">
-        <div className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 rounded-full border border-white/10 bg-[#050a18] flex items-center justify-center overflow-hidden shadow-inner shrink-0">
-          {player.headshot_url ? (
-            <img src={getHeadshotUrl(player.headshot_url)} alt="" width={56} height={56} loading="lazy" className="w-full h-full object-cover scale-110" />
-          ) : teamLogo ? (
-            <img src={teamLogo} alt="" width={32} height={32} loading="lazy" className="w-8 h-8 object-contain opacity-30" />
-          ) : (
-            <span className="text-sm font-black text-white/10">{player.name?.[0]}</span>
+    <div className="flex items-center gap-3 py-3">
+      <div className="h-10 w-10 rounded-md overflow-hidden bg-surface-2 border border-border shrink-0 flex items-center justify-center">
+        {headshot ? (
+          <img src={headshot} alt="" width={40} height={40} loading="lazy" className="w-full h-full object-cover" />
+        ) : teamLogo ? (
+          <img src={teamLogo} alt="" width={40} height={40} loading="lazy" className="w-full h-full object-contain p-2" />
+        ) : (
+          <span className="t-small font-semibold text-text-3">{player.name?.[0]}</span>
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1.5">
+          <PlayerName
+            player={player}
+            onClick={playGlassClick}
+            className="t-small font-semibold text-text-1 truncate"
+            linkClassName="hover:text-accent transition-colors"
+          />
+          {player.jersey && (
+            <span className="t-label text-text-3">
+              #{player.jersey}{player.position ? ` · ${player.position}` : ''}
+            </span>
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2.5">
-            <Link
-              to={`/player/${player.id || '1'}`}
-              onClick={playGlassClick}
-              className="text-[14px] sm:text-[15px] lg:text-[17px] font-black text-white uppercase tracking-tight truncate hover:text-indigo-400 transition-colors"
-            >
-              {player.name}
-            </Link>
-            {player.jersey && (
-              <span className="text-[12px] font-bold text-white/40 uppercase">
-                #{player.jersey} {player.position ? `· ${player.position}` : ""}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4 sm:gap-5 lg:gap-6">
-            <StatBlock label="PTS" value={player.points ?? 0} isPrimary={true} />
-            <StatBlock label="FG" value={player.fg || "0-0"} />
-            <StatBlock label="REB" value={player.rebounds ?? 0} />
-            <StatBlock label="AST" value={player.assists ?? 0} />
-            <StatBlock label="PF" value={player.fouls ?? 0} />
-          </div>
-        </div>
-
-        <div className="shrink-0 pl-4 self-center">
-          <span className="text-[24px] font-black text-white/15 tabular-nums italic">
-            {player.jersey || "0"}
-          </span>
+        {/* Five equal columns that always fit the card: PF is never clipped at any width. */}
+        <div className="grid grid-cols-5 gap-1">
+          <StatBlock label="PTS" value={player.points ?? 0} isPrimary />
+          <StatBlock label="FG" value={player.fg || "0-0"} />
+          <StatBlock label="REB" value={player.rebounds ?? 0} />
+          <StatBlock label="AST" value={player.assists ?? 0} />
+          <StatBlock label="PF" value={player.fouls ?? 0} />
         </div>
       </div>
     </div>
   );
 }
 
-function TeamSection({ teamAbbrev, players }) {
+// Empty copy for the on-court card and the full box score, by game status. Only a game
+// that hasn't started says it is waiting for tip-off.
+export function boxScoreEmptyText(status) {
+  if (status === "scheduled") return "Box score starts at tip-off.";
+  if (status === "final") return "The box score isn't available for this game.";
+  return "No box score yet.";
+}
+
+function onCourtEmptyText(status) {
+  return status === "scheduled" ? "Waiting for tip-off." : boxScoreEmptyText(status);
+}
+
+// What the side panel really lists. Live: the five on court now (starters, then every
+// "X enters the game for Y" substitution in the plays). Final with plays: the same
+// tracking run to the last play, so the five who closed the game. Final with no plays:
+// nothing to track, so the panel lists the box score's starters (flagged by the API);
+// with no starter flags either, it is just the first five box-score players.
+export function onCourtLabel(status, playsCount, hasStarters) {
+  if (status !== "final") return "On court";
+  if (playsCount > 0) return "Closing lineup";
+  return hasStarters ? "Starters" : "Players";
+}
+
+function TeamSection({ teamAbbrev, players, status, label = "On court" }) {
   const logo = getLogoUrl(teamAbbrev);
 
   return (
-    <div className="mb-6 last:mb-0 rounded-[2.5rem] bg-[#111624] border border-white/5 overflow-hidden shadow-2xl">
-      <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-5 bg-white/[0.02] border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="h-7 w-7 rounded-full bg-[#050a18] border border-white/10 flex items-center justify-center p-1.5 overflow-hidden">
-            <img src={logo} alt="" width={28} height={28} loading="lazy" className="w-full h-full object-contain" />
-          </div>
-          <span className="text-[15px] font-black text-white uppercase tracking-widest">{teamAbbrev}</span>
-        </div>
-        <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.3em]">On Court</span>
+    <Card className="mb-4 last:mb-0">
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
+        <TeamMark abbrev={teamAbbrev} logoUrl={logo} size="sm" />
+        <span className="t-label text-text-3">{label}</span>
       </div>
 
-      <div className="divide-y divide-white/[0.02]">
-        {players.length === 0 ? (
-          <div className="py-16 text-center text-[12px] font-black uppercase tracking-widest text-white/10">
-            Waiting for game start...
-          </div>
-        ) : (
-          players.map((p, i) => (
-            <PlayerRow key={p.name || i} player={p} teamAbbrev={teamAbbrev} />
-          ))
-        )}
-      </div>
-    </div>
+      {players.length === 0 ? (
+        <p className="py-8 text-center t-small text-text-3">{onCourtEmptyText(status)}</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {players.map((p, i) => (
+            <PlayerRow key={p.name ? playerKey(p) : i} player={p} teamAbbrev={teamAbbrev} />
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
 /* ─── Full Box Score Table ─── */
 
+// Each stat has a snake_case player-row key (what a player object from the box score
+// API uses) and the short label the `totals` object is keyed by (e.g. totals['3PT']) —
+// see buildTotalsRow, which copies totals onto both key shapes so a single render
+// function can read `r[key]` for a player row, a totals row, or a blank label row.
+const STAT_DEFS = [
+  { key: 'minutes', totalsKey: 'MIN', label: 'MIN' },
+  { key: 'fg', totalsKey: 'FG', label: 'FG' },
+  { key: 'three_pt', totalsKey: '3PT', label: '3PT' },
+  { key: 'ft', totalsKey: 'FT', label: 'FT' },
+  { key: 'rebounds', totalsKey: 'REB', label: 'REB' },
+  { key: 'assists', totalsKey: 'AST', label: 'AST' },
+  { key: 'steals', totalsKey: 'STL', label: 'STL' },
+  { key: 'blocks', totalsKey: 'BLK', label: 'BLK' },
+  { key: 'turnovers', totalsKey: 'TO', label: 'TO' },
+  { key: 'fouls', totalsKey: 'PF', label: 'PF' },
+  { key: 'plus_minus', totalsKey: '+/-', label: '+/-', isPlusMinus: true },
+  { key: 'points', totalsKey: 'PTS', label: 'PTS' },
+];
+
+function statCellValue(row, key, isPlusMinus) {
+  if (row.__kind === 'label') return '';
+  const raw = row[key];
+  if (isPlusMinus && row.__kind === 'player') {
+    // The API already sends a signed string (e.g. "+16"); parse to a number and re-sign
+    // from that, rather than prefixing "+" onto the already-signed raw string (which
+    // produced "++16").
+    const n = parseInt(raw, 10);
+    if (!Number.isNaN(n)) {
+      return <span className={n > 0 ? 'text-live' : n < 0 ? 'text-loss' : ''}>{n > 0 ? `+${n}` : String(n)}</span>;
+    }
+  }
+  return raw ?? 0;
+}
+
+const STAT_COLUMNS = STAT_DEFS.map(({ key, label, isPlusMinus }) => ({
+  key,
+  label,
+  numeric: true,
+  render: (r) => statCellValue(r, key, isPlusMinus),
+}));
+
+function buildTotalsRow(totals) {
+  const row = { name: 'Totals', __kind: 'totals', ...totals };
+  for (const { key, totalsKey } of STAT_DEFS) row[key] = totals[totalsKey];
+  return row;
+}
+
+function buildRows(players) {
+  const starters = players.filter((p) => p.starter);
+  const bench = players.filter((p) => !p.starter);
+  const rows = [];
+  if (starters.length) {
+    rows.push({ name: '__starters_label__', __kind: 'label', __label: 'Starters' });
+    for (const p of starters) rows.push({ ...p, __kind: 'player' });
+  }
+  if (bench.length) {
+    rows.push({ name: '__bench_label__', __kind: 'label', __label: 'Bench' });
+    for (const p of bench) rows.push({ ...p, __kind: 'player' });
+  }
+  return rows;
+}
+
+function playerColumnCell(row, playGlassClick) {
+  if (row.__kind === 'label') return <span className="t-label text-text-3">{row.__label}</span>;
+  if (row.__kind === 'totals') return <span className="t-small font-semibold text-text-1">Totals</span>;
+
+  const headshot = row.headshot_url ? getHeadshotUrl(row.headshot_url, 48) : null;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="h-6 w-6 rounded-sm overflow-hidden bg-surface-2 border border-border shrink-0">
+        {headshot && <img src={headshot} alt="" width={24} height={24} loading="lazy" className="w-full h-full object-cover" />}
+      </span>
+      <PlayerName
+        player={row}
+        onClick={playGlassClick}
+        className="text-text-1"
+        linkClassName="hover:text-accent transition-colors"
+      />
+      {row.position && <span className="t-label text-text-3">{row.position}</span>}
+    </span>
+  );
+}
+
 function FullTeamTable({ teamAbbrev, players, totals }) {
   const logo = getLogoUrl(teamAbbrev);
   const { playGlassClick } = useTheme();
 
-  const statCols = [
-    { key: 'minutes', label: 'MIN' },
-    { key: 'fg', label: 'FG' },
-    { key: 'three_pt', label: '3PT' },
-    { key: 'ft', label: 'FT' },
-    { key: 'rebounds', label: 'REB' },
-    { key: 'assists', label: 'AST' },
-    { key: 'steals', label: 'STL' },
-    { key: 'blocks', label: 'BLK' },
-    { key: 'turnovers', label: 'TO' },
-    { key: 'fouls', label: 'PF' },
-    { key: 'plus_minus', label: '+/-' },
-    { key: 'points', label: 'PTS', primary: true },
+  const rows = buildRows(players);
+  if (totals && Object.keys(totals).length > 0) rows.push(buildTotalsRow(totals));
+
+  const columns = [
+    {
+      key: 'player',
+      label: 'Player',
+      render: (r) => playerColumnCell(r, playGlassClick),
+    },
+    ...STAT_COLUMNS,
   ];
 
-  const starters = players.filter(p => p.starter);
-  const bench = players.filter(p => !p.starter);
-
-  const renderRow = (p, i) => (
-    <tr key={p.name || i} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors group/row">
-      <td className="py-2 sm:py-2.5 pl-3 pr-2 sm:pl-4 sm:pr-3 whitespace-nowrap">
-        <div className="flex items-center gap-2.5">
-          <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-full border border-white/10 bg-[#050a18] flex items-center justify-center overflow-hidden shrink-0">
-            {p.headshot_url ? (
-              <img src={getHeadshotUrl(p.headshot_url, 56)} alt="" width={28} height={28} loading="lazy" className="w-full h-full object-cover scale-110" />
-            ) : (
-              <span className="text-[8px] font-black text-white/10">{p.name?.[0]}</span>
-            )}
-          </div>
-          <Link
-            to={`/player/${p.id || '1'}`}
-            onClick={playGlassClick}
-            className="text-[12px] font-black text-white uppercase tracking-tight hover:text-indigo-400 transition-colors"
-          >
-            {p.name}
-          </Link>
-          <span className="text-[10px] font-bold text-white/15">{p.position}</span>
-        </div>
-      </td>
-      {statCols.map(col => {
-        const val = p[col.key] ?? 0;
-        const isPM = col.key === 'plus_minus';
-        const num = isPM ? parseInt(val) : null;
-        return (
-          <td key={col.key} className="py-2 sm:py-2.5 px-1.5 text-center whitespace-nowrap">
-            <span className={`text-[12px] tabular-nums ${
-              col.primary ? 'font-black text-white' :
-              isPM && num > 0 ? 'font-bold text-emerald-400' :
-              isPM && num < 0 ? 'font-bold text-red-400' :
-              'font-medium text-white/150'
-            }`}>
-              {isPM && num > 0 ? `+${val}` : val}
-            </span>
-          </td>
-        );
-      })}
-    </tr>
-  );
-
-  const renderLabel = (label) => (
-    <tr>
-      <td colSpan={statCols.length + 1} className="py-1.5 px-4 bg-white/[0.015]">
-        <span className="text-[9px] font-black text-white/15 uppercase tracking-[0.3em]">{label}</span>
-      </td>
-    </tr>
-  );
-
-  const totalLabelMap = { minutes: 'MIN', fg: 'FG', three_pt: '3PT', ft: 'FT', rebounds: 'REB', assists: 'AST', steals: 'STL', blocks: 'BLK', turnovers: 'TO', fouls: 'PF', plus_minus: '+/-', points: 'PTS' };
-
   return (
-    <div className="rounded-[2rem] bg-[#111624] border border-white/5 overflow-hidden shadow-2xl">
-      {/* Team header */}
-      <div className="flex items-center justify-between px-4 py-2.5 sm:px-5 sm:py-3 bg-white/[0.02] border-b border-white/5">
-        <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-full bg-[#050a18] border border-white/10 flex items-center justify-center p-1 overflow-hidden">
-            <img src={logo} alt="" width={28} height={28} loading="lazy" className="w-full h-full object-contain" />
-          </div>
-          <span className="text-[13px] font-black text-white uppercase tracking-widest">{teamAbbrev}</span>
-        </div>
+    <Card>
+      <div className="mb-3">
+        <TeamMark abbrev={teamAbbrev} logoUrl={logo} size="sm" />
       </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto scrollbar-thin">
-        <table style={{ width: '100%', tableLayout: 'auto', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr className="border-b border-white/5">
-              <th className="py-1.5 sm:py-2 pl-3 pr-2 sm:pl-4 sm:pr-3 text-left">
-                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Player</span>
-              </th>
-              {statCols.map(col => (
-                <th key={col.key} className="py-1.5 sm:py-2 px-1.5 text-center">
-                  <span className={`text-[9px] font-black uppercase tracking-wider ${col.primary ? 'text-white/40' : 'text-white/40'}`}>
-                    {col.label}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {starters.length > 0 && renderLabel('Starters')}
-            {starters.map(renderRow)}
-            {bench.length > 0 && renderLabel('Bench')}
-            {bench.map(renderRow)}
-            {totals && Object.keys(totals).length > 0 && (
-              <tr className="border-t border-white/10 bg-white/[0.03]">
-                <td className="py-2.5 pl-4 pr-3">
-                  <span className="text-[11px] font-black text-white/30 uppercase tracking-widest">Totals</span>
-                </td>
-                {statCols.map(col => (
-                  <td key={col.key} className="py-2 sm:py-2.5 px-1.5 text-center whitespace-nowrap">
-                    <span className={`text-[12px] tabular-nums ${col.primary ? 'font-black text-white' : 'font-bold text-white/30'}`}>
-                      {totals[totalLabelMap[col.key]] || ''}
-                    </span>
-                  </td>
-                ))}
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <DataTable columns={columns} rows={rows} getKey={(r) => (r.__kind === 'player' ? playerKey(r) : r.name)} />
+    </Card>
   );
 }
 
@@ -305,17 +308,17 @@ export function FullBoxScore({ gameId, homeTeam, awayTeam, status, boxData: boxD
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Skeleton variant="rectangle" height="h-64" className="w-full rounded-[2rem] bg-white/5 opacity-5" />
-        <Skeleton variant="rectangle" height="h-64" className="w-full rounded-[2rem] bg-white/5 opacity-5" />
+      <div className="space-y-4">
+        <Skeleton variant="rectangle" height="h-64" className="rounded-lg" />
+        <Skeleton variant="rectangle" height="h-64" className="rounded-lg" />
       </div>
     );
   }
 
-  if (!boxData) return null;
+  if (!boxData) return <PageState kind="empty" title={boxScoreEmptyText(status)} />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <FullTeamTable teamAbbrev={awayTeam} players={boxData.away?.players || []} totals={boxData.away?.totals} />
       <FullTeamTable teamAbbrev={homeTeam} players={boxData.home?.players || []} totals={boxData.home?.totals} />
     </div>
@@ -386,35 +389,39 @@ export function BoxScore({ gameId, homeTeam, awayTeam, status, side, plays: play
 
   const homePlayers = filterOnCourt(boxData?.home?.players, homeOnCourt);
   const awayPlayers = filterOnCourt(boxData?.away?.players, awayOnCourt);
+  const labelFor = (teamPlayers) =>
+    onCourtLabel(status, plays.length, (teamPlayers || []).some((p) => p.starter));
+  const homeLabel = labelFor(boxData?.home?.players);
+  const awayLabel = labelFor(boxData?.away?.players);
 
   // If side is specified, render only that team
   if (side === "away") {
     return loading ? (
-      <Skeleton variant="rectangle" height="h-48" className="w-full rounded-[2.5rem] bg-white/5 opacity-5" />
+      <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
     ) : (
-      <TeamSection teamAbbrev={awayTeam} players={awayPlayers} />
+      <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} label={awayLabel} />
     );
   }
   if (side === "home") {
     return loading ? (
-      <Skeleton variant="rectangle" height="h-48" className="w-full rounded-[2.5rem] bg-white/5 opacity-5" />
+      <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
     ) : (
-      <TeamSection teamAbbrev={homeTeam} players={homePlayers} />
+      <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} label={homeLabel} />
     );
   }
 
   // Default: render both teams stacked
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {loading ? (
-        <div className="space-y-6">
-          <Skeleton variant="rectangle" height="h-48" className="w-full rounded-[2.5rem] bg-white/5 opacity-5" />
-          <Skeleton variant="rectangle" height="h-48" className="w-full rounded-[2.5rem] bg-white/5 opacity-5" />
+        <div className="space-y-4">
+          <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
+          <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
         </div>
       ) : (
         <>
-          <TeamSection teamAbbrev={awayTeam} players={awayPlayers} />
-          <TeamSection teamAbbrev={homeTeam} players={homePlayers} />
+          <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} label={awayLabel} />
+          <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} label={homeLabel} />
         </>
       )}
     </div>

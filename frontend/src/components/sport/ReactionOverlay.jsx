@@ -2,6 +2,15 @@ import React, { useState, useCallback } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 
 const EMOJIS = ['🔥', '😱', '🧱', '🎯', '🙌', '🧊'];
+// What a screen reader says for each reaction button instead of the raw emoji.
+const EMOJI_NAMES = {
+  '🔥': 'Fire',
+  '😱': 'Shocked',
+  '🧱': 'Brick',
+  '🎯': 'Bullseye',
+  '🙌': 'Raised hands',
+  '🧊': 'Ice cold',
+};
 
 export function ReactionOverlay() {
   const [reactions, setReactions] = useState([]);
@@ -30,7 +39,6 @@ export function ReactionOverlay() {
             className="absolute bottom-0 text-3xl animate-reaction-float transition-opacity"
             style={{
               left: `${r.x}%`,
-              filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))'
             }}
           >
             {r.emoji}
@@ -39,12 +47,13 @@ export function ReactionOverlay() {
       </div>
 
       {/* Reaction Picker Bar */}
-      <div className="liquid-glass glass-pill flex items-center gap-2 p-1.5 rounded-2xl shadow-2xl">
-        {EMOJIS.map(emoji => (
+      <div className="bg-surface-card border border-border flex items-center gap-2 p-1.5 rounded-lg shadow-2xl">
+        {EMOJIS.map((emoji) => (
           <button
             key={emoji}
             onClick={() => addReaction(emoji)}
-            className="h-10 w-10 flex items-center justify-center text-xl hover:scale-125 hover:-translate-y-1 active:scale-90 transition-all rounded-xl hover:bg-white/10"
+            aria-label={`React: ${EMOJI_NAMES[emoji]}`}
+            className="h-10 w-10 flex items-center justify-center text-xl hover:scale-125 hover:-translate-y-1 active:scale-90 transition-all rounded-md hover:bg-surface-2/60"
           >
             {emoji}
           </button>

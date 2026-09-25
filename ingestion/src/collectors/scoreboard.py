@@ -20,6 +20,7 @@ from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
 from src.resilience.retry import espn_retry
 from src.schemas.events import ScoreboardEvent
 from src.sinks.base import EventSink
+from src.team_abbrev import normalize_abbrev
 
 logger = structlog.get_logger(__name__)
 
@@ -67,7 +68,7 @@ def _parse_competitor(competitors: list[dict], home_away: str) -> dict:
         if c.get("homeAway") == home_away:
             team = c.get("team", {})
             return {
-                "abbrev": team.get("abbreviation", "UNK"),
+                "abbrev": normalize_abbrev(team.get("abbreviation", "UNK")),
                 "name": team.get("displayName", "Unknown"),
                 "score": int(c.get("score", 0)),
             }

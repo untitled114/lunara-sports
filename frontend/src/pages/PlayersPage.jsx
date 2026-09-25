@@ -1,22 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Skeleton } from '@/components/ui';
+import { PageState } from '@/components/ui';
 import { fetchPlayers } from '@/services/api';
 import { useTheme } from '@/context/ThemeContext';
+import { PlayerHeadshot } from '@/components/sport/PlayerHeadshot';
 
 export default function PlayersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const debounceRef = useRef(null);
   const { playGlassClick } = useTheme();
 
   const loadPlayers = (search = '') => {
     setLoading(true);
+    setError(false);
     fetchPlayers(search)
       .then(setTeams)
-      .catch(() => setTeams([]))
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   };
 
@@ -33,76 +36,81 @@ export default function PlayersPage() {
   }, [searchTerm]);
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-12 pb-32 animate-fadeIn">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 border-b border-white/5 pb-12">
+    <div className="max-w-[1400px] mx-auto space-y-8 pb-32">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border pb-8">
         <div>
-          <h1 className="text-6xl md:text-8xl text-jumbotron tracking-tighter uppercase italic">Players</h1>
-          <p className="text-[13px] font-black text-white/70 uppercase tracking-[0.4em] mt-4 ml-1">Active Rosters & Player Profiles</p>
+          <h1 className="t-title text-text-1">Players</h1>
+          <p className="t-label text-text-3 mt-2">Active rosters</p>
         </div>
 
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/70" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-3" />
           <input
             type="text"
-            placeholder="Find a player..."
+            placeholder="Find a player"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-black text-white uppercase tracking-tight focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-white/30 placeholder:tracking-widest shadow-lg"
+            className="w-full bg-surface-1 border border-border rounded-sm py-2.5 pl-10 pr-4 t-small text-text-1 focus:outline-none focus:border-accent transition-colors placeholder:text-text-3"
           />
         </div>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} variant="rectangle" height="h-64" className="rounded-xl" />)}
-        </div>
+        <PageState kind="loading" />
+      ) : error ? (
+        <PageState kind="error" title="Couldn't load players." onRetry={() => loadPlayers(searchTerm)} />
       ) : teams.length === 0 ? (
-        <div className="py-20 text-center text-[var(--text-muted)] text-sm uppercase font-black tracking-widest">
-          {searchTerm ? `No nodes matching "${searchTerm}" found in sector` : "No player data available"}
-        </div>
+        <PageState
+          kind="empty"
+          title={searchTerm ? `No players match "${searchTerm}".` : 'No player data available.'}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {teams.map((teamData) => (
-            <div key={teamData.abbrev} className="space-y-4">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-2 px-1">
-                <div className="h-7 w-7 rounded bg-[#050a18] flex items-center justify-center text-sm font-black text-white border border-white/10">
+            <div key={teamData.abbrev} className="space-y-3">
+              <div className="flex items-center gap-3 border-b border-border pb-2 px-1">
+                <div className="h-7 min-w-7 px-1.5 shrink-0 rounded-sm bg-surface-2 flex items-center justify-center t-small text-text-1 border border-border">
                   {teamData.abbrev}
                 </div>
-                <h2 className="text-[13px] font-black uppercase tracking-[0.2em] text-white/80">{teamData.team}</h2>
+                <h2 className="t-label text-text-2">{teamData.team}</h2>
               </div>
 
               <div className="space-y-1">
                 {teamData.players.map((p) => (
                   <div
                     key={`${teamData.abbrev}-${p.jersey}-${p.name}`}
-                    className="group flex items-center justify-between p-3.5 rounded-xl hover:bg-white/[0.03] transition-all border border-transparent hover:border-white/5"
+                    className="group flex items-center justify-between p-3 rounded-md hover:bg-surface-1 transition-colors border border-transparent hover:border-border"
                   >
-                    <div className="flex items-center gap-5">
-                      <div className="relative shrink-0">
-                        <div className="h-12 w-12 rounded-full bg-[#050a18] border border-white/10 flex items-center justify-center overflow-hidden shadow-xl relative z-10">
-                          {p.headshot_url ? (
-                            <img src={p.headshot_url} alt={p.name} width={96} height={70} loading="lazy" className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-500" />
-                          ) : (
-                            <div className="text-sm font-black text-white/70 uppercase">{p.name[0]}</div>
-                          )}
-                        </div>
-                        <div className="absolute -inset-1 rounded-full bg-white/5 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex items-center gap-4">
+                      <div className="h-11 w-11 rounded-lg bg-surface-2 border border-border flex items-center justify-center overflow-hidden shrink-0">
+                        <PlayerHeadshot
+                          url={p.headshot_url}
+                          px={44}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                          fallback={<div className="t-small text-text-2 uppercase">{p.name[0]}</div>}
+                        />
                       </div>
                       <div>
+                        {/* Number and name share one centre line: mobile links get a 36px
+                            tap-target min-height, so the link centres its own text too. A
+                            player with no number gets an empty slot (names stay aligned),
+                            never a lone "#". */}
                         <div className="flex items-center gap-2">
-                          {/* INCREASED OPACITY FROM 50% TO 70% */}
-                          <span className="text-[13px] font-black text-white/70 tabular-nums w-5">#{p.jersey}</span>
+                          <span className="t-small tnum text-text-3 w-8 shrink-0">{p.jersey ? `#${p.jersey}` : ''}</span>
                           <Link
                             to={`/player/${p.id}`}
                             onClick={() => playGlassClick()}
-                            className="text-base font-black text-white uppercase tracking-tight hover:text-indigo-400 transition-colors"
+                            className="inline-flex items-center t-small text-text-1 hover:text-accent transition-colors"
                           >
                             {p.name}
                           </Link>
                         </div>
-                        {/* INCREASED OPACITY FROM 40% TO 60% */}
-                        <p className="text-sm font-bold text-white/60 uppercase tracking-widest mt-0.5">
-                          {p.position}{p.height ? ` \u2022 ${p.height}` : ''}{p.weight ? ` \u2022 ${p.weight} lbs` : ''}
+                        {/* Each value keeps its units on one line (6' 9" never splits). */}
+                        <p className="t-small text-text-2 mt-0.5">
+                          {p.position}
+                          {p.height ? <> • <span className="whitespace-nowrap">{p.height}</span></> : null}
+                          {p.weight ? <> • <span className="whitespace-nowrap">{p.weight} lbs</span></> : null}
                         </p>
                       </div>
                     </div>
@@ -112,9 +120,9 @@ export default function PlayersPage() {
 
               <Link
                 to={`/team/${teamData.abbrev}?tab=roster`}
-                className="block w-full py-2 text-[13px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-indigo-500/10 rounded-lg transition-all border border-dashed border-white/10 text-center"
+                className="block w-full py-2 t-label text-text-3 hover:text-text-1 hover:bg-surface-1 rounded-md transition-colors border border-dashed border-border text-center"
               >
-                View Full Roster
+                View full roster
               </Link>
             </div>
           ))}

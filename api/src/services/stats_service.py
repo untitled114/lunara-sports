@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import re
+
 import structlog
 
 from ..models.schemas import PlayerSeasonStats, StatLeader, StatLeadersResponse, TeamStatsRow
 from . import espn_client
+from .standings_service import choose_regular_season
 
 logger = structlog.get_logger(__name__)
 
@@ -204,13 +207,61 @@ async def _resolve_athlete(aid: str, athlete_map: dict) -> dict:
     return {"name": f"Player {aid}", "abbrev": ""}
 
 
+_SEASON_REF = re.compile(r"/seasons/(\d{4})/types/(\d+)/")
+_SEASON_TYPES = {1: "preseason", 2: "regular season", 3: "postseason"}
+
+
+def _leaders_season_label(ref: str) -> str:
+    """The season an ESPN leaders payload is for, from its own $ref URL.
+
+    ESPN names a season by the year it ends in: .../seasons/2025/types/2/ is the
+    2024–25 regular season. "" when the URL doesn't say.
+    """
+    m = _SEASON_REF.search(ref or "")
+    if not m:
+        return ""
+    end = int(m.group(1))
+    years = f"{end - 1}–{end % 100:02d}"
+    kind = _SEASON_TYPES.get(int(m.group(2)))
+    return f"{years} {kind}" if kind else years
+
+
+_PCT_KEYS = {"fg_pct", "ft_pct", "three_pct"}
+
+
+def _leader_value(key: str, leader: dict) -> str:
+    """The leader's display value. ESPN gives FG% and FT% as percentages ("68.2") but 3P%
+    as a fraction (value 0.4776, displayValue "0.5"), so percentages are formatted from the
+    raw value on one scale."""
+    if key in _PCT_KEYS and isinstance(leader.get("value"), int | float):
+        v = float(leader["value"])
+        return f"{v * 100 if v <= 1 else v:.1f}"
+    return str(leader.get("displayValue", "0.0"))
+
+
 async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
-    """Get league stat leaders from the ESPN core API."""
+    """League stat leaders for the regular season the standings show: last season's
+    until this season's first regular-season game, then this season's."""
     categories = {}
+    season_label = ""
+    is_previous = False
 
     try:
-        espn_data = await espn_client.get_stat_leaders(limit=limit)
+        choice = await choose_regular_season()
+        espn_data = (
+            await espn_client.get_stat_leaders(season=choice.year, limit=limit)
+            if choice and choice.year
+            else None
+        )
+        if not (espn_data and espn_data.get("categories")) and choice and not choice.is_previous:
+            # Just after the switchover ESPN can have standings for the new season but no
+            # leaders yet (season 2027 answered 404 on 2026-09-25): keep last season's.
+            espn_data = await espn_client.get_stat_leaders(season=choice.year - 1, limit=limit)
+            is_previous = True
+        else:
+            is_previous = bool(choice and choice.is_previous)
         if espn_data:
+            season_label = _leaders_season_label(espn_data.get("$ref", ""))
             # Build athlete lookup from cached rosters
             athlete_map = await _build_athlete_lookup()
 
@@ -221,9 +272,10 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
                 "stealsPerGame": "stl",
                 "blocksPerGame": "blk",
                 "3PointsMadePerGame": "threes",
-                "fieldGoalPct": "fg_pct",
-                "freeThrowPct": "ft_pct",
-                "threePointPct": "three_pct",
+                # ESPN's real names for these three (verified against the 2026 capture).
+                "fieldGoalPercentage": "fg_pct",
+                "FreeThrowPct": "ft_pct",
+                "3PointPct": "three_pct",
             }
             for cat in espn_data.get("categories", []):
                 cat_name = cat.get("name")
@@ -243,7 +295,7 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
                             player=info.get("name", f"Player {aid}"),
                             player_id=aid,
                             team=info.get("abbrev", ""),
-                            value=str(leader.get("displayValue", "0.0")),
+                            value=_leader_value(key, leader),
                             headshot_url=f"https://a.espncdn.com/i/headshots/nba/players/full/{aid}.png"
                             if aid
                             else "",
@@ -254,7 +306,12 @@ async def get_stat_leaders(limit: int = 10) -> StatLeadersResponse:
     except Exception as espn_e:
         logger.warning("stat_leaders.espn_failed", error=str(espn_e))
 
-    return StatLeadersResponse(categories=categories)
+    # No leaders means nothing to label.
+    return StatLeadersResponse(
+        categories=categories,
+        season_label=season_label if categories else "",
+        is_previous_season=is_previous if categories else False,
+    )
 
 
 async def get_team_stats_list() -> list[TeamStatsRow]:

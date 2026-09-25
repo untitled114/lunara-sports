@@ -1,0 +1,4 @@
+{
+  "_source": "GET https://api.lunara-app.com/picks/today, captured 2026-09-25T16:55:03Z. Also tried ?pick_date=2026-09-24 and /games/{id}/picks for several real completed games (401810433, 401810557, 401810723, 401809238) from the openapi-listed endpoints — every one returned []. No picks are currently populated in production (preseason; matches project memory that the NBA picks pipeline is sparse). This is the real, unmodified response.",
+  "data": []
+}

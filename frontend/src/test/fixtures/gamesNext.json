@@ -1,0 +1,6 @@
+{
+  "_source": "GET https://api.lunara-app.com/games/next?after=2026-09-25, captured 2026-09-25T16:55:30Z. Real next-game-day lookup.",
+  "data": {
+    "date": "2026-10-03"
+  }
+}

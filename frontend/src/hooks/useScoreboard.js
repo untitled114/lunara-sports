@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchGames } from "@/services/api";
+import { todayET } from "@/lib/et";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
 
@@ -7,163 +8,265 @@ const MAX_RETRIES = 10;
 const BASE_DELAY = 1000;
 const MAX_DELAY = 15000;
 const REST_FALLBACK_MS = 30000;
+const PING_MS = 20000;
+
+// ─── Shared state ────────────────────────────────────────────────────────────
+// Every useScoreboard() consumer (the ticker, the scoreboard page, the landing
+// page's live badge…) shares ONE /ws/scoreboard socket and, per date, ONE game
+// list, ONE initial REST fetch and ONE 30s REST fallback poll. Both are ref-counted:
+// the socket opens with the first consumer and closes when the last one unmounts;
+// a date's store (and its poll) goes away with its last consumer.
+
+const socket = {
+  ws: null,
+  connected: false,
+  refs: 0,
+  retryCount: 0,
+  retryTimer: null,
+  pingTimer: null,
+};
+
+/**
+ * date -> { games, loading, error, pushed, refs, listeners:Set, pollTimer }
+ * `error` is true only when the REST fetch failed and no data has arrived from any
+ * source; `pushed` is true once a WS update has landed (fresher than any REST reply).
+ */
+const stores = new Map();
+
+const snapshot = (store) => ({ games: store.games, loading: store.loading, error: store.error });
+
+function notify(store) {
+  const snap = snapshot(store);
+  for (const fn of store.listeners) fn(snap);
+}
+
+function setConnected(value) {
+  socket.connected = value;
+  for (const [date, store] of stores) {
+    for (const fn of store.listeners) fn({ ...snapshot(store), connected: value });
+    syncPoll(date, store);
+  }
+}
+
+// REST fallback: poll every 30s only for today's date and only while the socket
+// is down (other dates never change fast enough to need it).
+function syncPoll(date, store) {
+  const shouldPoll = date === todayET() && !socket.connected && store.refs > 0;
+  if (shouldPoll && !store.pollTimer) {
+    store.pollTimer = setInterval(() => {
+      fetchGames(date)
+        .then((data) => {
+          if (stores.get(date) === store && Array.isArray(data)) {
+            store.games = data;
+            store.error = false;
+            notify(store);
+          }
+        })
+        .catch(() => {});
+    }, REST_FALLBACK_MS);
+  } else if (!shouldPoll && store.pollTimer) {
+    clearInterval(store.pollTimer);
+    store.pollTimer = null;
+  }
+}
+
+function openSocket() {
+  if (socket.refs === 0) return;
+  if (socket.ws) {
+    socket.ws.close();
+    socket.ws = null;
+  }
+
+  const ws = new WebSocket(`${WS_URL}/ws/scoreboard`);
+
+  ws.onopen = () => {
+    if (socket.ws !== ws) return;
+    socket.retryCount = 0;
+    setConnected(true);
+  };
+
+  ws.onclose = () => {
+    if (socket.ws !== ws) return;
+    setConnected(false);
+    if (socket.refs > 0 && socket.retryCount < MAX_RETRIES) {
+      const delay = Math.min(BASE_DELAY * Math.pow(2, socket.retryCount), MAX_DELAY);
+      socket.retryCount++;
+      socket.retryTimer = setTimeout(() => {
+        socket.retryTimer = null;
+        if (socket.refs > 0) openSocket();
+      }, delay);
+    }
+  };
+
+  ws.onerror = () => {};
+
+  ws.onmessage = (event) => {
+    if (socket.ws !== ws) return;
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "scoreboard_update" && Array.isArray(msg.data)) {
+        // WS updates are today's (ET) games: they only apply to today's store.
+        const store = stores.get(todayET());
+        if (store) {
+          store.games = msg.data;
+          store.loading = false;
+          store.error = false;
+          store.pushed = true;
+          notify(store);
+        }
+      }
+    } catch {
+      // Ignore malformed messages
+    }
+  };
+
+  socket.ws = ws;
+}
+
+// WebSocket readyState values (spelled out so they don't depend on the global's statics).
+const CONNECTING = 0;
+const OPEN = 1;
+
+function acquireSocket() {
+  socket.refs++;
+  if (socket.refs === 1) {
+    socket.retryCount = 0;
+    openSocket();
+    // Ping keep-alive every 20s
+    socket.pingTimer = setInterval(() => {
+      if (socket.ws?.readyState === OPEN) socket.ws.send("ping");
+    }, PING_MS);
+    return;
+  }
+  // The socket outlives any one page (the ticker is always mounted), so a new consumer
+  // is the moment to recover a socket whose retries ran out: nothing pending, and the
+  // socket is neither open nor connecting. The retry budget starts over.
+  const state = socket.ws?.readyState;
+  if (!socket.retryTimer && state !== OPEN && state !== CONNECTING) {
+    socket.retryCount = 0;
+    openSocket();
+  }
+}
+
+function releaseSocket() {
+  socket.refs--;
+  if (socket.refs > 0) return;
+  socket.refs = 0;
+  if (socket.retryTimer) clearTimeout(socket.retryTimer);
+  if (socket.pingTimer) clearInterval(socket.pingTimer);
+  socket.retryTimer = null;
+  socket.pingTimer = null;
+  const ws = socket.ws;
+  socket.ws = null;
+  socket.connected = false;
+  if (ws) ws.close();
+}
+
+// The REST fetch of a date's games, shared by every consumer of that date. A WS update
+// that landed first is fresher, so the REST reply never overwrites it. A failure sets
+// `error` only when nothing has arrived from any source.
+function loadStore(date, store) {
+  fetchGames(date)
+    .then((data) => {
+      if (stores.get(date) !== store || store.pushed) return;
+      if (Array.isArray(data)) {
+        store.games = data;
+        store.error = false;
+      } else {
+        store.error = true;
+      }
+    })
+    .catch(() => {
+      if (stores.get(date) === store && !store.pushed) store.error = true;
+    })
+    .finally(() => {
+      if (stores.get(date) !== store) return;
+      store.loading = false;
+      notify(store);
+    });
+}
+
+/** Refetch a date's games after an error (the "Try again" button). */
+function retryStore(date) {
+  const store = stores.get(date);
+  if (!store || store.loading) return;
+  store.loading = true;
+  store.error = false;
+  notify(store);
+  loadStore(date, store);
+}
+
+function acquireStore(date) {
+  let store = stores.get(date);
+  if (!store) {
+    store = {
+      games: [],
+      loading: true,
+      error: false,
+      pushed: false,
+      refs: 0,
+      listeners: new Set(),
+      pollTimer: null,
+    };
+    stores.set(date, store);
+    // One-shot initial REST fetch for immediate data, shared by every consumer.
+    loadStore(date, store);
+  }
+  store.refs++;
+  syncPoll(date, store);
+  return store;
+}
+
+function releaseStore(date, store) {
+  store.refs--;
+  if (store.refs > 0) return;
+  if (store.pollTimer) clearInterval(store.pollTimer);
+  store.pollTimer = null;
+  if (stores.get(date) === store) stores.delete(date);
+}
 
 /**
  * Subscribes to /ws/scoreboard for real-time game list updates.
  * WS updates only apply when viewing today's date (ET).
  * Falls back to REST polling (30s) only when WS is disconnected.
+ * All consumers share one socket and one REST fetch/poll per date.
+ *
+ * `error` is true when the games couldn't be loaded and nothing has arrived since;
+ * `retry()` fetches them again.
  *
  * @param {string} dateStr - YYYY-MM-DD date for REST fallback
- * @returns {{ games: Array, connected: boolean }}
+ * @returns {{ games: Array, connected: boolean, loading: boolean, error: boolean, retry: Function }}
  */
 export function useScoreboard(dateStr) {
-  const wsRef = useRef(null);
-  const retryCount = useRef(0);
-  const retryTimer = useRef(null);
-  const mountedRef = useRef(true);
-  const fallbackTimer = useRef(null);
-  const dateRef = useRef(dateStr);
+  const [state, setState] = useState(() => {
+    const store = stores.get(dateStr);
+    return {
+      games: store ? store.games : [],
+      loading: store ? store.loading : true,
+      error: store ? store.error : false,
+      connected: socket.connected,
+    };
+  });
 
-  const [games, setGames] = useState([]);
-  const [connected, setConnected] = useState(false);
-
-  // Keep dateRef in sync so the WS callback sees the current date
+  // The shared socket lives as long as any consumer is mounted.
   useEffect(() => {
-    dateRef.current = dateStr;
-  }, [dateStr]);
-
-  // Compute today's date in Eastern Time
-  const todayET = (() => {
-    const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-    const y = et.getFullYear();
-    const m = String(et.getMonth() + 1).padStart(2, "0");
-    const d = String(et.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  })();
-
-  const isToday = dateStr === todayET;
-
-  // One-shot initial REST fetch for immediate data
-  useEffect(() => {
-    let cancelled = false;
-    fetchGames(dateStr)
-      .then((data) => {
-        if (!cancelled && Array.isArray(data)) setGames(data);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [dateStr]);
-
-  // REST fallback: poll every 30s only when WS is disconnected
-  useEffect(() => {
-    if (connected && isToday) {
-      if (fallbackTimer.current) clearInterval(fallbackTimer.current);
-      fallbackTimer.current = null;
-      return;
-    }
-
-    // For past/future dates, no need to poll frequently
-    if (!isToday) {
-      if (fallbackTimer.current) clearInterval(fallbackTimer.current);
-      fallbackTimer.current = null;
-      return;
-    }
-
-    fallbackTimer.current = setInterval(() => {
-      if (!mountedRef.current) return;
-      fetchGames(dateStr)
-        .then((data) => {
-          if (mountedRef.current && Array.isArray(data)) setGames(data);
-        })
-        .catch(() => {});
-    }, REST_FALLBACK_MS);
-
-    return () => {
-      if (fallbackTimer.current) clearInterval(fallbackTimer.current);
-    };
-  }, [connected, dateStr, isToday]);
-
-  const connect = useCallback(() => {
-    if (!mountedRef.current) return;
-
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
-    const ws = new WebSocket(`${WS_URL}/ws/scoreboard`);
-
-    ws.onopen = () => {
-      if (!mountedRef.current) return;
-      setConnected(true);
-      retryCount.current = 0;
-    };
-
-    ws.onclose = () => {
-      if (!mountedRef.current) return;
-      setConnected(false);
-
-      if (retryCount.current < MAX_RETRIES) {
-        const delay = Math.min(
-          BASE_DELAY * Math.pow(2, retryCount.current),
-          MAX_DELAY,
-        );
-        retryCount.current++;
-        retryTimer.current = setTimeout(() => {
-          if (mountedRef.current) connect();
-        }, delay);
-      }
-    };
-
-    ws.onerror = () => {};
-
-    ws.onmessage = (event) => {
-      if (!mountedRef.current) return;
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === "scoreboard_update" && Array.isArray(msg.data)) {
-          // Only apply WS updates when viewing today's date
-          const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-          const y = et.getFullYear();
-          const m = String(et.getMonth() + 1).padStart(2, "0");
-          const d = String(et.getDate()).padStart(2, "0");
-          const nowET = `${y}-${m}-${d}`;
-          if (dateRef.current === nowET) {
-            setGames(msg.data);
-          }
-        }
-      } catch {
-        // Ignore malformed messages
-      }
-    };
-
-    wsRef.current = ws;
+    acquireSocket();
+    setState((s) => (s.connected === socket.connected ? s : { ...s, connected: socket.connected }));
+    return releaseSocket;
   }, []);
 
-  // Ping keep-alive every 20s
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send("ping");
-      }
-    }, 20000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Connect on mount, cleanup on unmount
-  useEffect(() => {
-    mountedRef.current = true;
-    connect();
-
+    const store = acquireStore(dateStr);
+    const listener = (snap) =>
+      setState((s) => ({ ...s, ...snap, connected: snap.connected ?? socket.connected }));
+    store.listeners.add(listener);
+    setState({ ...snapshot(store), connected: socket.connected });
     return () => {
-      mountedRef.current = false;
-      if (retryTimer.current) clearTimeout(retryTimer.current);
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
+      store.listeners.delete(listener);
+      releaseStore(dateStr, store);
     };
-  }, [connect]);
+  }, [dateStr]);
 
-  return { games, connected };
+  const retry = useCallback(() => retryStore(dateStr), [dateStr]);
+  return { ...state, retry };
 }

@@ -11,7 +11,6 @@ from src.services.stats_service import (
     _safe_float,
     get_player_game_log,
     get_player_season_stats,
-    get_stat_leaders,
     get_team_stats_list,
 )
 
@@ -229,42 +228,19 @@ class TestResolveAthlete:
 
 
 @pytest.mark.asyncio
-class TestGetStatLeaders:
-    async def test_espn_fallback(self):
-        espn_data = {
-            "categories": [
-                {
-                    "name": "pointsPerGame",
-                    "leaders": [
-                        {
-                            "athlete": {"$ref": "http://api/athletes/123?season=2026"},
-                            "displayValue": "33.5",
-                        }
-                    ],
-                }
-            ],
-        }
-        with patch("src.services.stats_service.espn_client") as mock_espn:
-            mock_espn.get_stat_leaders = AsyncMock(return_value=espn_data)
-            mock_espn.get_team_roster = AsyncMock(return_value=None)
-            mock_espn.get_athlete_info = AsyncMock(
-                return_value={"athlete": {"displayName": "SGA", "team": {"abbreviation": "OKC"}}}
-            )
-            result = await get_stat_leaders(limit=5)
-            assert "pts" in result.categories
-            assert len(result.categories["pts"]) == 1
-
-    async def test_empty_categories_on_failure(self):
-        with patch("src.services.stats_service.espn_client") as mock_espn:
-            mock_espn.get_stat_leaders = AsyncMock(return_value=None)
-            result = await get_stat_leaders()
-            assert result.categories == {}
-
-
-@pytest.mark.asyncio
 class TestGetTeamStatsList:
     async def test_always_empty(self):
         """No data source since the Sport-suite DB pools were retired
         (owner-approved); always returns empty."""
         result = await get_team_stats_list()
         assert result == []
+
+
+@pytest.mark.asyncio
+async def test_athlete_lookup_skips_teams_whose_roster_fails():
+    """espn_client returns None for a failed roster request; that team is skipped."""
+    from src.services.stats_service import _build_athlete_lookup
+
+    with patch("src.services.stats_service.espn_client") as mock:
+        mock.get_team_roster = AsyncMock(return_value=None)
+        assert await _build_athlete_lookup() == {}

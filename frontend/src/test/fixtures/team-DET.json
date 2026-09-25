@@ -1,0 +1,14 @@
+{
+  "_source": "curl https://api.lunara-app.com/teams/DET -> HTTP 200, captured 2026-09-25T15:21:04-0400 (ET). Real, unmodified response body.",
+  "data": {
+    "name": "Detroit Pistons",
+    "abbrev": "DET",
+    "city": "Detroit",
+    "venue": "Little Caesars Arena",
+    "record": "0-0",
+    "conference": "Eastern",
+    "division": "Central",
+    "color": "#1d428a",
+    "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/det.png"
+  }
+}

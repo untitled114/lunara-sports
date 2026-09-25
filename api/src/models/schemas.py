@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date as _date
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -23,6 +24,14 @@ class GameResponse(BaseModel):
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class NextGameResponse(BaseModel):
+    """A field named `date` shadows the `date` type during pydantic's annotation
+    resolution (pydantic v2 + `from __future__ import annotations`), so the type is
+    imported under an alias here; the field name and wire format are unaffected."""
+
+    date: _date | None = None
 
 
 # ── Plays ──────────────────────────────────────────────────────────────
@@ -205,12 +214,15 @@ class StandingsTeam(BaseModel):
     l10: str = ""
     strk: str = ""
     logo_url: str = ""
+    seed: int | None = None
 
 
 class StandingsResponse(BaseModel):
     eastern: list[StandingsTeam]
     western: list[StandingsTeam]
     season: str = ""
+    season_label: str = ""
+    is_previous_season: bool = False
 
 
 # ── Teams ─────────────────────────────────────────────────────────────
@@ -315,6 +327,12 @@ class StatLeader(BaseModel):
 
 class StatLeadersResponse(BaseModel):
     categories: dict[str, list[StatLeader]]
+    # The season the leaders are from, read from ESPN's payload (e.g.
+    # "2025–26 regular season"); "" when ESPN doesn't say.
+    season_label: str = ""
+    # True before this season's first regular-season game: the leaders are last
+    # season's (the same decision as the standings fallback).
+    is_previous_season: bool = False
 
 
 class TeamStatsRow(BaseModel):

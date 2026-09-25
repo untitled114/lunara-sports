@@ -86,6 +86,27 @@ class TestGetTeams:
         assert "Los Angeles Lakers" in names
         assert "Miami Heat" in names
 
+    async def test_excludes_alias_rows_like_utah(self, session):
+        """Migration 007 seeds both 'UTA' and 'UTAH' rows for the same team (so raw
+        ingestion FKs never failed before normalization existed) — GET /teams must
+        list the Jazz once, under the canonical 'UTA', not twice."""
+        session.add_all(
+            [
+                Team(abbrev="UTA", name="Utah Jazz", conference="Western", division="Northwest"),
+                Team(abbrev="UTAH", name="Utah Jazz", conference="Western", division="Northwest"),
+                Team(
+                    abbrev="BOS", name="Boston Celtics", conference="Eastern", division="Atlantic"
+                ),
+            ]
+        )
+        await session.commit()
+
+        teams = await get_teams(session)
+        abbrevs = [t["abbrev"] for t in teams]
+        assert abbrevs.count("UTA") == 1
+        assert "UTAH" not in abbrevs
+        assert len(teams) == 2
+
     async def test_last_game_lookup_error_is_swallowed(self, team_session):
         """A failure looking up a team's last game is caught and the team
         still appears in the result with last_game left empty."""

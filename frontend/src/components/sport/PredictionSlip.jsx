@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Target, Lock, ChevronRight, TrendingUp } from 'lucide-react';
+import clsx from 'clsx';
 import { getTeamColor } from '@/utils/teamColors';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -41,21 +42,19 @@ export function PredictionSlip({ game, standings = {} }) {
   const rewardPoints = basePoints + Math.round(edge * 10);
 
   return (
-    <div className="liquid-glass rounded-[2rem] border-white/5 shadow-2xl overflow-hidden mb-6">
-      <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+    <div className="bg-surface-card rounded-lg border border-border shadow-2xl overflow-hidden mb-6">
+      <div className="px-6 py-4 border-b border-border bg-surface-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
-          <span className="text-[13px] font-black uppercase tracking-[0.2em] text-white">Prediction Slip</span>
+          <Target className="h-4 w-4 text-warn" />
+          <span className="t-label text-text-1">Prediction slip</span>
         </div>
         {locked ? (
-          <div className="flex items-center gap-1.5 text-[13px] font-black text-[var(--green)] uppercase tracking-widest">
+          <div className="flex items-center gap-1.5 t-label text-live">
             <Lock className="h-3 w-3" />
-            Locked In
+            Locked in
           </div>
         ) : (
-          <div className="text-[13px] font-black text-orange-500 uppercase tracking-widest animate-pulse">
-            Awaiting Pick
-          </div>
+          <div className="t-label text-warn animate-pulse">Awaiting pick</div>
         )}
       </div>
 
@@ -65,86 +64,77 @@ export function PredictionSlip({ game, standings = {} }) {
           <button
             onClick={() => handlePick('away')}
             disabled={locked}
-            className={`relative p-5 rounded-2xl border transition-all duration-300 group ${
-              pick === 'away'
-                ? 'bg-white/10 border-[var(--accent)] shadow-[0_0_30px_rgba(99,102,241,0.3)]'
-                : 'bg-[#050a18] border-white/5 hover:border-white/20'
-            } ${locked && pick !== 'away' ? 'grayscale opacity-20' : ''}`}
-          >
-            <div
-              className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.2)]"
-              style={{ backgroundColor: awayColors.primary }}
-            />
-            <p className="text-[13px] font-black text-white/40 uppercase mb-1.5 tracking-wider">{game.away_team}</p>
-            <p className="text-base font-black text-white uppercase tracking-tight">{homeFav ? 'Underdog' : 'Favorite'}</p>
-            {pick === 'away' && (
-              <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[var(--accent)] shadow-[0_0_10px_var(--accent)]" />
+            className={clsx(
+              'relative p-5 rounded-lg border transition-all duration-300 group',
+              pick === 'away' ? 'bg-accent/10 border-accent' : 'bg-surface-2 border-border hover:border-border-strong',
+              locked && pick !== 'away' && 'grayscale opacity-20'
             )}
+          >
+            <div className="absolute left-0 top-2 bottom-2 w-1 rounded-sm" style={{ backgroundColor: awayColors.primary }} />
+            <p className="t-label text-text-3 mb-1.5">{game.away_team}</p>
+            <p className="t-body font-semibold text-text-1">{homeFav ? 'Underdog' : 'Favorite'}</p>
+            {pick === 'away' && <div className="absolute top-2 right-2 h-2 w-2 rounded-sm bg-accent" />}
           </button>
 
           {/* Home Team Pick */}
           <button
             onClick={() => handlePick('home')}
             disabled={locked}
-            className={`relative p-5 rounded-2xl border transition-all duration-300 group ${
-              pick === 'home'
-                ? 'bg-white/10 border-[var(--accent)] shadow-[0_0_30px_rgba(99,102,241,0.3)]'
-                : 'bg-[#050a18] border-white/5 hover:border-white/20'
-            } ${locked && pick !== 'home' ? 'grayscale opacity-20' : ''}`}
-          >
-            <div
-              className="absolute right-0 top-2 bottom-2 w-1 rounded-l-full shadow-[0_0_10px_rgba(255,255,255,0.2)]"
-              style={{ backgroundColor: homeColors.primary }}
-            />
-            <p className="text-[13px] font-black text-white/40 uppercase mb-1.5 text-right tracking-wider">{game.home_team}</p>
-            <p className="text-base font-black text-white uppercase tracking-tight text-right">{homeFav ? 'Favorite' : 'Underdog'}</p>
-            {pick === 'home' && (
-              <div className="absolute top-2 left-2 h-2 w-2 rounded-full bg-[var(--accent)] shadow-[0_0_10px_var(--accent)]" />
+            className={clsx(
+              'relative p-5 rounded-lg border transition-all duration-300 group text-right',
+              pick === 'home' ? 'bg-accent/10 border-accent' : 'bg-surface-2 border-border hover:border-border-strong',
+              locked && pick !== 'home' && 'grayscale opacity-20'
             )}
+          >
+            <div className="absolute right-0 top-2 bottom-2 w-1 rounded-sm" style={{ backgroundColor: homeColors.primary }} />
+            <p className="t-label text-text-3 mb-1.5">{game.home_team}</p>
+            <p className="t-body font-semibold text-text-1">{homeFav ? 'Favorite' : 'Underdog'}</p>
+            {pick === 'home' && <div className="absolute top-2 left-2 h-2 w-2 rounded-sm bg-accent" />}
           </button>
         </div>
 
-        <div className="deboss p-5 rounded-2xl space-y-4">
-           <div className="flex justify-between items-center text-sm font-black uppercase tracking-[0.2em] text-white/60">
-              <span>Forecast</span>
-              <span className="text-white">{homeProb}% Win Prob</span>
-           </div>
-           <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden flex shadow-inner">
-              <div className="h-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]" style={{ width: `${awayProb}%` }} />
-              <div className="h-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${homeProb}%` }} />
-           </div>
+        <div className="bg-surface-2 p-5 rounded-lg space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="t-label text-text-3">Forecast</span>
+            <span className="t-small tnum font-semibold text-text-1">{homeProb}% win probability</span>
+          </div>
+          <div className="h-1.5 w-full bg-surface-1 rounded-sm overflow-hidden flex">
+            <div className="h-full bg-warn" style={{ width: `${awayProb}%` }} />
+            <div className="h-full bg-accent" style={{ width: `${homeProb}%` }} />
+          </div>
         </div>
 
         <button
           onClick={handleLock}
           disabled={locked || !pick}
-          className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.4em] text-[13px] transition-all duration-500 flex items-center justify-center gap-4 ${
+          className={clsx(
+            'w-full py-5 rounded-lg t-small font-semibold transition-all duration-500 flex items-center justify-center gap-4',
             locked
-              ? 'bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/20 cursor-default shadow-lg'
+              ? 'bg-live/10 text-live border border-live/20 cursor-default shadow-lg'
               : pick
-                ? 'bg-white text-black hover:bg-indigo-500 hover:text-white shadow-2xl scale-[1.02]'
-                : 'bg-white/5 text-white/50 border border-white/5 cursor-not-allowed'
-          }`}
+                ? 'bg-accent-fill text-white hover:bg-accent-fill-hover shadow-2xl'
+                : 'bg-surface-2 text-text-3 border border-border cursor-not-allowed'
+          )}
         >
           {locked ? (
             <>
               <Lock className="h-3.5 w-3.5" />
-              Locked In
+              Locked in
             </>
           ) : (
             <>
-              Confirm Analysis
+              Confirm pick
               <ChevronRight className="h-4 w-4" />
             </>
           )}
         </button>
       </div>
 
-      <div className="p-3 bg-white/5 text-center border-t border-white/5">
-         <div className="flex items-center justify-center gap-2 text-[13px] font-black text-white/40 uppercase tracking-widest">
-            <TrendingUp className="h-3 w-3" />
-            Potential Reward: {rewardPoints} PBP Points
-         </div>
+      <div className="p-3 bg-surface-2 text-center border-t border-border">
+        <div className="flex items-center justify-center gap-2 t-label text-text-3">
+          <TrendingUp className="h-3 w-3" />
+          Potential reward: {rewardPoints} PBP points
+        </div>
       </div>
     </div>
   );

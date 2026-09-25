@@ -28,7 +28,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log the error to console in development
+    // Report the error during development
     if (import.meta.env.DEV) {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
@@ -65,37 +65,29 @@ class ErrorBoundary extends React.Component {
 
       // Default fallback UI
       return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
-          <div className="max-w-md w-full bg-gray-800 rounded-lg shadow-xl p-8 text-center">
+        <div className="min-h-screen bg-surface-0 flex items-center justify-center px-4">
+          <div className="max-w-md w-full bg-surface-card border border-border rounded-lg p-8 text-center">
             {/* Error Icon */}
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-red-500" />
+              <div className="w-16 h-16 bg-loss/10 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-loss" />
               </div>
             </div>
 
             {/* Error Message */}
-            <h1 className="text-2xl font-bold text-white mb-2">
-              Something went wrong
-            </h1>
-            <p className="text-gray-400 mb-6">
+            <h1 className="t-title text-text-1 mb-2">Something went wrong</h1>
+            <p className="t-body text-text-2 mb-6">
               We're sorry for the inconvenience. The application encountered an unexpected error.
             </p>
 
             {/* Error Details (Development Only) */}
             {import.meta.env.DEV && this.state.error && (
-              <div className="mb-6 p-4 bg-gray-900 rounded-lg text-left">
-                <p className="text-sm font-mono text-red-400 mb-2">
-                  {this.state.error.toString()}
-                </p>
+              <div className="mb-6 rounded-lg bg-surface-2 p-4 text-left">
+                <p className="t-small font-mono text-loss mb-2">{this.state.error.toString()}</p>
                 {this.state.errorInfo && (
-                  <details className="text-sm font-mono text-gray-500">
-                    <summary className="cursor-pointer hover:text-gray-400">
-                      Stack trace
-                    </summary>
-                    <pre className="mt-2 whitespace-pre-wrap break-words">
-                      {this.state.errorInfo.componentStack}
-                    </pre>
+                  <details className="t-small font-mono text-text-3">
+                    <summary className="cursor-pointer hover:text-text-2">Stack trace</summary>
+                    <pre className="mt-2 whitespace-pre-wrap break-words">{this.state.errorInfo.componentStack}</pre>
                   </details>
                 )}
               </div>
@@ -105,27 +97,24 @@ class ErrorBoundary extends React.Component {
             <div className="flex gap-3">
               <button
                 onClick={this.handleReset}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                className="t-small flex-1 flex items-center justify-center gap-2 rounded-md bg-accent-fill px-4 py-3 font-medium text-white hover:bg-accent-fill-hover transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
-                Try Again
+                Try again
               </button>
               <button
                 onClick={this.handleGoHome}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                className="t-small flex-1 flex items-center justify-center gap-2 rounded-md bg-surface-2 px-4 py-3 font-medium text-text-1 hover:bg-surface-1 transition-colors border border-border"
               >
                 <Home className="w-4 h-4" />
-                Go Home
+                Go home
               </button>
             </div>
 
             {/* Support Link */}
-            <p className="mt-6 text-sm text-gray-500">
+            <p className="mt-6 t-small text-text-3">
               If this problem persists,{' '}
-              <a
-                href="mailto:support@playbyplay.app"
-                className="text-indigo-400 hover:text-indigo-300"
-              >
+              <a href="mailto:support@playbyplay.app" className="text-accent hover:text-accent-hover">
                 contact support
               </a>
             </p>

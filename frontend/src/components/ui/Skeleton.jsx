@@ -1,4 +1,5 @@
 import React from 'react';
+import clsx from 'clsx';
 
 /**
  * Skeleton Component
@@ -17,32 +18,27 @@ import React from 'react';
  * <Skeleton variant="circle" width="w-12" height="h-12" />
  * <Skeleton variant="rectangle" width="w-full" height="h-32" />
  */
-const Skeleton = ({
-  variant = 'text',
-  width,
-  height,
-  count = 1,
-  className = '',
-}) => {
+const Skeleton = ({ variant = 'text', width, height, count = 1, className = '' }) => {
   // Base skeleton styles
-  const baseStyles = 'animate-pulse bg-gray-700/50 rounded';
+  const baseStyles = 'animate-pulse bg-surface-2 rounded-sm';
 
-  // Variant-specific styles
+  // Variant-specific styles (avatars/badges render as soft-rounded blocks, not circles,
+  // consistent with TeamMark rendering logos unmasked elsewhere in the app)
   const variantStyles = {
-    text: `h-4 ${width || 'w-full'}`,
-    circle: `rounded-full ${width || 'w-12'} ${height || 'h-12'}`,
-    rectangle: `${width || 'w-full'} ${height || 'h-32'}`,
-    card: `${width || 'w-full'} ${height || 'h-48'} rounded-lg`,
+    text: clsx('h-4', width || 'w-full'),
+    circle: clsx('rounded-lg', width || 'w-12', height || 'h-12'),
+    rectangle: clsx(width || 'w-full', height || 'h-32'),
+    card: clsx(width || 'w-full', height || 'h-48', 'rounded-lg'),
   };
 
   // For multiple text lines
   if (count > 1 && variant === 'text') {
     return (
-      <div className={`space-y-3 ${className}`}>
+      <div className={clsx('space-y-3', className)}>
         {Array.from({ length: count }).map((_, index) => (
           <div
             key={index}
-            className={`${baseStyles} ${variantStyles[variant]}`}
+            className={clsx(baseStyles, variantStyles[variant])}
             style={{
               width: index === count - 1 ? '80%' : '100%', // Last line is shorter
             }}
@@ -52,9 +48,7 @@ const Skeleton = ({
     );
   }
 
-  return (
-    <div className={`${baseStyles} ${variantStyles[variant]} ${className}`} />
-  );
+  return <div className={clsx(baseStyles, variantStyles[variant], className)} />;
 };
 
 // Common skeleton presets
@@ -62,20 +56,16 @@ Skeleton.Avatar = ({ size = 'w-12 h-12', className = '' }) => (
   <Skeleton variant="circle" width={size} height={size} className={className} />
 );
 
-Skeleton.Text = ({ lines = 1, className = '' }) => (
-  <Skeleton variant="text" count={lines} className={className} />
-);
+Skeleton.Text = ({ lines = 1, className = '' }) => <Skeleton variant="text" count={lines} className={className} />;
 
-Skeleton.Title = ({ className = '' }) => (
-  <Skeleton variant="text" width="w-48" height="h-6" className={className} />
-);
+Skeleton.Title = ({ className = '' }) => <Skeleton variant="text" width="w-48" height="h-6" className={className} />;
 
 Skeleton.Button = ({ className = '' }) => (
-  <Skeleton variant="rectangle" width="w-24" height="h-10" className={`rounded-lg ${className}`} />
+  <Skeleton variant="rectangle" width="w-24" height="h-10" className={clsx('rounded-md', className)} />
 );
 
 Skeleton.Card = ({ className = '' }) => (
-  <div className={`p-6 bg-gray-800/50 rounded-lg border border-gray-700/50 ${className}`}>
+  <div className={clsx('rounded-lg border border-border bg-surface-card p-6', className)}>
     <div className="flex items-center gap-4 mb-4">
       <Skeleton.Avatar />
       <div className="flex-1">
@@ -92,7 +82,7 @@ Skeleton.Card = ({ className = '' }) => (
 );
 
 Skeleton.Table = ({ rows = 5, columns = 4, className = '' }) => (
-  <div className={`space-y-3 ${className}`}>
+  <div className={clsx('space-y-3', className)}>
     {/* Header */}
     <div className="flex gap-4">
       {Array.from({ length: columns }).map((_, i) => (
@@ -104,12 +94,7 @@ Skeleton.Table = ({ rows = 5, columns = 4, className = '' }) => (
     {Array.from({ length: rows }).map((_, rowIndex) => (
       <div key={`row-${rowIndex}`} className="flex gap-4">
         {Array.from({ length: columns }).map((_, colIndex) => (
-          <Skeleton
-            key={`cell-${rowIndex}-${colIndex}`}
-            variant="text"
-            width="flex-1"
-            height="h-4"
-          />
+          <Skeleton key={`cell-${rowIndex}-${colIndex}`} variant="text" width="flex-1" height="h-4" />
         ))}
       </div>
     ))}
@@ -117,7 +102,7 @@ Skeleton.Table = ({ rows = 5, columns = 4, className = '' }) => (
 );
 
 Skeleton.List = ({ items = 5, className = '' }) => (
-  <div className={`space-y-4 ${className}`}>
+  <div className={clsx('space-y-4', className)}>
     {Array.from({ length: items }).map((_, index) => (
       <div key={index} className="flex items-center gap-4">
         <Skeleton.Avatar size="w-10 h-10" />
@@ -131,11 +116,11 @@ Skeleton.List = ({ items = 5, className = '' }) => (
 );
 
 Skeleton.Dashboard = ({ className = '' }) => (
-  <div className={`space-y-6 ${className}`}>
+  <div className={clsx('space-y-6', className)}>
     {/* Stats Grid */}
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="p-6 bg-gray-800/50 rounded-lg">
+        <div key={i} className="rounded-lg bg-surface-card p-6">
           <Skeleton variant="text" width="w-24" height="h-4" />
           <Skeleton variant="text" width="w-16" height="h-8" className="mt-2" />
         </div>

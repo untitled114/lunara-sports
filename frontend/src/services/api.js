@@ -1,3 +1,5 @@
+import { todayET, addDaysISO } from "@/lib/et";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export async function fetchGames(date) {
@@ -44,6 +46,14 @@ export async function fetchPredictions(userId) {
 }
 
 // ── New API functions ──────────────────────────────────────────────
+
+// First game day strictly after `after` (YYYY-MM-DD, ET), or null when nothing is scheduled.
+export async function fetchNextGameDate(after) {
+  const res = await fetch(`${API_URL}/games/next?after=${after}`);
+  if (!res.ok) throw new Error("Failed to fetch next game date");
+  const data = await res.json();
+  return data.date ?? null;
+}
 
 export async function fetchStandings() {
   const res = await fetch(`${API_URL}/standings`);
@@ -125,10 +135,8 @@ export async function fetchBoxScore(gameId) {
 }
 
 export async function fetchNextGame(abbrev) {
-  // Get tomorrow's games and find one involving this team
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const dateStr = tomorrow.toISOString().slice(0, 10);
+  // Get tomorrow's games (tomorrow in ET, where NBA dates live) and find one involving this team
+  const dateStr = addDaysISO(todayET(), 1);
   try {
     const games = await fetchGames(dateStr);
     return games.find(g => g.home_team === abbrev || g.away_team === abbrev) || null;
@@ -261,7 +269,9 @@ export async function authMe(token) {
   return res.json();
 }
 
-// Build a standings lookup map: { abbrev: { rank, w, l, record, streak, conf, pct } }
+// Build a standings lookup map: { abbrev: { rank, seed, w, l, record, streak, conf, pct } }.
+// The season context (season_label / is_previous_season) lives on the response, not
+// on each team — read it from the fetchStandings() payload directly.
 export function buildStandingsLookup(standings) {
   const map = {};
   if (!standings) return map;
@@ -269,6 +279,7 @@ export function buildStandingsLookup(standings) {
     for (const t of teams) {
       map[t.abbrev] = {
         rank: t.rank,
+        seed: t.seed ?? null,
         w: t.w,
         l: t.l,
         record: `${t.w}-${t.l}`,
