@@ -96,6 +96,27 @@ class TestSplitMessage:
 
 
 # ---------------------------------------------------------------------------
+# Lumen.__init__ — LUNARA_API_URL / LUNARA_WS_URL env override
+# ---------------------------------------------------------------------------
+
+
+class TestLunaraUrlOverride:
+    def test_env_vars_override_config_urls(self, monkeypatch):
+        monkeypatch.setenv("LUNARA_API_URL", "http://127.0.0.1:8010")
+        monkeypatch.setenv("LUNARA_WS_URL", "ws://127.0.0.1:8010/ws")
+        b = Lumen(_cfg(lunara={"api_url": "https://old.run.app", "ws_url": "wss://old.run.app/ws"}))
+        assert b.api_url == "http://127.0.0.1:8010"
+        assert b.ws_url == "ws://127.0.0.1:8010/ws"
+
+    def test_config_used_when_env_absent(self, monkeypatch):
+        monkeypatch.delenv("LUNARA_API_URL", raising=False)
+        monkeypatch.delenv("LUNARA_WS_URL", raising=False)
+        b = Lumen(_cfg())
+        assert b.api_url == "http://127.0.0.1:8010"
+        assert b.ws_url == "ws://127.0.0.1:8010/ws"
+
+
+# ---------------------------------------------------------------------------
 # Lumen.on_message
 # ---------------------------------------------------------------------------
 

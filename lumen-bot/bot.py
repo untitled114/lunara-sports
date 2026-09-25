@@ -25,6 +25,7 @@ import yaml
 from brain import BotIdentity, CephalonBrain
 from formatter import PickFormatter
 from lumen_tools import TOOLS, handle_tool, init_tools
+from settings import resolve_lunara_urls
 from ws_listener import WSListener
 
 log = logging.getLogger("lumen")
@@ -92,8 +93,7 @@ class Lumen(discord.Client):
 
         self.config = config
         self.owner_id: int = config["discord"]["owner_id"]
-        self.api_url: str = config["lunara"]["api_url"]
-        self.ws_url: str = config["lunara"]["ws_url"]
+        self.api_url, self.ws_url = resolve_lunara_urls(config, os.environ)
         self.alert_cfg: dict = config.get("alerts", {})
         self.copilot_cfg: dict = config.get("copilot", {})
         self.start_time = datetime.now(timezone.utc)
