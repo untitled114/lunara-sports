@@ -45,6 +45,11 @@ const TIMEZONE_OPTIONS = [
   { id: 'PT', label: 'PT' }
 ];
 
+// The page grain (the one allowed ambient effect) tops out well under full opacity —
+// arenaIntensity (0..1) is scaled into this ceiling rather than driving a decorative
+// glow that no longer exists.
+const GRAIN_MAX_OPACITY = 0.12;
+
 const AppLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -89,15 +94,21 @@ const AppLayout = () => {
       {/* Skip to Content */}
       <a href="#main-content" className="skip-to-content">Skip to content</a>
 
-      {/* Page background: flat surface + grain texture only */}
+      {/* Page background: flat surface + grain texture only. The "Background texture"
+          setting drives this layer's opacity directly (0 - GRAIN_MAX_OPACITY) — it's
+          the one allowed ambient effect, so the control now does something real. */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none' }} className="bg-surface-0">
-        <div className="texture-grain absolute inset-0 mix-blend-overlay" />
+        <div
+          data-testid="page-grain"
+          className="texture-grain absolute inset-0 mix-blend-overlay"
+          style={{ opacity: arenaIntensity * GRAIN_MAX_OPACITY }}
+        />
       </div>
 
       {/* Cinematic Transition Overlay */}
       {isTransitioning && (
         <div
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200, backgroundColor: 'white' }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200, backgroundColor: 'var(--text-1)' }}
           className="animate-flash flex flex-col items-center justify-center"
         >
           <div className="absolute inset-0 z-0 overflow-hidden">
@@ -106,16 +117,16 @@ const AppLayout = () => {
               alt=""
               className="w-full h-full object-cover animate-scaleIn transition-transform duration-1000"
             />
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'white', opacity: 0.4, mixBlendMode: 'overlay' }} />
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--text-1)', opacity: 0.4, mixBlendMode: 'overlay' }} />
           </div>
           <div className="flex flex-col items-center gap-8 animate-fadeIn relative z-10">
             <div className="h-32 w-32 rounded-lg bg-surface-2 border border-border flex items-center justify-center overflow-hidden relative">
               <img src={BRANDING_IMAGES.logos.general} alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" />
             </div>
             <div className="flex flex-col items-center gap-2">
-              <span className="t-section" style={{ color: 'black' }}>Lunara Sports</span>
-              <div className="h-1 w-48 rounded-sm overflow-hidden" style={{ backgroundColor: 'color-mix(in srgb, black 20%, transparent)' }}>
-                <div className="h-full animate-progress" style={{ backgroundColor: 'black' }} />
+              <span className="t-section" style={{ color: 'var(--surface-0)' }}>Lunara Sports</span>
+              <div className="h-1 w-48 rounded-sm overflow-hidden" style={{ backgroundColor: 'color-mix(in srgb, var(--surface-0) 20%, transparent)' }}>
+                <div className="h-full animate-progress" style={{ backgroundColor: 'var(--surface-0)' }} />
               </div>
             </div>
           </div>
@@ -165,9 +176,9 @@ const AppLayout = () => {
                   <button
                     aria-label="Open settings"
                     onClick={() => { playGlassClick(); setSettingsOpen(true); }}
-                    className="h-9 w-9 sm:h-11 sm:w-11 flex items-center justify-center rounded-md bg-surface-2 border border-border text-text-3 hover:text-text-1 transition-colors"
+                    className="group/settings h-9 w-9 sm:h-11 sm:w-11 flex items-center justify-center rounded-md bg-surface-2 border border-border text-text-3 hover:text-text-1 transition-colors"
                   >
-                    <Settings className={`h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-[1.5s] ${settingsOpen ? 'text-accent' : ''}`} />
+                    <Settings className={`h-4 w-4 sm:h-5 sm:w-5 group-hover/settings:rotate-180 transition-transform duration-[1.5s] ${settingsOpen ? 'text-accent' : ''}`} />
                   </button>
                   <button
                     aria-label="Toggle navigation menu"
@@ -194,8 +205,8 @@ const AppLayout = () => {
         {/* Settings Drawer */}
         {settingsOpen && (
           <>
-            <div className="fixed inset-0 z-[200] animate-fadeIn" style={{ backgroundColor: 'color-mix(in srgb, black 60%, transparent)' }} onClick={() => setSettingsOpen(false)} aria-hidden="true" />
-            <div className="fixed top-0 right-0 bottom-0 w-80 bg-surface-1 z-[210] shadow-2xl border-l border-border animate-slideInRight flex flex-col" role="dialog" aria-label="Menu" aria-modal="true">
+            <div className="fixed inset-0 z-[200] bg-surface-0/60 animate-fadeIn" onClick={() => setSettingsOpen(false)} aria-hidden="true" />
+            <div className="fixed top-0 right-0 bottom-0 w-80 bg-surface-1 z-[210] shadow-2xl border-l border-border animate-slideInRight flex flex-col" role="dialog" aria-label="Settings" aria-modal="true">
               <div className="p-6 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-accent/10 flex items-center justify-center">
@@ -251,10 +262,10 @@ const AppLayout = () => {
                   </button>
                 </section>
 
-                {/* 3. Background glow */}
+                {/* 3. Background texture — controls the page grain layer's opacity */}
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="t-label text-text-3">Background glow</span>
+                    <span className="t-label text-text-3">Background texture</span>
                     <Sun className="h-3.5 w-3.5 text-text-3" />
                   </div>
                   <div className="p-4 rounded-md border border-border bg-surface-2">
@@ -353,8 +364,7 @@ const AppLayout = () => {
         {mobileMenuOpen && (
           <>
             <div
-              className="fixed inset-0 lg:hidden z-[60] animate-fadeIn"
-              style={{ backgroundColor: 'color-mix(in srgb, black 70%, transparent)' }}
+              className="fixed inset-0 lg:hidden z-[60] bg-surface-0/70 animate-fadeIn"
               onClick={() => setMobileMenuOpen(false)}
             ></div>
 

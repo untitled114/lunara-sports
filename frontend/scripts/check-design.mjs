@@ -15,6 +15,10 @@ const EFFECT_OK = ['src/components/layout/AppLayout.jsx', 'src/styles/tokens.css
 // rgb()/rgba()/hsl()/hsla() literals: only the token file gets to define raw
 // color functions; everywhere else should reference a --token instead.
 const COLORFN_OK = ['src/styles/tokens.css']
+// color-mix(...) calls that don't reference a --token (ruling D16): only the token
+// file gets to mix colors from anything other than a --token (its color-mix calls
+// already reference --tokens as-is, so this is a defensive allowlist, not a live gap).
+const COLORMIX_OK = ['src/styles/tokens.css']
 // "text-white" is only allowed when it's paired with "bg-accent-fill" (the
 // filled-button token, #4F46E5 / --accent-fill) on the same line — that
 // button needs white text for contrast. Plain "bg-accent" does NOT grant the
@@ -62,6 +66,23 @@ const RULES = {
     `\\b(?:${PALETTE_PREFIX})-(?:(?:white|black)(?:/\\d+)?|(?:${PALETTE_COLOR})-\\d{2,3}(?:/\\d+)?)\\b`,
     'g'
   ),
+  // Ruling D16: CSS named colors inside inline style values (e.g. `style={{
+  // backgroundColor: 'white' }}`) are the same raw-color debt as the `palette` rule's
+  // Tailwind classes, just written where that rule can't see it. Property name is
+  // whatever the coordinator specified; deliberately narrow (doesn't try to catch every
+  // CSS color keyword) — this closes the specific gap that showed up in review, not a
+  // general inline-style linter.
+  namedColor:
+    /\b(color|background|backgroundColor|borderColor|fill|stroke)\s*:\s*['"](white|black|red|blue|green|yellow|gray|grey|orange|purple|pink)['"]/g,
+  // Ruling D16: color-mix(...) that doesn't reference a --token anywhere in its
+  // arguments (e.g. `color-mix(in srgb, black 60%, transparent)`) is the same raw-color
+  // debt as a literal hex or rgba() — it just evades the `hex`/`colorFn` rules because
+  // it's neither. The negative-lookahead repetition matches a whole `color-mix(...)`
+  // call only when `var(--` never appears inside it; if it does, the lookahead blocks
+  // consuming that position and the match can never reach the closing `)`, so the call
+  // is (correctly) not counted. Doesn't handle a call with its own nested, non-token
+  // parens (e.g. a bare `rgba(...)` mixed in) — not a pattern used in this codebase.
+  colorMix: /color-mix\((?:(?!var\(--)[^)])*\)/g,
 }
 
 export function scan(text, path) {
@@ -73,6 +94,7 @@ export function scan(text, path) {
       if (k === 'hex' && HEX_OK.includes(path)) continue
       if (k === 'effect' && EFFECT_OK.includes(path)) continue
       if (k === 'colorFn' && COLORFN_OK.includes(path)) continue
+      if (k === 'colorMix' && COLORMIX_OK.includes(path)) continue
       const matches = line.match(re) || []
       const n =
         k === 'palette'

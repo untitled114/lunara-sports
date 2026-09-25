@@ -1,30 +1,31 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
-vi.mock('@/context/ThemeContext', () => ({
-  useTheme: () => ({
-    playGlassClick: vi.fn(),
-    playThud: vi.fn(),
-    isTransitioning: false,
-    transitionImage: null,
-    soundEnabled: true,
-    toggleSound: vi.fn(),
-    arenaIntensity: 0.4,
-    updateIntensity: vi.fn(),
-    favoriteTeam: null,
-    selectFavoriteTeam: vi.fn(),
-    fontSize: 'md',
-    updateFontSize: vi.fn(),
-    reducedMotion: false,
-    toggleReducedMotion: vi.fn(),
-    refreshInterval: 30,
-    updateRefreshInterval: vi.fn(),
-    timezone: 'local',
-    updateTimezone: vi.fn(),
-  }),
-}))
+const BASE_THEME = {
+  playGlassClick: vi.fn(),
+  playThud: vi.fn(),
+  isTransitioning: false,
+  transitionImage: null,
+  soundEnabled: true,
+  toggleSound: vi.fn(),
+  arenaIntensity: 0.4,
+  updateIntensity: vi.fn(),
+  favoriteTeam: null,
+  selectFavoriteTeam: vi.fn(),
+  fontSize: 'md',
+  updateFontSize: vi.fn(),
+  reducedMotion: false,
+  toggleReducedMotion: vi.fn(),
+  refreshInterval: 30,
+  updateRefreshInterval: vi.fn(),
+  timezone: 'local',
+  updateTimezone: vi.fn(),
+}
+
+const mockUseTheme = vi.fn(() => BASE_THEME)
+vi.mock('@/context/ThemeContext', () => ({ useTheme: () => mockUseTheme() }))
 
 // ScoreTicker and CommandBar fetch live data (useScoreboard / fetchPlayers) — stubbed here
 // so this test stays isolated and deterministic; they're separate rollout tasks' files.
@@ -49,6 +50,10 @@ function renderLayout() {
 }
 
 describe('AppLayout', () => {
+  beforeEach(() => {
+    mockUseTheme.mockReturnValue(BASE_THEME)
+  })
+
   it('primary nav has plain, exact link names in order', () => {
     renderLayout()
     const nav = screen.getByRole('navigation', { name: 'Primary' })
@@ -79,16 +84,18 @@ describe('AppLayout', () => {
     await user.click(screen.getByRole('button', { name: 'Open settings' }))
     expect(BANNED.test(document.body.textContent)).toBe(false)
     expect(BANNED_NODE.test(document.body.textContent)).toBe(false)
-    expect(screen.getByRole('dialog', { name: 'Menu' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument()
     // required copy-table renames, still present with their new plain wording
     expect(screen.getByText('Favorite team')).toBeInTheDocument()
     expect(screen.getByText('Data')).toBeInTheDocument()
-    expect(screen.getByText('Settings')).toBeInTheDocument()
+    expect(screen.getByText('Background texture')).toBeInTheDocument()
+    expect(screen.getAllByText('Settings').length).toBeGreaterThan(0)
     // removed/renamed old copy must not be present
     expect(screen.queryByText('Node Affinity')).toBeNull()
     expect(screen.queryByText('Data Uplink')).toBeNull()
     expect(screen.queryByText('System Protocols')).toBeNull()
     expect(screen.queryByText('Intelligence Station')).toBeNull()
+    expect(screen.queryByText('Background glow')).toBeNull()
   })
 
   it('wordmark is a plain t-section span, not the tracked/italic wordmark', () => {
@@ -111,5 +118,45 @@ describe('AppLayout', () => {
     const bottomBar = navs.find((el) => el.getAttribute('aria-label') !== 'Primary')
     expect(bottomBar).toBeTruthy()
     expect(bottomBar.getAttribute('aria-label')).toBeTruthy()
+  })
+
+  it('the settings drawer and the mobile menu are distinctly named landmarks (D16 a11y)', async () => {
+    const user = userEvent.setup()
+    renderLayout()
+    await user.click(screen.getByRole('button', { name: 'Open settings' }))
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull()
+  })
+
+  it('the settings-gear icon keeps its hover rotate motion', () => {
+    renderLayout()
+    const gearButton = screen.getByRole('button', { name: 'Open settings' })
+    expect(gearButton).toHaveClass('group/settings')
+    const icon = gearButton.querySelector('svg')
+    expect(icon).toHaveClass('group-hover/settings:rotate-180', 'duration-[1.5s]')
+  })
+
+  it('"Background texture" drives the page grain layer opacity (ruling D15)', () => {
+    mockUseTheme.mockReturnValue({ ...BASE_THEME, arenaIntensity: 0 })
+    const { rerender, container } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppLayout />
+      </MemoryRouter>
+    )
+    const grainAt0 = screen.getByTestId('page-grain').style.opacity
+
+    mockUseTheme.mockReturnValue({ ...BASE_THEME, arenaIntensity: 1 })
+    rerender(
+      <MemoryRouter initialEntries={['/']}>
+        <AppLayout />
+      </MemoryRouter>
+    )
+    const grainAt1 = screen.getByTestId('page-grain').style.opacity
+
+    expect(Number(grainAt0)).toBe(0)
+    expect(Number(grainAt1)).toBeGreaterThan(Number(grainAt0))
+    // it's a real ceiling, not "always visible" — well under fully opaque
+    expect(Number(grainAt1)).toBeLessThanOrEqual(0.12)
+    expect(container).toBeTruthy()
   })
 })

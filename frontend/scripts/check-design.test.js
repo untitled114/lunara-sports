@@ -129,6 +129,40 @@ describe('design check', () => {
     })
   })
 
+  // ── hardening (ruling D16) ───────────────────────────────────────────────
+
+  describe('namedColor: CSS named colors inside inline style values', () => {
+    it('flags backgroundColor/color/borderColor/fill/stroke set to a named color', () => {
+      expect(scan(`style={{ backgroundColor: 'white' }}`, 'src/pages/Z.jsx')).toEqual({ namedColor: 1 })
+      expect(scan(`style={{ color: 'black' }}`, 'src/pages/Z.jsx')).toEqual({ namedColor: 1 })
+      expect(scan(`style={{ borderColor: "red" }}`, 'src/pages/Z.jsx')).toEqual({ namedColor: 1 })
+      expect(scan(`style={{ fill: 'blue', stroke: 'green' }}`, 'src/pages/Z.jsx')).toEqual({ namedColor: 2 })
+    })
+    it('allows a --token or any other CSS value in the same style props', () => {
+      expect(scan(`style={{ backgroundColor: 'var(--text-1)', color: 'var(--surface-0)' }}`, 'src/pages/Z.jsx')).toEqual({})
+    })
+    it('does not flag unrelated uses of the word "color" (prop name, comment)', () => {
+      expect(scan(`const color = getTeamColor(abbrev)`, 'src/pages/Z.jsx')).toEqual({})
+    })
+  })
+
+  describe('colorMix: color-mix(...) that never references a --token', () => {
+    it('flags a color-mix() built from named colors only', () => {
+      expect(scan(`color-mix(in srgb, black 60%, transparent)`, 'src/pages/Z.jsx')).toEqual({ colorMix: 1 })
+    })
+    it('allows a color-mix() that references a --token anywhere in its arguments', () => {
+      expect(scan(`color-mix(in srgb, var(--surface-0) 60%, transparent)`, 'src/pages/Z.jsx')).toEqual({})
+      expect(scan(`color-mix(in srgb, var(--live) 40%, var(--border))`, 'src/pages/Z.jsx')).toEqual({})
+    })
+    it('allows color-mix in tokens.css regardless', () => {
+      expect(scan(`color-mix(in srgb, black 40%, white)`, 'src/styles/tokens.css')).toEqual({})
+    })
+    it('counts more than one non-token color-mix() call on a line', () => {
+      const t = `color-mix(in srgb, black 60%, transparent) color-mix(in srgb, white 20%, transparent)`
+      expect(scan(t, 'src/pages/Z.jsx')).toEqual({ colorMix: 2 })
+    })
+  })
+
   describe('files(): directory traversal', () => {
     it('skips test/, tests/, and __tests__/ directories', () => {
       const root = mkdtempSync(join(tmpdir(), 'design-check-'))
