@@ -66,16 +66,14 @@ async def _cached_get(
         return None
 
 
-async def get_standings() -> dict | None:
-    """Fetch NBA standings from ESPN.
-
-    Note: The standings endpoint uses /apis/v2/ (not /apis/site/v2/).
-    """
-    return await _cached_get(
-        "espn:standings",
-        "https://site.api.espn.com/apis/v2/sports/basketball/nba/standings",
-        STANDINGS_TTL,
-    )
+async def get_standings(season: int | None = None) -> dict | None:
+    """Fetch NBA standings from ESPN (/apis/v2/). `season` is ESPN's end-year (2026 = 2025-26)."""
+    url = "https://site.api.espn.com/apis/v2/sports/basketball/nba/standings"
+    key = "espn:standings"
+    if season is not None:
+        url += f"?season={season}"
+        key += f":{season}"
+    return await _cached_get(key, url, STANDINGS_TTL)
 
 
 async def get_team_roster(espn_id: int) -> dict | None:

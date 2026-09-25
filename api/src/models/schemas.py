@@ -205,12 +205,15 @@ class StandingsTeam(BaseModel):
     l10: str = ""
     strk: str = ""
     logo_url: str = ""
+    seed: int | None = None
 
 
 class StandingsResponse(BaseModel):
     eastern: list[StandingsTeam]
     western: list[StandingsTeam]
     season: str = ""
+    season_label: str = ""
+    is_previous_season: bool = False
 
 
 # ── Teams ─────────────────────────────────────────────────────────────

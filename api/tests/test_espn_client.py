@@ -105,6 +105,19 @@ class TestGetStandings:
         result = await get_standings()
         assert result == {"children": []}
 
+    @pytest.mark.asyncio
+    async def test_with_season_appends_query_and_cache_suffix(self, mock_redis, mock_http):
+        client, resp = mock_http
+        resp.json.return_value = {"children": [], "seasons": [{"year": 2026}]}
+        result = await get_standings(season=2026)
+        assert result == {"children": [], "seasons": [{"year": 2026}]}
+        client.get.assert_called_once_with(
+            "https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?season=2026",
+            params=None,
+        )
+        mock_redis.set.assert_called_once()
+        assert mock_redis.set.call_args.args[0] == "espn:standings:2026"
+
 
 class TestGetGameSummary:
     @pytest.mark.asyncio

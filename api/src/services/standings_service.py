@@ -59,6 +59,9 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
         gb = _get_stat(entry, "gamesBehind") or _get_stat(entry, "GB") or "-"
         streak = _get_stat(entry, "streak") or ""
 
+        seed_raw = _get_stat(entry, "playoffSeed")
+        seed = int(seed_raw) if seed_raw.isdigit() and int(seed_raw) > 0 else None
+
         # Try to get record breakdowns
         conf_record = ""
         home_record = ""
@@ -92,6 +95,7 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
                 l10=l10_record,
                 strk=streak,
                 logo_url=logo_url,
+                seed=seed,
             )
         )
 
@@ -103,24 +107,65 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
     return teams
 
 
+def _season_years(data: dict, index: int) -> tuple[int | None, str]:
+    """Return (end-year, display years) for the season at `index` in ESPN's seasons[] list."""
+    seasons = data.get("seasons") or []
+    if len(seasons) <= index:
+        return None, ""
+    s = seasons[index]
+    return s.get("year"), (s.get("seasonYears") or s.get("displayName") or "")
+
+
+def _label(years: str, final: bool) -> str:
+    """Render a season-years string (e.g. "2025-26") as a display label."""
+    pretty = years.replace("-", "–")
+    return f"{pretty} final" if final else pretty
+
+
+def _parse(data: dict) -> tuple[list[StandingsTeam], list[StandingsTeam]]:
+    """Parse ESPN standings payload children[] into (eastern, western) team lists."""
+    eastern: list[StandingsTeam] = []
+    western: list[StandingsTeam] = []
+    for child in data.get("children", []):
+        name = child.get("name", "").lower()
+        if "east" in name:
+            eastern = _parse_conference(child)
+        elif "west" in name:
+            western = _parse_conference(child)
+    return eastern, western
+
+
 async def get_standings() -> StandingsResponse:
-    """Fetch and parse NBA standings from ESPN."""
-    data = await espn_client.get_standings()
+    """Current standings; before the regular season starts, last season's final standings."""
+    data = await espn_client.get_standings(season=None)
     if not data:
         return StandingsResponse(eastern=[], western=[])
 
-    eastern = []
-    western = []
+    eastern, western = _parse(data)
+    _, cur_years = _season_years(data, 0)
+    if any(t.w + t.l for t in eastern + western):
+        return StandingsResponse(
+            eastern=eastern,
+            western=western,
+            season=cur_years,
+            season_label=_label(cur_years, final=False),
+        )
 
-    # ESPN structure: children[] contains conference groups
-    children = data.get("children", [])
-    for child in children:
-        conf_name = child.get("name", "").lower()
-        if "east" in conf_name:
-            eastern = _parse_conference(child)
-        elif "west" in conf_name:
-            western = _parse_conference(child)
+    prev_year, prev_years = _season_years(data, 1)
+    prev = await espn_client.get_standings(season=prev_year) if prev_year else None
+    if not prev:
+        return StandingsResponse(
+            eastern=eastern,
+            western=western,
+            season=cur_years,
+            season_label=_label(cur_years, final=False),
+        )
 
-    season = data.get("seasons", [{}])[0].get("displayName", "") if data.get("seasons") else ""
-
-    return StandingsResponse(eastern=eastern, western=western, season=season)
+    p_east, p_west = _parse(prev)
+    return StandingsResponse(
+        eastern=p_east,
+        western=p_west,
+        season=prev_years,
+        season_label=_label(prev_years, final=True),
+        is_previous_season=True,
+    )
