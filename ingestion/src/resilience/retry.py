@@ -10,6 +10,7 @@ from tenacity import (
     retry_if_exception,
     stop_after_attempt,
     wait_exponential,
+    wait_fixed,
 )
 
 logger = structlog.get_logger(__name__)
@@ -37,6 +38,19 @@ espn_retry = retry(
     retry=retry_if_exception(_is_retryable),
     wait=wait_exponential(multiplier=1, min=1, max=30),
     stop=stop_after_attempt(5),
+    before_sleep=_log_retry,
+    reraise=True,
+)
+
+# Play-by-play: one quick retry at most. The PBP loop polls every second, so the
+# next cycle is the real retry; a long backoff here would only hold a game's
+# poll (and, before the per-game timeout, every other game's) hostage.
+PBP_RETRY_WAIT = 0.25  # seconds
+
+espn_retry_pbp = retry(
+    retry=retry_if_exception(_is_retryable),
+    wait=wait_fixed(PBP_RETRY_WAIT),
+    stop=stop_after_attempt(2),
     before_sleep=_log_retry,
     reraise=True,
 )

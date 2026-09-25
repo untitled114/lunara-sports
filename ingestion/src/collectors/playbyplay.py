@@ -19,7 +19,7 @@ from src.collectors.base import BaseCollector
 from src.config import Settings
 from src.http.espn import EspnHttp
 from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
-from src.resilience.retry import espn_retry
+from src.resilience.retry import espn_retry_pbp
 from src.schemas.events import PlayEvent
 from src.sinks.base import EventSink
 
@@ -203,9 +203,9 @@ class PlayByPlayCollector(BaseCollector):
         """Number of plays seen (based on max sequence). Useful for monitoring."""
         return self._max_sequence + 1 if self._max_sequence >= 0 else 0
 
-    @espn_retry
+    @espn_retry_pbp
     async def _fetch(self) -> dict:
-        """Fetch game summary JSON from ESPN with retry."""
+        """Fetch game summary JSON from ESPN (one quick retry; the next cycle retries)."""
         url = f"{self.settings.espn_base_url}/summary"
         params = {"event": self.game_id}
         logger.debug("playbyplay.fetching", game_id=self.game_id)

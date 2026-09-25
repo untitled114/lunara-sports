@@ -15,6 +15,7 @@ import asyncio
 import os
 import signal
 import time
+from asyncio import wait_for as _bounded  # bound by reference: tests patch asyncio.wait_for
 from collections.abc import Callable
 
 import structlog
@@ -32,6 +33,9 @@ LIVE_STATUSES = {"live", "halftime"}
 PBP_INTERVAL = 1  # seconds — fast loop for play-by-play
 SCOREBOARD_INTERVAL = 10  # seconds — slower loop for game discovery
 POLL_FAILED_LOG_WINDOW = 60.0  # seconds — at most one pbp_poll_failed per game per window
+# One game's poll (ESPN fetch + its quick retry + sink flush) gets this long; a
+# hanging or flaky game then fails alone instead of stalling every other game.
+PBP_POLL_TIMEOUT = 3.0  # seconds
 
 
 async def build_io(settings: Settings) -> tuple[PostgresSink, EspnHttp]:
@@ -110,7 +114,11 @@ async def _run_loops(settings: Settings, sink: PostgresSink, http: EspnHttp) -> 
 
     async def retire(gid: str, collector: PlayByPlayCollector) -> None:
         """Final poll (plays ESPN posts after the flip to final), then close."""
-        await _quietly(collector.poll, "ingestion.final_poll_failed", game_id=gid)
+        await _quietly(
+            lambda: _bounded(collector.poll(), PBP_POLL_TIMEOUT),
+            "ingestion.final_poll_failed",
+            game_id=gid,
+        )
         logger.info(
             "ingestion.pbp_stop",
             game_id=gid,
@@ -188,7 +196,7 @@ async def _run_loops(settings: Settings, sink: PostgresSink, http: EspnHttp) -> 
 
                 if active:
                     results = await asyncio.gather(
-                        *(c.poll() for c in active.values()),
+                        *(_bounded(c.poll(), PBP_POLL_TIMEOUT) for c in active.values()),
                         return_exceptions=True,
                     )
                     for gid, result in zip(active, results, strict=True):

@@ -246,11 +246,10 @@ class TestRun:
         assert order == ["pbp.close", "scoreboard.close", "sink.close", "http.aclose"]
 
     async def test_pbp_loop_error_is_caught_and_logged(self, capsys):
-        """gather() raising synchronously (a non-awaitable poll) is caught by
+        """Building the cycle's gather raising synchronously is caught by
         pbp_loop's own except block, not left to crash run()."""
         sink, http = _io()
         pbp = _pbp()
-        pbp.poll = MagicMock(return_value=42)  # not awaitable -> gather() raises TypeError
 
         with ExitStack() as stack:
             _patch_run(
@@ -261,6 +260,9 @@ class TestRun:
                 scoreboard=_scoreboard([{"game_id": "g1", "status": "live"}]),
                 pbp=pbp,
                 wait_for=_split_wait_for(pbp_cycles=2, scoreboard_cycles=2),
+            )
+            stack.enter_context(
+                patch("src.__main__._bounded", MagicMock(side_effect=TypeError("boom")))
             )
             with pytest.raises(asyncio.CancelledError):
                 await run()
@@ -529,3 +531,98 @@ async def test_persistent_pbp_failure_logs_once_per_window(capsys):
 
     assert pbp.poll.await_count >= 3
     assert capsys.readouterr().out.count("ingestion.pbp_poll_failed") == 1
+
+
+# --- Final fix wave #4: a hanging/flaky game's poll is bounded per game, so it
+# never delays the other games' produce within a cycle. ---
+
+
+def _pbp_per_game(collectors: dict):
+    return lambda settings, sink, game_id, http: collectors[game_id]
+
+
+@pytest.mark.asyncio
+async def test_hanging_game_does_not_delay_the_others_within_a_cycle(monkeypatch, capsys):
+    import src.__main__ as main_mod
+
+    monkeypatch.setattr(main_mod, "PBP_POLL_TIMEOUT", 0.05)
+    sink, http = _io()
+    never = asyncio.Event()
+
+    stuck, healthy = _pbp(), _pbp()
+
+    async def hang():
+        await never.wait()
+
+    stuck.poll = AsyncMock(side_effect=hang)
+    healthy.poll = AsyncMock(side_effect=lambda: sink.produce(topic="raw.plays", key="g2"))
+
+    with ExitStack() as stack:
+        _patch_run(
+            stack,
+            settings=MagicMock(),
+            sink=sink,
+            http=http,
+            scoreboard=_scoreboard(
+                [{"game_id": "g1", "status": "live"}, {"game_id": "g2", "status": "live"}]
+            ),
+            wait_for=_split_wait_for(pbp_cycles=3, scoreboard_cycles=1),
+        )
+        stack.enter_context(
+            patch(
+                "src.__main__.PlayByPlayCollector",
+                side_effect=_pbp_per_game({"g1": stuck, "g2": healthy}),
+            )
+        )
+        with pytest.raises(asyncio.CancelledError):
+            # Unbounded, the stuck game would hold the first cycle forever.
+            await _real_wait_for(run(), timeout=3)
+
+    assert healthy.poll.await_count >= 2  # polled every cycle, not stuck behind g1
+    assert sink.produce.call_count == healthy.poll.await_count
+    out = capsys.readouterr().out
+    assert "ingestion.pbp_poll_failed" in out and "game_id=g1" in out
+
+
+@pytest.mark.asyncio
+async def test_hanging_final_poll_is_bounded_and_the_collector_still_closes(monkeypatch, capsys):
+    import src.__main__ as main_mod
+
+    monkeypatch.setattr(main_mod, "PBP_POLL_TIMEOUT", 0.05)
+    sink, http = _io()
+    never = asyncio.Event()
+    scoreboard = _scoreboard()
+    scoreboard.collect = AsyncMock(
+        side_effect=[
+            [{"game_id": "g1", "status": "live"}],
+            [{"game_id": "g1", "status": "final"}],
+        ]
+    )
+    pbp = _pbp()
+
+    async def hang():
+        await never.wait()
+
+    pbp.poll = AsyncMock(side_effect=hang)
+
+    with ExitStack() as stack:
+        _patch_run(
+            stack,
+            settings=MagicMock(),
+            sink=sink,
+            http=http,
+            scoreboard=scoreboard,
+            pbp=pbp,
+            wait_for=_split_wait_for(pbp_cycles=1, scoreboard_cycles=2),
+        )
+        with pytest.raises(asyncio.CancelledError):
+            await _real_wait_for(run(), timeout=3)
+
+    pbp.close.assert_awaited_once()
+    assert "ingestion.final_poll_failed" in capsys.readouterr().out
+
+
+def test_pbp_poll_timeout_is_short_but_positive():
+    from src.__main__ import PBP_POLL_TIMEOUT
+
+    assert 0 < PBP_POLL_TIMEOUT <= 5
