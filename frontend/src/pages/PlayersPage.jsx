@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { PageState } from '@/components/ui';
 import { fetchPlayers } from '@/services/api';
 import { useTheme } from '@/context/ThemeContext';
+import { PlayerHeadshot } from '@/components/sport/PlayerHeadshot';
 
 export default function PlayersPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,7 +69,7 @@ export default function PlayersPage() {
           {teams.map((teamData) => (
             <div key={teamData.abbrev} className="space-y-3">
               <div className="flex items-center gap-3 border-b border-border pb-2 px-1">
-                <div className="h-7 w-7 rounded-sm bg-surface-2 flex items-center justify-center t-small text-text-1 border border-border">
+                <div className="h-7 min-w-7 px-1.5 shrink-0 rounded-sm bg-surface-2 flex items-center justify-center t-small text-text-1 border border-border">
                   {teamData.abbrev}
                 </div>
                 <h2 className="t-label text-text-2">{teamData.team}</h2>
@@ -82,32 +83,34 @@ export default function PlayersPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="h-11 w-11 rounded-lg bg-surface-2 border border-border flex items-center justify-center overflow-hidden shrink-0">
-                        {p.headshot_url ? (
-                          <img
-                            src={p.headshot_url}
-                            alt={p.name}
-                            width={88}
-                            height={64}
-                            loading="lazy"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="t-small text-text-2 uppercase">{p.name[0]}</div>
-                        )}
+                        <PlayerHeadshot
+                          url={p.headshot_url}
+                          px={44}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                          fallback={<div className="t-small text-text-2 uppercase">{p.name[0]}</div>}
+                        />
                       </div>
                       <div>
+                        {/* Number and name share one centre line: mobile links get a 36px
+                            tap-target min-height, so the link centres its own text too. A
+                            player with no number gets an empty slot (names stay aligned),
+                            never a lone "#". */}
                         <div className="flex items-center gap-2">
-                          <span className="t-small tnum text-text-3 w-5">#{p.jersey}</span>
+                          <span className="t-small tnum text-text-3 w-8 shrink-0">{p.jersey ? `#${p.jersey}` : ''}</span>
                           <Link
                             to={`/player/${p.id}`}
                             onClick={() => playGlassClick()}
-                            className="t-small text-text-1 hover:text-accent transition-colors"
+                            className="inline-flex items-center t-small text-text-1 hover:text-accent transition-colors"
                           >
                             {p.name}
                           </Link>
                         </div>
+                        {/* Each value keeps its units on one line (6' 9" never splits). */}
                         <p className="t-small text-text-2 mt-0.5">
-                          {p.position}{p.height ? ` • ${p.height}` : ''}{p.weight ? ` • ${p.weight} lbs` : ''}
+                          {p.position}
+                          {p.height ? <> • <span className="whitespace-nowrap">{p.height}</span></> : null}
+                          {p.weight ? <> • <span className="whitespace-nowrap">{p.weight} lbs</span></> : null}
                         </p>
                       </div>
                     </div>

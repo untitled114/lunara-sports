@@ -48,7 +48,13 @@ export const getLogoUrl = (abbrev) => {
   return `https://a.espncdn.com/combiner/i?img=/i/teamlogos/nba/500/${code}.png&w=100&h=100`;
 };
 
-/** Resize ESPN headshot URL via combiner (default 96px for retina at 48px display) */
+/**
+ * The one place a player headshot URL is built. ESPN's full-size headshots are about
+ * 1040x760 (~250 KB each); every avatar in the app is a small square, so the image is
+ * requested through ESPN's combiner at `size` x `size` px. Pass 2x the rendered CSS size
+ * for retina (a 48px avatar asks for 96, the default). A URL that is already a combiner
+ * URL is returned unchanged.
+ */
 export const getHeadshotUrl = (url, size = 96) => {
   if (!url) return null;
   if (url.includes('/combiner/')) return url;

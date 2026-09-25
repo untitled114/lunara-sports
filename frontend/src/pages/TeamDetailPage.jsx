@@ -70,7 +70,7 @@ function RosterTab({ roster, loading }) {
           ),
         },
         { key: 'position', label: 'Pos' },
-        { key: 'height', label: 'Ht' },
+        { key: 'height', label: 'Ht', nowrap: true },
         { key: 'weight', label: 'Wt', numeric: true, render: (p) => (p.weight ? `${p.weight} lbs` : '—') },
         { key: 'age', label: 'Age', numeric: true, render: (p) => p.age || '—' },
         { key: 'experience', label: 'Exp', render: (p) => p.experience || 'R' },

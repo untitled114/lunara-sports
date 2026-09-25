@@ -40,7 +40,12 @@ export function Segmented({ options, value, onChange, className }) {
   return (
     <div
       role="tablist"
-      className={clsx('inline-flex gap-1 rounded-md bg-surface-1 border border-border p-1', className)}
+      className={clsx(
+        // Same overflow behaviour as Tabs: never wider than its container; scrolls sideways
+        // with no visible scrollbar when the options don't fit.
+        'inline-flex max-w-full gap-1 rounded-md bg-surface-1 border border-border p-1 overflow-x-auto scrollbar-hide',
+        className
+      )}
     >
       {options.map((o, index) => {
         const selected = value === o.id
@@ -56,7 +61,7 @@ export function Segmented({ options, value, onChange, className }) {
             onClick={() => onChange(o.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={clsx(
-              't-small rounded-md px-3 py-1.5 transition-colors focus-visible:outline-2 outline-accent',
+              't-small shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 transition-colors focus-visible:outline-2 outline-accent',
               selected ? 'bg-surface-2 text-text-1' : 'text-text-2 hover:text-text-1'
             )}
           >

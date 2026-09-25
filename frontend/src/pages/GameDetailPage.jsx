@@ -11,12 +11,27 @@ import { useGameFeed } from '@/hooks/useGameFeed';
 import { useFormatTime } from '@/utils/formatTime';
 import { PickTracker } from '@/components/sport/PickTracker';
 import { ChevronLeft } from 'lucide-react';
+import { seedBadge, recordLine } from '@/lib/gameMath';
+import { formatLongDay, todayET } from '@/lib/et';
 
 /* ─── Team Header (inside Scoreboard) ─── */
 
-function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf }) {
+// The full team name, only when the API sent one that differs from the abbreviation
+// (the TeamMark already shows the abbreviation; never render the same string twice).
+export function teamNameLine(fullName, abbrev) {
+  return fullName && fullName !== abbrev ? fullName : null;
+}
+
+function TeamHeader({ name, abbrev, score, isWinner, isAway, standing, standingsMeta, fallbackRecord, showScore = true }) {
   const logoUrl = getLogoUrl(abbrev);
   const { playGlassClick } = useTheme();
+  // Same seed badge and record line as GameCard (lib/gameMath), so a team shows one
+  // badge everywhere.
+  const badge = seedBadge(standing, standingsMeta.isPrev);
+  const record = standing
+    ? recordLine(standing, standingsMeta.seasonLabel, standingsMeta.isPrev)
+    : fallbackRecord;
+  const nameLine = teamNameLine(name, abbrev);
 
   return (
     <div className={`flex flex-col gap-1.5 min-w-0 ${isAway ? '' : 'items-end text-right'}`}>
@@ -26,22 +41,29 @@ function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf 
           <TeamMark abbrev={abbrev} logoUrl={logoUrl} size="lg" />
         </Link>
 
-        <span className="relative shrink-0">
-          <span className={`t-score tnum ${isWinner ? 'text-text-1' : 'text-text-3'}`}>{score}</span>
-          {isWinner && (
-            <span className="absolute -right-2 -top-1 h-2 w-2 rounded-sm bg-live animate-ping" aria-hidden="true" />
-          )}
-        </span>
+        {showScore && (
+          <span className="relative shrink-0">
+            <span className={`t-score tnum ${isWinner ? 'text-text-1' : 'text-text-3'}`}>{score}</span>
+            {isWinner && (
+              <span className="absolute -right-2 -top-1 h-2 w-2 rounded-sm bg-live animate-ping" aria-hidden="true" />
+            )}
+          </span>
+        )}
       </div>
 
       {/* Row 2: seed, full name (sm+) and record — never competes with the score for width */}
       <div className={`flex flex-col gap-1 min-w-0 ${isAway ? '' : 'items-end'}`}>
-        {seed && (
+        {badge && (
           <span className="hidden sm:inline-flex">
-            <Badge>{conf || 'Conf'} #{seed}</Badge>
+            <Badge
+              variant={badge.variant}
+              title={badge.prev ? `${standingsMeta.seasonLabel} seeding` : undefined}
+            >
+              {badge.text}
+            </Badge>
           </span>
         )}
-        <p className="hidden sm:block t-small text-text-2 truncate max-w-[160px]">{name}</p>
+        {nameLine && <p className="hidden sm:block t-small text-text-2 truncate max-w-[160px]">{nameLine}</p>}
         {record && <p className="t-small tnum text-text-3 whitespace-nowrap">{record}</p>}
       </div>
     </div>
@@ -50,15 +72,22 @@ function TeamHeader({ name, abbrev, score, record, isWinner, isAway, seed, conf 
 
 /* ─── Scoreboard Header ─── */
 
-function ScoreboardHeader({ game, standings }) {
+// "Sat, Oct 3 · 7:00 PM": the ET calendar day of tip-off, then the time in the same
+// format GameCard uses (useFormatTime). No start time means nothing to show but "TBD".
+export function tipOffLabel(startTime, fmt) {
+  if (!startTime) return 'TBD';
+  return `${formatLongDay(todayET(new Date(startTime)))} · ${fmt(startTime)}`;
+}
+
+function ScoreboardHeader({ game, standings, standingsMeta }) {
   const fmt = useFormatTime();
   const isFinal = game.status === 'final';
   const isLive = game.status === 'live' || game.status === 'halftime';
+  // Before tip-off there is no score yet: show the tip-off date and time, never "0 0".
+  const isScheduled = !isFinal && !isLive;
   const awayWin = isFinal && game.away_score > game.home_score;
   const homeWin = isFinal && game.home_score > game.away_score;
 
-  const awaySeed = standings[game.away_team]?.rank;
-  const homeSeed = standings[game.home_team]?.rank;
 
   return (
     <Card className="mb-4 sm:mb-6" data-testid="scoreboard-header">
@@ -76,30 +105,34 @@ function ScoreboardHeader({ game, standings }) {
         ) : isFinal ? (
           <span className="t-label text-text-3">Final</span>
         ) : (
-          <span className="t-small tnum text-text-2">{fmt(game.start_time)}</span>
+          <span className="t-small tnum text-text-1" data-testid="tip-off">
+            {tipOffLabel(game.start_time, fmt)}
+          </span>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:gap-8 items-center">
         <TeamHeader
-          name={game.away_team_full || game.away_team}
+          name={game.away_team_full}
           abbrev={game.away_team}
           score={game.away_score}
-          record={standings[game.away_team]?.record || game.away_record}
+          standing={standings[game.away_team]}
+          standingsMeta={standingsMeta}
+          fallbackRecord={game.away_record}
           isWinner={awayWin}
           isAway
-          seed={awaySeed}
-          conf={standings[game.away_team]?.conf}
+          showScore={!isScheduled}
         />
         <TeamHeader
-          name={game.home_team_full || game.home_team}
+          name={game.home_team_full}
           abbrev={game.home_team}
           score={game.home_score}
-          record={standings[game.home_team]?.record || game.home_record}
+          standing={standings[game.home_team]}
+          standingsMeta={standingsMeta}
+          fallbackRecord={game.home_record}
           isWinner={homeWin}
           isAway={false}
-          seed={homeSeed}
-          conf={standings[game.home_team]?.conf}
+          showScore={!isScheduled}
         />
       </div>
     </Card>
@@ -112,6 +145,7 @@ export default function GameDetailPage() {
   const { id } = useParams();
   const [game, setGame] = useState(null);
   const [standings, setStandings] = useState({});
+  const [standingsMeta, setStandingsMeta] = useState({ seasonLabel: '', isPrev: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -129,6 +163,10 @@ export default function GameDetailPage() {
         if (!cancelled) {
           setGame(gameData);
           setStandings(buildStandingsLookup(standingsData));
+          setStandingsMeta({
+            seasonLabel: standingsData?.season_label || '',
+            isPrev: !!standingsData?.is_previous_season,
+          });
           setArenaTheme(gameData.home_team);
         }
       })
@@ -200,7 +238,7 @@ export default function GameDetailPage() {
       </div>
 
       {/* Scoreboard Header */}
-      <ScoreboardHeader game={game} standings={standings} />
+      <ScoreboardHeader game={game} standings={standings} standingsMeta={standingsMeta} />
 
       {/* AI Pick Tracker */}
       <PickTracker gameId={game.id} pickUpdates={pickUpdates} />

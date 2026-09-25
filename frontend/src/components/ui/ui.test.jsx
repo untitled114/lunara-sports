@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Card, Badge, Stat, Segmented, DataTable, TeamMark, PageState, SectionHeader } from './index'
+import Tabs from './Tabs'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 describe('ui', () => {
   it('Card uses surface-1, border and 16px radius; live adds glow class', () => {
@@ -159,5 +162,50 @@ describe('ui', () => {
     render(<SectionHeader title="Standings" aside="2025–26 final" />)
     expect(screen.getByRole('heading', { name: 'Standings' })).toHaveClass('t-section')
     expect(screen.getByText('2025–26 final')).toHaveClass('t-label')
+  })
+
+  it('Segmented and Tabs share one overflow rule: never wider than the container, scroll with no scrollbar', () => {
+    const { container, unmount } = render(
+      <Segmented options={[{ id: 'a', label: 'All' }, { id: 'g', label: 'Goldmine' }]} value="a" onChange={() => {}} />
+    )
+    const seg = container.querySelector('[role=tablist]')
+    expect(seg).toHaveClass('max-w-full', 'overflow-x-auto', 'scrollbar-hide')
+    for (const tab of seg.querySelectorAll('[role=tab]')) expect(tab).toHaveClass('shrink-0', 'whitespace-nowrap')
+    unmount()
+
+    render(<Tabs tabs={[{ id: 'o', label: 'Overview' }, { id: 'l', label: 'Game log' }]} activeTab="o" />)
+    const list = screen.getByRole('tablist')
+    expect(list).toHaveClass('max-w-full', 'overflow-x-auto', 'scrollbar-hide')
+    expect(list).not.toHaveClass('scrollbar-thin')
+    for (const tab of screen.getAllByRole('tab')) expect(tab).toHaveClass('shrink-0')
+  })
+
+  it('DataTable keeps numeric cells and nowrap text cells on one line', () => {
+    render(
+      <DataTable
+        columns={[
+          { key: 'name', label: 'Player' },
+          { key: 'height', label: 'Ht', nowrap: true },
+          { key: 'weight', label: 'Wt', numeric: true },
+        ]}
+        rows={[{ name: 'Bam Adebayo', height: '6\' 9"', weight: '260' }]}
+        getKey={(r) => r.name}
+      />
+    )
+    expect(screen.getByText('6\' 9"')).toHaveClass('whitespace-nowrap')
+    expect(screen.getByText('6\' 9"')).not.toHaveClass('tnum')
+    expect(screen.getByText('260')).toHaveClass('whitespace-nowrap', 'tnum')
+    expect(screen.getByText('Bam Adebayo')).not.toHaveClass('whitespace-nowrap')
+  })
+
+  it('SectionHeader right-aligns a caption that wraps', () => {
+    render(<SectionHeader title="Defense" aside="Rim protection and perimeter defense" />)
+    expect(screen.getByText('Rim protection and perimeter defense')).toHaveClass('text-right')
+  })
+
+  it('headings never break mid-word: no word-break rule that lowers their min-content width', () => {
+    const css = readFileSync(join(__dirname, '..', '..', 'styles.css'), 'utf8')
+    expect(css).not.toMatch(/word-break:\s*break-(word|all)/)
+    expect(css).not.toMatch(/overflow-wrap:\s*anywhere/)
   })
 })

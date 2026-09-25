@@ -5,6 +5,8 @@ import clsx from 'clsx'
 // (aria-sort + ▲/▼) and reports clicks via `onSortChange(columnKey)`. Columns without
 // `sortable: true` render exactly as before (plain header text, no button, no
 // aria-sort) — passing `sort`/`onSortChange` alone changes nothing for them.
+// Numeric cells never wrap; a text column whose values must stay on one line (a height
+// like 6' 9", an ISO date) sets `nowrap: true`.
 export function DataTable({ columns, rows, getKey, className, sort, onSortChange }) {
   return (
     <div className={clsx('overflow-x-auto rounded-lg border border-border', className)}>
@@ -46,7 +48,7 @@ export function DataTable({ columns, rows, getKey, className, sort, onSortChange
           {rows.map((r) => (
             <tr key={getKey(r)} className="border-t border-border">
               {columns.map((c) => (
-                <td key={c.key} className={clsx('px-3 py-2 text-text-1', c.numeric && 'tnum text-right whitespace-nowrap')}>
+                <td key={c.key} className={clsx('px-3 py-2 text-text-1', c.numeric && 'tnum text-right', (c.numeric || c.nowrap) && 'whitespace-nowrap')}>
                   {c.render ? c.render(r) : r[c.key]}
                 </td>
               ))}

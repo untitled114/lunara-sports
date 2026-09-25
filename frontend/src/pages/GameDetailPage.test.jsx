@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import GameDetailPage from './GameDetailPage'
-import { LiveFeed } from '@/components/sport/LiveFeed'
+import GameDetailPage, { tipOffLabel, teamNameLine } from './GameDetailPage'
+import { GameCard } from '@/components/sport/GameCard'
+import { LiveFeed, feedEmptyText } from '@/components/sport/LiveFeed'
+import { boxScoreEmptyText, onCourtLabel } from '@/components/sport/BoxScore'
 import * as api from '@/services/api'
 
 // Real, captured API responses (frontend/src/test/fixtures/README below) — no invented
@@ -22,6 +24,11 @@ import REAL_PLAYS from '@/test/fixtures/plays-401811037.json'
 // ingestion/src/collectors/playbyplay.py's _parse_play does. Source URL and mapping notes
 // are recorded in the fixture file itself.
 import REAL_ESPN_PLAYS from '@/test/fixtures/plays-401811037-espn.json'
+// The scheduled MIA @ TOR opener (2026-10-03 23:00Z), the real e2e capture of
+// GET /games/401902644 (its /boxscore was a real 404 and /plays a real []).
+import REAL_SCHEDULED_GAME from '../../e2e/fixtures/api/games_401902644.json'
+// The real GET /standings capture (2025–26 final, is_previous_season true).
+import REAL_STANDINGS from '../../e2e/fixtures/api/standings.json'
 
 // The mocked hook must return stable function references across re-renders —
 // GameDetailPage's data-loading effect depends on `setArenaTheme`, so a fresh
@@ -42,10 +49,11 @@ vi.mock('@/context/ThemeContext', () => {
   }
 })
 
-vi.mock('@/services/api', () => ({
+vi.mock('@/services/api', async (importOriginal) => ({
+  // The real lookup builder, so the header sees the same standings shape GameCard does.
+  buildStandingsLookup: (await importOriginal()).buildStandingsLookup,
   fetchGame: vi.fn(),
   fetchStandings: vi.fn(),
-  buildStandingsLookup: () => ({}),
   fetchModelPicks: vi.fn(),
   fetchBoxScore: vi.fn(),
   fetchPlays: vi.fn(),
@@ -77,8 +85,7 @@ describe('GameDetailPage', () => {
   it('shows both TeamMarks and t-score scores in the header for the real final score', async () => {
     renderPage()
     const header = within(await screen.findByTestId('scoreboard-header'))
-    // The real fixture has no separate full-team-name field, so the abbreviation appears
-    // twice (TeamMark + the name line) — assert presence, not uniqueness.
+    // The real fixture has no full-team-name field: the abbreviation shows once (TeamMark).
     expect(header.getAllByText('OKC').length).toBeGreaterThan(0)
     expect(header.getAllByText('DEN').length).toBeGreaterThan(0)
     expect(header.getByAltText('OKC logo')).toBeInTheDocument()
@@ -155,6 +162,84 @@ describe('GameDetailPage', () => {
     expect(document.body.textContent).not.toMatch(banned)
   })
 
+  it('a final game with no plays says play-by-play is unavailable, not "Waiting for tip-off"', async () => {
+    renderPage()
+    expect(await screen.findByText("Play-by-play isn't available for this game.")).toBeInTheDocument()
+    expect(screen.getByText('Recap')).toBeInTheDocument()
+    expect(screen.queryByText('Waiting for tip-off.')).toBeNull()
+    expect(screen.queryByText(/\b0 plays\b/)).toBeNull()
+  })
+
+  it('lays the on-court stats out in five equal columns so PF always fits', async () => {
+    renderPage()
+    await screen.findByTestId('scoreboard-header')
+    const pfLabels = await screen.findAllByText('PF', { selector: 'span.t-label' })
+    expect(pfLabels.length).toBeGreaterThan(0)
+    for (const label of pfLabels) {
+      expect(label.parentElement.parentElement).toHaveClass('grid', 'grid-cols-5')
+    }
+  })
+
+  it('a scheduled game shows the tip-off day and time, no "0 0" score, and box score copy', async () => {
+    api.fetchGame.mockResolvedValue(REAL_SCHEDULED_GAME)
+    api.fetchBoxScore.mockRejectedValue(new Error('404'))
+    api.fetchPlays.mockResolvedValue([])
+    renderPage()
+    const header = within(await screen.findByTestId('scoreboard-header'))
+    expect(header.getByTestId('tip-off')).toHaveTextContent(/^Sat, Oct 3 · \d{1,2}:\d{2} [AP]M$/)
+    expect(header.queryAllByText('0')).toHaveLength(0)
+    expect(document.querySelectorAll('[data-testid="scoreboard-header"] .t-score')).toHaveLength(0)
+    expect(await screen.findByText('Box score starts at tip-off.')).toBeInTheDocument()
+    expect(screen.getAllByText('Waiting for tip-off.').length).toBeGreaterThan(0)
+  })
+
+  it('shows the same seed badges as GameCard for the teams that disagreed (MIA, TOR)', async () => {
+    api.fetchGame.mockResolvedValue(REAL_SCHEDULED_GAME)
+    api.fetchStandings.mockResolvedValue(REAL_STANDINGS)
+    api.fetchBoxScore.mockRejectedValue(new Error('404'))
+    api.fetchPlays.mockResolvedValue([])
+    renderPage()
+    const header = within(await screen.findByTestId('scoreboard-header'))
+    // Real 2025–26 final standings: MIA seed 10 (rank 10), TOR seed 5 (rank 6).
+    const mia = await header.findByText('Play-in')
+    const tor = header.getByText('East #5')
+    expect(header.queryByText(/#10|#6/)).toBeNull()
+    expect(mia).toHaveAttribute('title', '2025–26 final seeding')
+    expect(tor).toHaveAttribute('title', '2025–26 final seeding')
+    expect(header.getByText('2025–26: 43-39')).toBeInTheDocument()
+
+    // GameCard renders the identical badges from the same data.
+    const { buildStandingsLookup } = await vi.importActual('@/services/api')
+    const card = render(
+      <MemoryRouter>
+        <GameCard
+          game={REAL_SCHEDULED_GAME}
+          standings={buildStandingsLookup(REAL_STANDINGS)}
+          standingsMeta={{ seasonLabel: REAL_STANDINGS.season_label, isPrev: REAL_STANDINGS.is_previous_season }}
+        />
+      </MemoryRouter>
+    )
+    expect(within(card.container).getByText('Play-in')).toHaveAttribute('title', '2025–26 final seeding')
+    expect(within(card.container).getByText('East #5')).toBeInTheDocument()
+  })
+
+  it('shows the abbreviation once when the API sends no full team name', async () => {
+    renderPage()
+    const header = within(await screen.findByTestId('scoreboard-header'))
+    expect(header.getAllByText('OKC')).toHaveLength(1)
+    expect(header.getAllByText('DEN')).toHaveLength(1)
+  })
+
+  it('labels the side panels truthfully on a final game with no plays: its starters', async () => {
+    renderPage()
+    await screen.findByTestId('scoreboard-header')
+    await screen.findAllByText('Branden Carlson')
+    expect(screen.queryByText('On court')).toBeNull()
+    // 2 desktop side panels + 2 stacked mobile panels, each labelled; the full box
+    // score's own "Starters" row labels add to the count.
+    expect(screen.getAllByText('Starters', { selector: 'span.t-label' }).length).toBeGreaterThanOrEqual(4)
+  })
+
   it('shows PageState with a retry action when fetchGame fails', async () => {
     api.fetchGame.mockRejectedValue(new Error('boom'))
     renderPage()
@@ -210,5 +295,44 @@ describe('LiveFeed play card', () => {
     // "Julian Strawther makes layup (Bruce Brown assists)" — real ESPN text — should
     // surface the real assisting player on the assist line, with a team logo beside it.
     expect(screen.getByText('B. Brown')).toBeInTheDocument()
+  })
+})
+
+describe('status-dependent copy', () => {
+  it('on-court panel label says what the panel lists', () => {
+    expect(onCourtLabel('live', 120, true)).toBe('On court')
+    expect(onCourtLabel('halftime', 60, true)).toBe('On court')
+    expect(onCourtLabel('scheduled', 0, false)).toBe('On court')
+    expect(onCourtLabel('final', 450, true)).toBe('Closing lineup')
+    expect(onCourtLabel('final', 0, true)).toBe('Starters')
+    expect(onCourtLabel('final', 0, false)).toBe('Players')
+  })
+
+  it('team name line: only a full name that differs from the abbreviation', () => {
+    expect(teamNameLine(undefined, 'MIA')).toBeNull()
+    expect(teamNameLine('MIA', 'MIA')).toBeNull()
+    expect(teamNameLine('Miami Heat', 'MIA')).toBe('Miami Heat')
+  })
+
+  it('feed: only a scheduled game waits for tip-off', () => {
+    expect(feedEmptyText('scheduled', false)).toBe('Waiting for tip-off.')
+    expect(feedEmptyText('final', true)).toBe("Play-by-play isn't available for this game.")
+    expect(feedEmptyText('final', false)).toBe("Play-by-play isn't available for this game.")
+    expect(feedEmptyText('live', true)).toBe('No plays yet.')
+    expect(feedEmptyText('live', false)).toBe('Connecting.')
+  })
+
+  it('box score: tip-off copy for a scheduled game, plain copy otherwise', () => {
+    expect(boxScoreEmptyText('scheduled')).toBe('Box score starts at tip-off.')
+    expect(boxScoreEmptyText('final')).toBe("The box score isn't available for this game.")
+    expect(boxScoreEmptyText('live')).toBe('No box score yet.')
+  })
+
+  it('tip-off label: the ET calendar day, then the GameCard time format', () => {
+    const fmt = () => '7:00 PM'
+    expect(tipOffLabel('2026-10-03T23:00:00Z', fmt)).toBe('Sat, Oct 3 · 7:00 PM')
+    // 03:30Z on Oct 4 is still Oct 3 in ET (11:30 PM EDT).
+    expect(tipOffLabel('2026-10-04T03:30:00Z', fmt)).toBe('Sat, Oct 3 · 7:00 PM')
+    expect(tipOffLabel(null, fmt)).toBe('TBD')
   })
 })

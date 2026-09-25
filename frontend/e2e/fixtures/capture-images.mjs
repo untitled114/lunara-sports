@@ -2,13 +2,14 @@
 // headshots) exactly as a.espncdn.com serves them, status included (one headshot really
 // is a 404 upstream, and stays one here).
 //
-//   node e2e/fixtures/capture-images.mjs
+//   node e2e/fixtures/capture-images.mjs            (re-captures everything)
+//   node e2e/fixtures/capture-images.mjs --missing  (captures only URLs not yet in the
+//                                                    manifest; existing files stay as-is)
 //
-// The URL list (images/urls.txt) is every a.espncdn.com request the spec's pages make,
-// minus the full-size headshots (/i/headshots/...png, ~76 MB for the players and stats
-// pages). Those are not committed; mockApi.js answers them 404, so those pages render
-// their no-image state. A new image URL that is in neither set fails the test.
-import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
+// The URL list (images/urls.txt) is every a.espncdn.com request the spec's pages make.
+// Every headshot is the small combiner size getHeadshotUrl asks for (2x the avatar); the
+// app never requests a full-size headshot, and one that is not in the list fails the test.
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -24,14 +25,23 @@ const etStamp = (d) =>
 async function main() {
   const urls = readFileSync(join(DIR, 'urls.txt'), 'utf8').split('\n').filter(Boolean)
   const out = join(DIR, 'files')
-  rmSync(out, { recursive: true, force: true })
+  const missingOnly = process.argv.includes('--missing')
+  const manifestPath = join(DIR, 'manifest.json')
+  const existing = missingOnly && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {}
+  if (!missingOnly) rmSync(out, { recursive: true, force: true })
   mkdirSync(out, { recursive: true })
   const manifest = {}
-  let i = 0
+  // New files continue the numbering after the ones already on disk.
+  let i = missingOnly ? readdirSync(out).length : 0
   for (const url of urls) {
+    const u = new URL(url)
+    if (existing[u.pathname + u.search]) {
+      manifest[u.pathname + u.search] = existing[u.pathname + u.search]
+      continue
+    }
+    if (manifest[u.pathname + u.search]) continue
     const res = await fetch(url)
     const buf = Buffer.from(await res.arrayBuffer())
-    const u = new URL(url)
     const file = `${String(i++).padStart(3, '0')}-${(u.pathname + u.search).replace(/[^A-Za-z0-9.-]/g, '_').slice(-80)}`
     writeFileSync(join(out, file), buf)
     manifest[u.pathname + u.search] = {

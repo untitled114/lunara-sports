@@ -290,6 +290,8 @@ describe('TeamDetailPage', () => {
     expect(avatars.length).toBe(1)
     expect(avatars[0].getAttribute('src')).toContain('2199.png')
     expect(screen.getByText('B')).toBeInTheDocument() // Bam Adebayo's initials fallback
+    // Heights keep their units on one line (6'7" never splits).
+    expect(screen.getByText("6'7\"")).toHaveClass('whitespace-nowrap')
 
     // 3. Roster size restored near the tab bar.
     expect(screen.getByText('Roster size: 2')).toBeInTheDocument()

@@ -12,8 +12,6 @@ const images = JSON.parse(readFileSync(join(FIXTURES, 'images', 'manifest.json')
 // The production bundle calls api.lunara-app.com; a dev build falls back to localhost:8000.
 const API_HOSTS = new Set(['api.lunara-app.com', 'localhost:8000', '127.0.0.1:8000'])
 
-const FULL_HEADSHOT = /^\/i\/headshots\/nba\/players\/full\/\d+\.png$/
-
 // The vite preview server playwright.config.js starts.
 export const APP_HOST = '127.0.0.1:4173'
 
@@ -65,9 +63,9 @@ export async function mockApi(page) {
     } else if (url.host === 'a.espncdn.com') {
       const entry = images[url.pathname + url.search]
       if (entry) return serveFile(route, join(FIXTURES, 'images', entry.file), entry.contentType, entry.status)
-      // Full-size headshots (~76 MB across the players and stats pages) are not committed:
-      // they answer 404, so those pages render their no-image state. See capture-images.mjs.
-      if (FULL_HEADSHOT.test(url.pathname) && !url.search) return route.fulfill({ status: 404, body: '' })
+      // Every headshot is a small combiner capture (getHeadshotUrl). There is no special
+      // rule for full-size headshots any more: the app must never request one, so one that
+      // shows up here is unmocked and fails the test.
     }
 
     unmocked.push(`${req.method()} ${req.url()}`)

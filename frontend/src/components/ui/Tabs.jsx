@@ -115,7 +115,7 @@ const Tabs = ({ tabs = [], activeTab, onChange, variant = 'underline', urlSync =
       <div
         role="tablist"
         aria-orientation="horizontal"
-        className="inline-flex gap-1 rounded-md bg-surface-1 border border-border p-1 overflow-x-auto scrollbar-thin"
+        className="inline-flex max-w-full gap-1 rounded-md bg-surface-1 border border-border p-1 overflow-x-auto scrollbar-hide"
       >
         {tabs.map((tab, index) => {
           const isActive = tab.id === activeTabState;
@@ -137,7 +137,7 @@ const Tabs = ({ tabs = [], activeTab, onChange, variant = 'underline', urlSync =
               onClick={() => handleTabChange(tab.id)}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className={clsx(
-                't-small flex items-center gap-2 rounded-md px-3 py-1.5 transition-colors focus-visible:outline-2 outline-accent',
+                't-small flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 transition-colors focus-visible:outline-2 outline-accent',
                 tab.disabled
                   ? 'text-text-3 cursor-not-allowed'
                   : isActive
@@ -145,7 +145,8 @@ const Tabs = ({ tabs = [], activeTab, onChange, variant = 'underline', urlSync =
                     : 'text-text-2 hover:text-text-1 cursor-pointer'
               )}
             >
-              {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
+              {/* Icons from sm up; below it the labels alone fit a 390px screen. */}
+              {Icon && <Icon className="hidden sm:block w-4 h-4 flex-shrink-0" aria-hidden="true" />}
               <span className="whitespace-nowrap">{tab.label}</span>
               {tab.badge !== undefined && tab.badge !== null && (
                 <span

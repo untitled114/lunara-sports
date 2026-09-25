@@ -5,6 +5,7 @@ import { Tabs, Badge, Stat, DataTable, PageState, SectionHeader, Card, TeamMark 
 import { fetchPlayerDetail, fetchPlayerStats, fetchPlayerGameLog } from '@/services/api';
 import { getLogoUrl } from '@/utils/teamColors';
 import { useTheme } from '@/context/ThemeContext';
+import { PlayerHeadshot } from '@/components/sport/PlayerHeadshot';
 
 function ShootingRow({ label, value, pct }) {
   return (
@@ -30,7 +31,7 @@ function ResultBadge({ result }) {
 // kept here in one place so neither the Recent Performances preview nor the
 // full Game Log table can drop a field the old page showed (ruling D9).
 const GAME_LOG_COLUMNS = [
-  { key: 'date', label: 'Date' },
+  { key: 'date', label: 'Date', nowrap: true },
   {
     key: 'opponent',
     label: 'Opponent',
@@ -135,21 +136,18 @@ export default function PlayerProfilePage() {
 
       <Card className="flex flex-col sm:flex-row sm:items-center gap-6">
         <div className="flex items-center gap-4">
-          {player.headshot_url && (
-            <img
-              src={player.headshot_url}
-              alt={player.name}
-              width={80}
-              height={80}
-              className="h-20 w-20 rounded-lg object-cover border border-border"
-            />
-          )}
+          <PlayerHeadshot
+            url={player.headshot_url}
+            px={80}
+            alt={player.name}
+            className="h-20 w-20 rounded-lg object-cover border border-border"
+          />
           <TeamMark abbrev={player.team_abbrev} logoUrl={teamLogo} size="lg" />
         </div>
 
         <div className="flex flex-col gap-2 min-w-0">
           <div className="flex items-center gap-3">
-            <span className="t-small tnum text-text-3">#{player.jersey || '00'}</span>
+            {player.jersey && <span className="t-small tnum text-text-3">#{player.jersey}</span>}
             <Badge variant="accent">{player.position}</Badge>
           </div>
           <h1 className="t-title text-text-1">{player.name}</h1>
