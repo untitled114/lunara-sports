@@ -61,7 +61,7 @@ const RULES = {
   // real word boundary and the alternative would never match anything (e.g.
   // "blur-[2px]"). It keeps its own leading `\b` (before "blur") instead.
   effect:
-    /\bblur-\[\w+\]|\b(bg-gradient-to-\w+|bg-linear-\w+|backdrop-blur(-\w+)?|radial-gradient|linear-gradient|liquid-mirror|gloss-sweep|rim-glow[\w-]*)\b/g,
+    /\bblur-\[\w+\]|\b(bg-gradient-to-\w+|bg-linear-\w+|backdrop-blur(-\w+)?|radial-gradient|linear-gradient|liquid-mirror|gloss-sweep|rim-glow[\w-]*|liquid-glass|glass-pill|luxury-edge|deboss)\b/g,
   colorFn: /\b(rgba?|hsla?)\(/gi,
   // Raw Tailwind palette utilities: `text-white`/`bg-black` (+ optional
   // /opacity), or `bg-red-500`-style `prefix-color-shade` (+ optional

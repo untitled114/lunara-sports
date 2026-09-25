@@ -54,6 +54,18 @@ describe('design check', () => {
     expect(scan('blur-[2px]', 'src/pages/Z.jsx')).toEqual({ effect: 1 })
   })
 
+  // Fix-round addition: these four decorative classes weren't in the original
+  // effect list (only liquid-mirror/gloss-sweep/rim-glow-* were), even though
+  // they're the same kind of glass/bevel/inset-shadow decoration the rule
+  // exists to catch.
+  it('flags liquid-glass, glass-pill, luxury-edge, and deboss as effects', () => {
+    expect(scan('liquid-glass', 'src/pages/Z.jsx')).toEqual({ effect: 1 })
+    expect(scan('glass-pill', 'src/pages/Z.jsx')).toEqual({ effect: 1 })
+    expect(scan('luxury-edge', 'src/pages/Z.jsx')).toEqual({ effect: 1 })
+    expect(scan('deboss', 'src/pages/Z.jsx')).toEqual({ effect: 1 })
+    expect(scan('liquid-glass glass-pill luxury-edge deboss', 'src/pages/Z.jsx')).toEqual({ effect: 4 })
+  })
+
   it('design-check-allow marker only suppresses its own line', () => {
     const t = `telemetry\ntelemetry // design-check-allow`
     expect(scan(t, 'src/pages/Z.jsx')).toEqual({ banned: 1 })
