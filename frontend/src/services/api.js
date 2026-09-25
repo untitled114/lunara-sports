@@ -45,6 +45,14 @@ export async function fetchPredictions(userId) {
 
 // ── New API functions ──────────────────────────────────────────────
 
+// First game day strictly after `after` (YYYY-MM-DD, ET), or null when nothing is scheduled.
+export async function fetchNextGameDate(after) {
+  const res = await fetch(`${API_URL}/games/next?after=${after}`);
+  if (!res.ok) throw new Error("Failed to fetch next game date");
+  const data = await res.json();
+  return data.date ?? null;
+}
+
 export async function fetchStandings() {
   const res = await fetch(`${API_URL}/standings`);
   if (!res.ok) throw new Error("Failed to fetch standings");
@@ -261,7 +269,9 @@ export async function authMe(token) {
   return res.json();
 }
 
-// Build a standings lookup map: { abbrev: { rank, w, l, record, streak, conf, pct } }
+// Build a standings lookup map: { abbrev: { rank, seed, w, l, record, streak, conf, pct } }.
+// The season context (season_label / is_previous_season) lives on the response, not
+// on each team — read it from the fetchStandings() payload directly.
 export function buildStandingsLookup(standings) {
   const map = {};
   if (!standings) return map;
@@ -269,6 +279,7 @@ export function buildStandingsLookup(standings) {
     for (const t of teams) {
       map[t.abbrev] = {
         rank: t.rank,
+        seed: t.seed ?? null,
         w: t.w,
         l: t.l,
         record: `${t.w}-${t.l}`,

@@ -1,59 +1,85 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { fetchStandings, buildStandingsLookup } from '@/services/api';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { fetchStandings, fetchNextGameDate, buildStandingsLookup } from '@/services/api';
 import { GameCard } from '@/components/sport/GameCard';
 import { DateNav } from '@/components/sport/DateNav';
-import { Skeleton } from '@/components/ui';
+import { PageState, Segmented } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
 import { useScoreboard } from '@/hooks/useScoreboard';
+import { todayET, formatLongDay } from '@/lib/et';
 
 const statusOrder = { live: 0, halftime: 1, scheduled: 2, final: 3 };
+
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'live', label: 'Live' },
+  { id: 'scheduled', label: 'Scheduled' },
+  { id: 'final', label: 'Final' },
+];
+
+const EMPTY_META = { seasonLabel: '', isPrev: false };
 
 export default function GamesPage() {
   const [searchParams] = useSearchParams();
   const [standings, setStandings] = useState({});
+  const [standingsMeta, setStandingsMeta] = useState(EMPTY_META);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all'); // 'all' | 'live' | 'upcoming' | 'final'
+  const [reloadKey, setReloadKey] = useState(0);
+  const [nextDate, setNextDate] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   const { playGlassClick } = useTheme();
 
-  // Use Eastern time for "today" default since NBA games are scheduled in ET
-  const now = new Date();
-  const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
-  const etYear = et.getFullYear();
-  const etMonth = String(et.getMonth() + 1).padStart(2, '0');
-  const etDay = String(et.getDate()).padStart(2, '0');
-  const dateStr = searchParams.get('date') || `${etYear}-${etMonth}-${etDay}`;
+  // NBA games are scheduled in ET, so "today" is today in America/New_York.
+  const today = todayET();
+  const dateStr = searchParams.get('date') || today;
 
-  // Games come from shared WS scoreboard channel (REST fallback when disconnected)
+  // Games come from the shared WS scoreboard channel (REST fallback when disconnected)
   const { games: rawGames } = useScoreboard(dateStr);
   const games = [...rawGames].sort((a, b) => (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4));
 
-  // Standings: one-shot fetch (doesn't need WS)
+  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  // Standings: one-shot fetch (doesn't need WS). Carries the season context so the cards
+  // can say when seeds and records are last season's.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
     fetchStandings()
-      .then((standingsData) => {
-        if (!cancelled) setStandings(buildStandingsLookup(standingsData));
+      .then((data) => {
+        if (cancelled) return;
+        setStandings(buildStandingsLookup(data));
+        setStandingsMeta({
+          seasonLabel: data?.season_label || '',
+          isPrev: !!data?.is_previous_season,
+        });
       })
       .catch(() => {
-        if (!cancelled) setError("Unable to load standings.");
+        if (!cancelled) setError("Couldn't load standings.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
 
     return () => { cancelled = true; };
+  }, [dateStr, reloadKey]);
+
+  // Next game day after the selected date, for the empty state's next step.
+  useEffect(() => {
+    let cancelled = false;
+    setNextDate(null);
+    fetchNextGameDate(dateStr)
+      .then((d) => { if (!cancelled) setNextDate(d || null); })
+      .catch(() => { if (!cancelled) setNextDate(null); });
+    return () => { cancelled = true; };
   }, [dateStr]);
 
-  const filteredGames = games.filter(g => {
+  const filteredGames = games.filter((g) => {
     if (filter === 'all') return true;
     if (filter === 'live') return g.status === 'live' || g.status === 'halftime';
-    if (filter === 'upcoming') return g.status === 'scheduled';
     return g.status === filter;
   });
 
@@ -64,87 +90,59 @@ export default function GamesPage() {
     }
   };
 
-  return (
-    <div className="space-y-8 sm:space-y-12 animate-fadeIn max-w-[1400px] mx-auto pb-24 sm:pb-32 relative pt-4 sm:pt-8">
-      {/* Background Environment Detail */}
-      <div className="absolute inset-0 -top-20 z-0 h-[500px] jumbotron-grid opacity-40 pointer-events-none" />
-      <div className="scanline" />
+  const count = filteredGames.length;
 
-      <div className="relative z-10 space-y-6 sm:space-y-12">
-        <div className="animate-boot flex flex-col gap-2">
-          <DateNav current={dateStr} />
-        </div>
-
-        {/* Interactive Control Strip */}
-        <div className="animate-boot flex flex-col md:flex-row items-center justify-between gap-4 bg-[#050a18]/60 p-2 rounded-2xl sm:rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-md rim-light" style={{ animationDelay: '0.2s' }}>
-          <div className="flex items-center gap-1 w-full md:w-auto">
-            {[
-              { id: 'all', label: 'All' },
-              { id: 'live', label: 'Live' },
-              { id: 'upcoming', label: 'Scheduled' },
-              { id: 'final', label: 'Final' }
-            ].map((f) => (
-              <button
-                key={f.id}
-                onClick={() => handleFilterChange(f.id)}
-                className={`flex-1 text-center py-2.5 rounded-xl text-[11px] sm:text-sm font-black uppercase tracking-widest transition-all duration-500 ${
-                  filter === f.id
-                    ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+  let content;
+  if (loading) {
+    content = <PageState kind="loading" />;
+  } else if (games.length === 0) {
+    content = (
+      <PageState
+        kind="empty"
+        title={dateStr === today ? 'No games today.' : 'No games on this day.'}
+        action={
+          nextDate ? (
+            <Link
+              to={`/scoreboard?date=${nextDate}`}
+              onClick={() => playGlassClick()}
+              className="t-small text-accent hover:text-accent-hover"
+            >
+              Next game: {formatLongDay(nextDate)} →
+            </Link>
+          ) : (
+            <span className="t-small text-text-2">No games scheduled yet.</span>
+          )
+        }
+      />
+    );
+  } else if (count === 0) {
+    content = <PageState kind="empty" title="No games match this filter." />;
+  } else {
+    content = (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        {filteredGames.map((game, idx) => (
+          <div key={game.id} className="animate-boot" style={{ animationDelay: `${0.4 + (idx * 0.1)}s` }}>
+            <GameCard game={game} standings={standings} standingsMeta={standingsMeta} />
           </div>
-
-          <div className="flex items-center gap-6 px-8 border-l border-white/5 hidden md:flex">
-             <div className="flex flex-col items-end">
-                <span className="text-[13px] font-black uppercase tracking-[0.3em] text-white/50">System Status</span>
-                <span className="text-sm font-bold text-indigo-400 uppercase tracking-widest">Nominal</span>
-             </div>
-             <div className="h-10 w-px bg-white/5" />
-             <div className="flex flex-col">
-                <span className="text-[13px] font-black uppercase tracking-[0.3em] text-white/50">Syncing</span>
-                <span className="text-sm font-black text-white tabular-nums tracking-tighter">{filteredGames.length} NODES</span>
-             </div>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} variant="rectangle" height="h-[500px]" className="rounded-[3.5rem]" />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="rounded-[4rem] deboss p-32 text-center border-white/5 shadow-2xl">
-             <p className="text-xl font-black uppercase tracking-[0.4em] text-red-500 animate-pulse">{error}</p>
-          </div>
-        ) : filteredGames.length === 0 ? (
-          <div className="rounded-[4rem] deboss py-40 text-center border-white/5 shadow-2xl">
-            <p className="text-sm font-black uppercase tracking-[0.5em] text-white/10">No matching telemetry found in local sector</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-10 relative">
-            {/* Ambient Vertical Spotlights */}
-            <div className="absolute -left-20 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent blur-sm" />
-            <div className="absolute -right-20 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-indigo-500/20 to-transparent blur-sm" />
-
-            {filteredGames.map((game, idx) => (
-              <div
-                key={game.id}
-                className="animate-boot"
-                style={{
-                  animationDelay: `${0.4 + (idx * 0.1)}s`
-                }}
-              >
-                <GameCard game={game} standings={standings} />
-              </div>
-            ))}
-          </div>
-        )}
+        ))}
       </div>
+    );
+  }
+
+  return (
+    <div className="animate-fadeIn max-w-[1400px] mx-auto pb-24 sm:pb-32 pt-4 sm:pt-8 space-y-6">
+      <div className="animate-boot">
+        <DateNav current={dateStr} />
+      </div>
+
+      <div className="animate-boot flex flex-wrap items-center justify-between gap-3" style={{ animationDelay: '0.2s' }}>
+        <Segmented options={FILTERS} value={filter} onChange={handleFilterChange} />
+        <span className="t-label text-text-3 tnum">{count} {count === 1 ? 'game' : 'games'}</span>
+      </div>
+
+      {error && <PageState kind="error" title={error} onRetry={reload} />}
+
+      {content}
     </div>
   );
 }

@@ -60,21 +60,6 @@
     "banned": 2,
     "hex": 1
   },
-  "src/components/sport/DateNav.jsx": {
-    "heavy": 6,
-    "tracking": 7,
-    "palette": 21,
-    "radius": 7,
-    "hex": 1,
-    "effect": 1
-  },
-  "src/components/sport/GameCard.jsx": {
-    "radius": 12,
-    "heavy": 15,
-    "tracking": 11,
-    "palette": 35,
-    "hex": 1
-  },
   "src/components/sport/JumbotronAlert.jsx": {
     "radius": 2,
     "effect": 1,
@@ -209,15 +194,6 @@
     "heavy": 21,
     "italic": 3,
     "tracking": 19,
-    "banned": 3
-  },
-  "src/pages/GamesPage.jsx": {
-    "hex": 1,
-    "radius": 5,
-    "effect": 3,
-    "palette": 18,
-    "heavy": 6,
-    "tracking": 6,
     "banned": 3
   },
   "src/pages/LandingPage.jsx": {
