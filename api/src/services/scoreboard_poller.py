@@ -7,7 +7,7 @@ PostgreSQL, and refreshes the Redis cache so the API always serves live data.
 from __future__ import annotations
 
 import asyncio
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 import structlog
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from ..db.models import Game
 from ..db.redis import cache_game_list, cache_game_state
 from ..db.session import get_session_factory
+from ..eastern import eastern_today
 from ..ws.live_feed import manager
 from . import espn_client
 from .team_mapping import from_espn_abbrev
@@ -97,10 +98,8 @@ def _parse_event(event: dict) -> dict | None:
 
 
 def _eastern_today() -> date:
-    """Return today's date in US Eastern time (timezone.utc-5)."""
-    utc_now = datetime.now(timezone.utc)
-    et_now = utc_now - timedelta(hours=5)
-    return et_now.date()
+    """Return today's date in US Eastern time (EST or EDT)."""
+    return eastern_today()
 
 
 async def _poll_scoreboard() -> None:

@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
-
-# US Eastern offset (EST = timezone.utc-5; simplification — ignoring DST for now)
-_ET_OFFSET = timedelta(hours=5)
+from datetime import date, datetime, timezone
 
 import structlog
 from sqlalchemy import select
@@ -20,6 +17,7 @@ from ..db.redis import (
     get_cached_game_list,
     get_cached_game_state,
 )
+from ..eastern import eastern_day_window, eastern_today
 from . import espn_client
 from .team_mapping import from_espn_abbrev
 
@@ -33,7 +31,7 @@ async def get_games(session: AsyncSession, game_date: date | None = None) -> lis
     If PG returns nothing, fetches from ESPN scoreboard and upserts into PG.
     """
     # Default to Eastern date since NBA schedules are in ET
-    target = game_date or (datetime.now(timezone.utc) - _ET_OFFSET).date()
+    target = game_date or eastern_today()
     date_str = target.isoformat()
 
     # Check cache
@@ -44,7 +42,7 @@ async def get_games(session: AsyncSession, game_date: date | None = None) -> lis
 
     # For today's date, always fetch fresh from ESPN to capture live scores.
     # For other dates, query PG first.
-    if target == date.today():
+    if target == eastern_today():
         rows = await _fetch_and_upsert_espn(session, target)
         if not rows:
             rows = await _query_pg(session, target)
@@ -94,11 +92,8 @@ async def get_game(session: AsyncSession, game_id: str) -> dict | None:
 
 async def _query_pg(session: AsyncSession, target: date) -> list[dict]:
     """Query PostgreSQL for games on a given date (ET-aware window)."""
-    # NBA games are scheduled in ET. A 7pm ET game on Feb 19 = midnight timezone.utc Feb 20.
-    # Shift the window by 5 hours (EST) so queries match the local game date.
-    et_offset = timedelta(hours=5)
-    day_start = datetime.combine(target, time.min, tzinfo=timezone.utc) + et_offset
-    day_end = datetime.combine(target, time.max, tzinfo=timezone.utc) + et_offset
+    # NBA games are scheduled in ET. A 7pm ET game on Feb 19 = midnight UTC Feb 20.
+    day_start, day_end = eastern_day_window(target)
 
     stmt = (
         select(Game)

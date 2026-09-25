@@ -15,6 +15,7 @@ from starlette.responses import Response
 from .config import Settings
 from .db.redis import close_redis, get_cached_game_list, init_redis, redis_ping
 from .db.session import close_db, create_tables, db_ping, init_db, seed_teams
+from .eastern import eastern_today
 from .metrics import instrumentator
 from .models.schemas import HealthResponse
 from .routers import (
@@ -188,11 +189,7 @@ async def scoreboard_ws(websocket: WebSocket):
     await manager.connect(websocket, "scoreboard")
     try:
         # Send current cached game list immediately
-        from datetime import datetime, timedelta, timezone
-
-        utc_now = datetime.now(timezone.utc)
-        et_now = utc_now - timedelta(hours=5)
-        today_str = et_now.date().isoformat()
+        today_str = eastern_today().isoformat()
         cached = await get_cached_game_list(today_str)
         if cached:
             await websocket.send_text(

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.db.models import Game, Team
+from src.eastern import ET
 from src.services.game_service import (
     _fetch_and_upsert_espn,
     _game_to_dict,
@@ -183,11 +184,8 @@ class TestGetGames:
                 new_callable=AsyncMock,
             ) as mock_cache,
             patch("src.services.game_service.espn_client", mock_espn),
-            patch("src.services.game_service.date", wraps=date) as mock_date,
+            patch("src.services.game_service.eastern_today", return_value=today),
         ):
-            # Make date.today() return our target date
-            mock_date.today = MagicMock(return_value=today)
-
             games = await get_games(game_session, today)
             # ESPN was called
             mock_espn.get_scoreboard.assert_called_once()
@@ -199,8 +197,7 @@ class TestGetGames:
         """For today's date, if ESPN returns empty, PG is queried."""
         # Insert a game for 'today' in the ET window so PG finds it
         today = date.today()
-        et_offset = timedelta(hours=5)
-        start = datetime.combine(today, time(23, 0), tzinfo=timezone.utc) + et_offset
+        start = datetime.combine(today, time(19, 30), tzinfo=ET).astimezone(timezone.utc)
 
         game_session.add(
             Game(
@@ -225,9 +222,8 @@ class TestGetGames:
             ),
             patch("src.services.game_service.cache_game_list", new_callable=AsyncMock),
             patch("src.services.game_service.espn_client", mock_espn),
-            patch("src.services.game_service.date", wraps=date) as mock_date,
+            patch("src.services.game_service.eastern_today", return_value=today),
         ):
-            mock_date.today = MagicMock(return_value=today)
             games = await get_games(game_session, today)
             # ESPN returned nothing, PG fallback found the game
             assert any(g["id"] == "pg_today" for g in games)
