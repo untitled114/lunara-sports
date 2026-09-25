@@ -57,7 +57,13 @@ class TestConversationHistory:
 
     def test_clear_unknown_user_is_a_noop(self):
         h = ConversationHistory()
-        h.clear(999)  # no raise
+        h.add_exchange(1, "hi", "hello")  # unrelated user's history present
+        h.clear(999)  # user_id not tracked — must not raise or touch user 1
+        assert h.get_messages(1) == [
+            {"role": "user", "content": "hi"},
+            {"role": "assistant", "content": "hello"},
+        ]
+        assert 999 not in h._convos
 
 
 # ---------------------------------------------------------------------------

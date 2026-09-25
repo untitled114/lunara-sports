@@ -1,6 +1,7 @@
 """Characterization tests for game_log.py — JSONL game context recorder."""
 
 import json
+import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -177,7 +178,7 @@ class TestRotationAndClose:
             recorder.record_game_snapshot(game, "second")  # no-op, no raise
             assert recorder._file_handle is None
 
-    def test_write_failure_is_swallowed(self, tmp_path, monkeypatch):
+    def test_write_failure_is_swallowed(self, tmp_path, monkeypatch, caplog):
         """_write catches all exceptions and just logs — verify no raise."""
         recorder = GameLogRecorder(log_dir=str(tmp_path))
 
@@ -186,4 +187,8 @@ class TestRotationAndClose:
 
         monkeypatch.setattr(recorder, "_get_file", boom)
         game = GameState(game_id="401", home_team="BOS", away_team="NYK")
-        recorder.record_game_snapshot(game, "ev")  # should not raise
+        with caplog.at_level(logging.ERROR, logger="lumen.gamelog"):
+            recorder.record_game_snapshot(game, "ev")  # should not raise
+
+        assert "Failed to write game log record" in caplog.text
+        assert list(tmp_path.glob("*.jsonl")) == []  # nothing was ever written

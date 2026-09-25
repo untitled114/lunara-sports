@@ -6,6 +6,7 @@ small async-iterator fake (no real sockets, no real sleeping).
 
 import asyncio
 import json
+import logging
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
@@ -20,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import ws_listener  # noqa: E402
 from formatter import PickFormatter  # noqa: E402
 from game_context import AlertType, GameState, PickContext  # noqa: E402
-from ws_listener import WS_RETRY_DELAY, WSListener  # noqa: E402
+from ws_listener import POLL_INTERVAL, WS_RETRY_DELAY, WSListener  # noqa: E402
 
 API_URL = "http://127.0.0.1:8010"
 WS_URL = "ws://127.0.0.1:8010/ws"
@@ -66,6 +67,31 @@ async def _cleanup_leftover_tasks():
         t.cancel()
     if leftovers:
         await asyncio.gather(*leftovers, return_exceptions=True)
+
+
+class TestDefaultGameLogDirIsolation:
+    def test_default_relative_log_dir_never_touches_repo_cwd(self, listener, tmp_path):
+        """The `listener` fixture builds a real `WSListener()`, which builds a
+        real `GameLogRecorder()` with no args — i.e. the actual
+        `game_log.DEFAULT_LOG_DIR` ("logs/game_context"), the directory
+        Sport-Suite ingests as ML training data. conftest's autouse
+        `_isolate_default_game_log_dir` fixture chdirs every test into
+        `tmp_path`, so that relative default must resolve there — never in
+        the real lumen-bot repo tree."""
+        repo_logs_dir = (Path(__file__).parent.parent / "logs" / "game_context").resolve()
+        before = sorted(repo_logs_dir.glob("*")) if repo_logs_dir.exists() else None
+
+        game = GameState(game_id="401", home_team="BOS", away_team="NYK")
+        listener.game_log.record_game_snapshot(game, "isolation_check")
+
+        # The write actually happened, but under the isolated cwd.
+        assert Path.cwd().resolve() == tmp_path.resolve()
+        assert (tmp_path / "logs" / "game_context").exists()
+        assert any((tmp_path / "logs" / "game_context").glob("*.jsonl"))
+
+        # The real repo directory is untouched (still absent, or unchanged).
+        after = sorted(repo_logs_dir.glob("*")) if repo_logs_dir.exists() else None
+        assert after == before
 
 
 def _stop_after(obj, n=1, attr="_running"):
@@ -767,32 +793,47 @@ class TestPollBoxScores:
 
     async def test_no_players_in_response_is_skipped(self, listener):
         game = GameState(game_id="401", home_team="BOS", away_team="NYK", status="live")
-        game.picks = {1: _mk_pick()}
+        pick = _mk_pick()
+        game.picks = {1: pick}
         listener.engine.games["401"] = game
 
         with respx.mock:
             respx.get(f"{API_URL}/games/401/boxscore").mock(
                 return_value=httpx.Response(200, json={"home": {}, "away": {}})
             )
-            await listener._poll_box_scores()  # no raise, nothing to update
+            await listener._poll_box_scores()
+
+        # No players in the response -> `if not all_players: continue` — the
+        # pick's box score is left completely untouched.
+        assert pick.box_score.minutes == 0.0
+        assert pick.box_score.last_updated == 0.0
 
     async def test_non_200_is_skipped(self, listener):
         game = GameState(game_id="401", home_team="BOS", away_team="NYK", status="live")
-        game.picks = {1: _mk_pick()}
+        pick = _mk_pick()
+        game.picks = {1: pick}
         listener.engine.games["401"] = game
 
         with respx.mock:
             respx.get(f"{API_URL}/games/401/boxscore").mock(return_value=httpx.Response(500))
             await listener._poll_box_scores()
 
-    async def test_exception_logs_warning(self, listener):
+        assert pick.box_score.minutes == 0.0
+        assert pick.box_score.last_updated == 0.0
+
+    async def test_exception_logs_warning(self, listener, caplog):
         game = GameState(game_id="401", home_team="BOS", away_team="NYK", status="live")
-        game.picks = {1: _mk_pick()}
+        pick = _mk_pick()
+        game.picks = {1: pick}
         listener.engine.games["401"] = game
 
         with respx.mock:
             respx.get(f"{API_URL}/games/401/boxscore").mock(side_effect=httpx.ConnectError("down"))
-            await listener._poll_box_scores()  # must not raise
+            with caplog.at_level(logging.WARNING, logger="lumen.ws"):
+                await listener._poll_box_scores()
+
+        assert "Box score fetch failed for 401" in caplog.text
+        assert pick.box_score.minutes == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -834,28 +875,53 @@ class TestFetchSeasonStatsForPicks:
             )
             assert len(respx.calls) == 0
 
+    def _register_pick_named_x(self, listener):
+        """Shared setup for the failure-path tests below: a tracked pick
+        named "X" so `season_avg` unset is a meaningful assertion, not a
+        trivially-true one."""
+        game = GameState(game_id="401", home_team="BOS", away_team="NYK")
+        pick = _mk_pick(player_name="X")
+        game.picks = {1: pick}
+        listener.engine.games["401"] = game
+        return pick
+
     async def test_players_search_non_200(self, listener):
+        pick = self._register_pick_named_x(listener)
         with respx.mock:
             respx.get(f"{API_URL}/players", params={"search": "X"}).mock(
                 return_value=httpx.Response(500)
             )
             await listener._fetch_season_stats_for_picks([{"player_name": "X", "game_id": "401"}])
 
+        # cache_key is added before the request is made, regardless of
+        # outcome — pinning the no-retry-after-failure behavior as-is.
+        assert "401:X" in listener._season_stats_fetched
+        assert pick.season_avg is None
+
     async def test_players_search_empty(self, listener):
+        pick = self._register_pick_named_x(listener)
         with respx.mock:
             respx.get(f"{API_URL}/players", params={"search": "X"}).mock(
                 return_value=httpx.Response(200, json=[])
             )
             await listener._fetch_season_stats_for_picks([{"player_name": "X", "game_id": "401"}])
 
+        assert "401:X" in listener._season_stats_fetched
+        assert pick.season_avg is None
+
     async def test_player_missing_id(self, listener):
+        pick = self._register_pick_named_x(listener)
         with respx.mock:
             respx.get(f"{API_URL}/players", params={"search": "X"}).mock(
                 return_value=httpx.Response(200, json=[{"name": "X"}])
             )
             await listener._fetch_season_stats_for_picks([{"player_name": "X", "game_id": "401"}])
 
+        assert "401:X" in listener._season_stats_fetched
+        assert pick.season_avg is None
+
     async def test_stats_non_200(self, listener):
+        pick = self._register_pick_named_x(listener)
         with respx.mock:
             respx.get(f"{API_URL}/players", params={"search": "X"}).mock(
                 return_value=httpx.Response(200, json=[{"id": "p1"}])
@@ -863,12 +929,19 @@ class TestFetchSeasonStatsForPicks:
             respx.get(f"{API_URL}/players/p1/stats").mock(return_value=httpx.Response(500))
             await listener._fetch_season_stats_for_picks([{"player_name": "X", "game_id": "401"}])
 
+        assert "401:X" in listener._season_stats_fetched
+        assert pick.season_avg is None
+
     async def test_exception_is_swallowed(self, listener):
+        pick = self._register_pick_named_x(listener)
         with respx.mock:
             respx.get(f"{API_URL}/players", params={"search": "X"}).mock(
                 side_effect=httpx.ConnectError("down")
             )
             await listener._fetch_season_stats_for_picks([{"player_name": "X", "game_id": "401"}])
+
+        assert "401:X" in listener._season_stats_fetched
+        assert pick.season_avg is None
 
 
 # ---------------------------------------------------------------------------
@@ -1060,7 +1133,7 @@ class TestQueueDmAndWorker:
 
 
 class TestRunAndStop:
-    async def test_run_logs_poll_cycle_exception(self, listener, monkeypatch):
+    async def test_run_logs_poll_cycle_exception(self, listener, monkeypatch, caplog):
         async def forever():
             await asyncio.sleep(3600)
 
@@ -1072,9 +1145,16 @@ class TestRunAndStop:
             raise RuntimeError("poll boom")
 
         monkeypatch.setattr(listener, "_poll_and_subscribe", raise_poll)
-        monkeypatch.setattr(ws_listener.asyncio, "sleep", _stop_after(listener))
+        sleep_stub = _stop_after(listener)
+        monkeypatch.setattr(ws_listener.asyncio, "sleep", sleep_stub)
 
-        await listener.run()  # must not raise — caught and logged
+        with caplog.at_level(logging.ERROR, logger="lumen.ws"):
+            await listener.run()  # exception must be caught and logged, not propagated
+
+        assert "Poll cycle error" in caplog.text
+        # The loop reached the bottom `await asyncio.sleep(POLL_INTERVAL)` —
+        # proof the exception didn't abort the while loop early.
+        assert sleep_stub.calls == [POLL_INTERVAL]
 
     async def test_stop_without_run_is_safe(self, listener):
         """Calling stop() before run() means the three task attrs are still

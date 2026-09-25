@@ -15,6 +15,25 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from game_context import GameState, PickContext  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _isolate_default_game_log_dir(tmp_path, monkeypatch):
+    """`WSListener()` and `Lumen.on_ready()` construct `GameLogRecorder()`
+    with no arguments, which defaults to the relative path
+    `game_log.DEFAULT_LOG_DIR` ("logs/game_context") — the same directory
+    Sport-Suite ingests as ML training data (see game_log.py's module
+    docstring). Any test that builds a real WSListener/Lumen without
+    patching the game log must never let that default `mkdir`/write land in
+    the actual repo tree.
+
+    Running every test from an isolated `tmp_path` cwd guarantees that: the
+    relative default path resolves under `tmp_path`, never under the real
+    lumen-bot directory. See test_ws_listener.py's
+    `test_default_relative_log_dir_never_touches_repo_cwd` for a test that
+    asserts this directly.
+    """
+    monkeypatch.chdir(tmp_path)
+
+
 @pytest.fixture
 def game() -> GameState:
     """A live game, midway through the 3rd quarter."""

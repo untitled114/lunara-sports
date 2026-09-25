@@ -1,6 +1,7 @@
 """Characterization tests for bot.py — the Lumen discord.Client and entrypoint."""
 
 import asyncio
+import logging
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -296,8 +297,10 @@ class TestAtlasHeartbeat:
 
         monkeypatch.setattr(b, "is_closed", is_closed)
 
+        sleeps = []
+
         async def fake_sleep(secs):
-            pass
+            sleeps.append(secs)
 
         monkeypatch.setattr(bot.asyncio, "sleep", fake_sleep)
 
@@ -305,7 +308,12 @@ class TestAtlasHeartbeat:
             respx.post("http://127.0.0.1:9999/heartbeat").mock(
                 side_effect=httpx.ConnectError("down")
             )
-            await b._atlas_heartbeat()  # must not raise
+            await b._atlas_heartbeat()
+
+        # The `except Exception: pass` swallowed the request failure and the
+        # loop still reached the bottom `await asyncio.sleep(60)` — proof the
+        # error didn't abort the loop.
+        assert sleeps == [60]
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +383,10 @@ class TestSendStatus:
 class TestSendCurrentPicks:
     async def test_no_listener_sends_nothing(self):
         b = Lumen(_cfg())
-        await b._send_current_picks(None)  # no _ws_listener -> early return, no crash
+        assert b._ws_listener is None
+        channel = _dm_channel()
+        await b._send_current_picks(channel)  # no _ws_listener -> early return
+        channel.send.assert_not_awaited()
 
     async def test_skips_empty_or_scheduled_games(self):
         from game_context import GameState
@@ -447,7 +458,10 @@ class TestSendCurrentPicks:
 class TestSendRecap:
     async def test_no_listener(self):
         b = Lumen(_cfg())
-        await b._send_recap(None)  # early return
+        assert b._ws_listener is None
+        channel = _dm_channel()
+        await b._send_recap(channel)  # early return
+        channel.send.assert_not_awaited()
 
     async def test_no_resolved_picks(self):
         b = Lumen(_cfg())
@@ -489,24 +503,42 @@ class TestSendDm:
         await b._send_dm(content="hi", embed=None)
         user.send.assert_awaited_once_with(content="hi", embed=None)
 
-    async def test_forbidden_is_logged_not_raised(self, monkeypatch):
+    async def test_forbidden_is_logged_not_raised(self, monkeypatch, caplog):
         b = Lumen(_cfg())
 
         async def raise_forbidden(_):
             raise discord.Forbidden(Mock(status=403), "no dms")
 
         monkeypatch.setattr(b, "fetch_user", raise_forbidden)
-        await b._send_dm(content="hi")  # must not raise
+        with caplog.at_level(logging.WARNING, logger="lumen"):
+            await b._send_dm(content="hi")  # must not raise
 
-    async def test_generic_exception_is_logged_not_raised(self, monkeypatch):
+        assert "Cannot DM owner" in caplog.text
+
+    async def test_generic_exception_is_logged_not_raised(self, monkeypatch, caplog):
         b = Lumen(_cfg())
         monkeypatch.setattr(b, "fetch_user", AsyncMock(side_effect=RuntimeError("boom")))
-        await b._send_dm(content="hi")  # must not raise
+        with caplog.at_level(logging.ERROR, logger="lumen"):
+            await b._send_dm(content="hi")  # must not raise
+
+        assert "Failed to send DM" in caplog.text
 
     async def test_falsy_user_sends_nothing(self, monkeypatch):
         b = Lumen(_cfg())
-        monkeypatch.setattr(b, "fetch_user", AsyncMock(return_value=None))
+
+        class FalsyUser:
+            """Falsy stand-in for `if user:` — still trackable via .send."""
+
+            def __bool__(self):
+                return False
+
+            def __init__(self):
+                self.send = AsyncMock()
+
+        falsy_user = FalsyUser()
+        monkeypatch.setattr(b, "fetch_user", AsyncMock(return_value=falsy_user))
         await b._send_dm(content="hi")  # `if user:` false -> no .send() call, no raise
+        falsy_user.send.assert_not_awaited()
 
 
 def _pick_ctx(**overrides):
