@@ -1,15 +1,9 @@
-"""Strict-xfail tests for the URL override, pending Task 13's `settings` module.
+"""Tests for the URL override implemented by Task 13's `settings` module.
 
-Task 13 implements `settings.resolve_lunara_urls(config, environ) -> tuple[str, str]`
-with environment values winning over `config["lunara"]`. Until that lands, `settings`
-does not exist, so every test here must fail — importing it inside the test body
-(not at module scope) keeps a missing module from aborting collection for the whole
-package.
+`settings.resolve_lunara_urls(config, environ) -> tuple[str, str]` lets environment
+values win over `config["lunara"]`.
 """
 
-import pytest
-
-pytestmark = pytest.mark.xfail(strict=True, reason="pending Task 13")
 CFG = {"lunara": {"api_url": "https://old.run.app", "ws_url": "wss://old.run.app/ws"}}
 
 

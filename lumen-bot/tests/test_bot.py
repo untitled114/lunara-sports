@@ -3,12 +3,14 @@
 import asyncio
 import logging
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import discord
 import pytest
+import time_machine
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -93,6 +95,27 @@ class TestSplitMessage:
         # empties it, so the loop ends via `while text:` going false, not `break`.
         text = "a" * 10 + "\n" * 5
         assert _split_message(text, 10) == ["a" * 10]
+
+
+# ---------------------------------------------------------------------------
+# Lumen.__init__ — LUNARA_API_URL / LUNARA_WS_URL env override
+# ---------------------------------------------------------------------------
+
+
+class TestLunaraUrlOverride:
+    def test_env_vars_override_config_urls(self, monkeypatch):
+        monkeypatch.setenv("LUNARA_API_URL", "http://127.0.0.1:8010")
+        monkeypatch.setenv("LUNARA_WS_URL", "ws://127.0.0.1:8010/ws")
+        b = Lumen(_cfg(lunara={"api_url": "https://old.run.app", "ws_url": "wss://old.run.app/ws"}))
+        assert b.api_url == "http://127.0.0.1:8010"
+        assert b.ws_url == "ws://127.0.0.1:8010/ws"
+
+    def test_config_used_when_env_absent(self, monkeypatch):
+        monkeypatch.delenv("LUNARA_API_URL", raising=False)
+        monkeypatch.delenv("LUNARA_WS_URL", raising=False)
+        b = Lumen(_cfg())
+        assert b.api_url == "http://127.0.0.1:8010"
+        assert b.ws_url == "ws://127.0.0.1:8010/ws"
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +214,38 @@ class TestOnMessage:
         await b.on_message(msg2)
         assert fake_brain.clear_history.call_count == 1  # same day: not cleared again
 
+    async def test_history_clear_date_uses_eastern_time_not_utc(self, monkeypatch):
+        """The day-boundary date recorded on `_last_history_clear_date` must be
+        the Eastern calendar date, not the UTC date."""
+        b = Lumen(_cfg())
+        fake_brain = Mock()
+        fake_brain.available = True
+        fake_brain.respond = AsyncMock(return_value="ok")
+        fake_brain.clear_history = Mock()
+        b._brain = fake_brain
+
+        channel = _dm_channel()
+        msg = FakeMessage(author_id=111, content="hi", channel=channel)
+
+        # 03:00 UTC on Jan 1 is still Dec 31 in Eastern time (EST, UTC-5).
+        with time_machine.travel(datetime(2026, 1, 1, 3, 0, tzinfo=timezone.utc)):
+            await b.on_message(msg)
+        assert b._last_history_clear_date == "2025-12-31"
+        assert fake_brain.clear_history.call_count == 1
+
+        # Still Dec 31 ET a few hours later (04:00 UTC) — no second clear.
+        msg2 = FakeMessage(author_id=111, content="hi again", channel=channel)
+        with time_machine.travel(datetime(2026, 1, 1, 4, 0, tzinfo=timezone.utc)):
+            await b.on_message(msg2)
+        assert fake_brain.clear_history.call_count == 1
+
+        # Past real ET midnight (05:00 UTC = 00:00 EST) — new ET day, clears again.
+        msg3 = FakeMessage(author_id=111, content="hi once more", channel=channel)
+        with time_machine.travel(datetime(2026, 1, 1, 5, 0, tzinfo=timezone.utc)):
+            await b.on_message(msg3)
+        assert b._last_history_clear_date == "2026-01-01"
+        assert fake_brain.clear_history.call_count == 2
+
 
 # ---------------------------------------------------------------------------
 # _health_server
@@ -233,6 +288,71 @@ class TestHealthServer:
         assert b"200 OK" in data
         assert b'"status": "ok"' in data
         assert b'"service": "cephalon-lumen"' in data
+
+    async def test_binds_localhost_by_default(self, monkeypatch):
+        """R21: default bind must be 127.0.0.1, not 0.0.0.0 (which collided
+        with Airflow on the box at the default PORT)."""
+        monkeypatch.setenv("PORT", "0")
+        monkeypatch.delenv("HEALTH_HOST", raising=False)
+        captured = {}
+        real_start_server = asyncio.start_server
+
+        async def spy_start_server(handler, host, port, *args, **kwargs):
+            captured["host"] = host
+            return await real_start_server(handler, host, port, *args, **kwargs)
+
+        monkeypatch.setattr(bot.asyncio, "start_server", spy_start_server)
+
+        b = Lumen(_cfg())
+        task = asyncio.create_task(b._health_server())
+        try:
+            for _ in range(200):
+                if "host" in captured:
+                    break
+                await asyncio.sleep(0.005)
+            assert captured.get("host") == "127.0.0.1"
+        finally:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+    async def test_binds_host_from_env_override(self, monkeypatch):
+        """A distinct, non-bindable-by-coincidence host: distinguishes this
+        from the pre-fix hardcoded "0.0.0.0" (which would have matched an
+        override of "0.0.0.0" for the wrong reason). Stubs out the actual
+        bind so an unroutable test address never touches a real socket."""
+        monkeypatch.setenv("PORT", "0")
+        monkeypatch.setenv("HEALTH_HOST", "192.0.2.1")  # TEST-NET-1, RFC 5737
+        captured = {}
+
+        class _FakeServer:
+            sockets = []
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *exc_info):
+                return False
+
+            async def serve_forever(self):
+                await asyncio.sleep(3600)
+
+        async def spy_start_server(handler, host, port, *args, **kwargs):
+            captured["host"] = host
+            return _FakeServer()
+
+        monkeypatch.setattr(bot.asyncio, "start_server", spy_start_server)
+
+        b = Lumen(_cfg())
+        task = asyncio.create_task(b._health_server())
+        try:
+            for _ in range(200):
+                if "host" in captured:
+                    break
+                await asyncio.sleep(0.005)
+            assert captured.get("host") == "192.0.2.1"
+        finally:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
 
 
 # ---------------------------------------------------------------------------
@@ -628,6 +748,26 @@ class TestInitBrain:
         b._init_brain()
         ctx = await b._brain.identity.context_fn()
         assert "No listener active" in ctx
+
+    async def test_lumen_context_current_time_is_eastern_not_utc(self):
+        """The brain's CURRENT TIME line must be Eastern, never bare UTC
+        (owner rule: never display bare UTC)."""
+        b = Lumen(_cfg())
+        listener = Mock()
+        engine = Mock()
+        engine.games = {}
+        engine._resolved_pick_ids = set()
+        engine.get_all_resolved_today = Mock(return_value=[])
+        listener.engine = engine
+        b._ws_listener = listener
+        b._init_brain()
+
+        # 20:00 UTC on Jan 15 is 15:00 EST (winter, UTC-5) in real ET.
+        with time_machine.travel(datetime(2026, 1, 15, 20, 0, tzinfo=timezone.utc)):
+            ctx = await b._brain.identity.context_fn()
+
+        assert "CURRENT TIME: 2026-01-15 15:00 EST" in ctx
+        assert "UTC" not in ctx
 
     async def test_lumen_context_no_games_tracked(self):
         b = Lumen(_cfg())

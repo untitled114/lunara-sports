@@ -17,6 +17,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import discord
 import httpx
@@ -25,9 +26,12 @@ import yaml
 from brain import BotIdentity, CephalonBrain
 from formatter import PickFormatter
 from lumen_tools import TOOLS, handle_tool, init_tools
+from settings import resolve_lunara_urls
 from ws_listener import WSListener
 
 log = logging.getLogger("lumen")
+
+EASTERN = ZoneInfo("America/New_York")
 
 # ---------------------------------------------------------------------------
 # Lumen personality — NBA Game-Time Copilot
@@ -92,8 +96,7 @@ class Lumen(discord.Client):
 
         self.config = config
         self.owner_id: int = config["discord"]["owner_id"]
-        self.api_url: str = config["lunara"]["api_url"]
-        self.ws_url: str = config["lunara"]["ws_url"]
+        self.api_url, self.ws_url = resolve_lunara_urls(config, os.environ)
         self.alert_cfg: dict = config.get("alerts", {})
         self.copilot_cfg: dict = config.get("copilot", {})
         self.start_time = datetime.now(timezone.utc)
@@ -147,9 +150,9 @@ class Lumen(discord.Client):
             engine = self._ws_listener.engine
             sections = []
 
-            # Current time
-            now = datetime.now(timezone.utc)
-            sections.append(f"CURRENT TIME: {now.strftime('%Y-%m-%d %H:%M UTC')}")
+            # Current time — Eastern, never bare UTC (owner rule).
+            now = datetime.now(EASTERN)
+            sections.append(f"CURRENT TIME: {now.strftime('%Y-%m-%d %H:%M %Z')}")
 
             # Active games summary
             if engine.games:
@@ -223,8 +226,8 @@ class Lumen(discord.Client):
 
         # Everything else goes to the AI brain
         if self._brain and self._brain.available:
-            # Auto-clear history at day boundary
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            # Auto-clear history at day boundary (Eastern calendar day, not UTC).
+            today = datetime.now(EASTERN).strftime("%Y-%m-%d")
             if self._last_history_clear_date != today:
                 self._brain.clear_history(message.author.id)
                 self._last_history_clear_date = today
@@ -346,6 +349,7 @@ class Lumen(discord.Client):
     async def _health_server(self) -> None:
         """Minimal HTTP server so Cloud Run knows we're alive."""
         port = int(os.environ.get("PORT", "8080"))
+        host = os.environ.get("HEALTH_HOST", "127.0.0.1")
 
         async def handle(reader, writer):
             await reader.read(1024)
@@ -360,8 +364,8 @@ class Lumen(discord.Client):
             await writer.drain()
             writer.close()
 
-        server = await asyncio.start_server(handle, "0.0.0.0", port)
-        log.info("Health server listening on :%d", port)
+        server = await asyncio.start_server(handle, host, port)
+        log.info("Health server listening on %s:%d", host, port)
         async with server:
             await server.serve_forever()
 

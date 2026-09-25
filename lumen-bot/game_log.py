@@ -15,8 +15,9 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from game_context import GameState, PickContext
 
@@ -25,11 +26,11 @@ log = logging.getLogger("lumen.gamelog")
 # Default log directory
 DEFAULT_LOG_DIR = "logs/game_context"
 
+EASTERN = ZoneInfo("America/New_York")
+
 
 def _eastern_today() -> date:
-    utc_now = datetime.now(timezone.utc)
-    et_now = utc_now - timedelta(hours=5)
-    return et_now.date()
+    return datetime.now(EASTERN).date()
 
 
 class GameLogRecorder:
