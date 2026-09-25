@@ -36,15 +36,19 @@ const FREEZE_CSS = `
     transition: none !important;
     caret-color: transparent !important;
   }
-  /* The page grain is SVG noise: incompressible (it tripled the PNG sizes) and it would
-     only ever diff as noise. It is hidden for the shots; everything above it is real. */
-  [data-testid='page-grain'] { visibility: hidden !important; }
 `
+
+// Screenshot only, after every assertion has run against the real page (grain included):
+// the page grain is SVG noise, incompressible (it tripled the PNG sizes) and it would only
+// ever diff as noise, so it is hidden for the shots. Everything above it is real.
+const HIDE_GRAIN_CSS = `[data-testid='page-grain'] { visibility: hidden !important; }`
 
 // The app shell is a fixed, viewport-sized box with its own scroller, so the document
 // never grows and a fullPage shot would stop at the fold. For the screenshot only, the
-// shell is let out to its natural height so the whole page is captured.
+// shell is let out to its natural height so the whole page is captured. The grain is
+// hidden here too, so it only ever leaves the screenshots, never the assertions.
 async function unpinShell(page) {
+  await page.addStyleTag({ content: HIDE_GRAIN_CSS })
   await page.addStyleTag({
     content: 'html, body, #react-root { height: auto !important; overflow: visible !important; }',
   })
