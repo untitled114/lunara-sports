@@ -30,7 +30,6 @@ export function ReactionOverlay() {
             className="absolute bottom-0 text-3xl animate-reaction-float transition-opacity"
             style={{
               left: `${r.x}%`,
-              filter: 'drop-shadow(0 0 10px color-mix(in srgb, var(--text-1) 30%, transparent))',
             }}
           >
             {r.emoji}
@@ -39,7 +38,7 @@ export function ReactionOverlay() {
       </div>
 
       {/* Reaction Picker Bar */}
-      <div className="liquid-glass glass-pill flex items-center gap-2 p-1.5 rounded-lg shadow-2xl">
+      <div className="bg-surface-1 border border-border flex items-center gap-2 p-1.5 rounded-lg shadow-2xl">
         {EMOJIS.map((emoji) => (
           <button
             key={emoji}
