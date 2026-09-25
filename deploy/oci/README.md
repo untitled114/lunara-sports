@@ -164,6 +164,10 @@ deploy/oci/deploy.sh --dry-run
 deploy/oci/deploy.sh
 ```
 
+**Never deploy between tip-off and final.** A deploy restarts `lunara-api`, and a restart
+drops every WebSocket client on every live game at once. Deploy before the first tip-off
+or after the last game of the night is final.
+
 1. **Preflight, read-only, before anything is copied.** It checks:
    - the `lunara` user exists;
    - `/etc/lunara/{api,ingestion,lumen}.env` and `db.secret` exist;
@@ -250,6 +254,11 @@ ssh ss-admin 'sudo -u lunara /opt/lunara/ingestion/.venv/bin/python /opt/lunara/
 # through ingestion's EspnHttp with the proxy fallback:
 ssh ss-admin 'sudo -u lunara sh -c "set -a; . /etc/lunara/ingestion.env; exec /opt/lunara/ingestion/.venv/bin/python /opt/lunara/deploy/live_slate_check.py --via-ingestion"'
 ```
+
+Keep `--seconds` short during live games (the default 90 s is the go/no-go run; do not
+lengthen it or loop it). Every run doubles the ESPN load from the box IP: ingestion is
+already polling each live game's `/summary` once per second from the same address, and
+the check adds a second poller on top.
 
 Run it **outside the Sport-suite pipeline windows**. Airflow's `nba_full_pipeline` runs
 every 3 h at :30 from 2:30 AM to 8:30 PM ET, and `nba_daily_card` runs every 30 min;
