@@ -78,9 +78,18 @@ _ESPN_TO_PBP: dict[str, str] = {
     "SA": "SA",  # same
     "NY": "NY",  # same
     "NO": "NO",  # same
+    # Defensive: long-form abbreviations ESPN's live endpoints don't currently
+    # send (confirmed against captured scoreboard/standings fixtures), but that
+    # match the Sport-suite convention below — normalize them the same way if
+    # ESPN ever does.
+    "GSW": "GS",
+    "WAS": "WSH",
+    "NYK": "NY",
+    "NOP": "NO",
+    "SAS": "SA",
 }
 
 
 def from_espn_abbrev(espn_abbrev: str) -> str:
-    """Convert ESPN scoreboard abbreviation to play-by-play format."""
+    """Convert ESPN scoreboard/standings abbreviation to play-by-play format."""
     return _ESPN_TO_PBP.get(espn_abbrev, espn_abbrev)

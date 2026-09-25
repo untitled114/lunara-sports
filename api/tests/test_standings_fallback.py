@@ -82,3 +82,40 @@ async def test_espn_down_returns_empty():
     with patch.object(standings_service.espn_client, "get_standings", AsyncMock(return_value=None)):
         r = await standings_service.get_standings()
     assert r.eastern == [] and r.western == [] and r.is_previous_season is False
+
+
+@pytest.mark.asyncio
+async def test_standings_use_the_same_team_abbreviations_as_games():
+    """Utah is 'UTAH' in ESPN's raw standings payload but games use 'UTA'
+    (team_mapping.from_espn_abbrev) — standings must normalize the same way,
+    or the frontend's standings lookup never matches Utah's games."""
+    get = AsyncMock(side_effect=lambda season=None: PREV if season == 2026 else PRE)
+    with patch.object(standings_service.espn_client, "get_standings", get):
+        r = await standings_service.get_standings()
+    all_abbrevs = {t.abbrev for t in r.eastern + r.western}
+    assert "UTA" in all_abbrevs
+    assert "UTAH" not in all_abbrevs
+
+
+def test_standings_abbreviations_match_games_for_every_team():
+    """No abbreviation ESPN's real standings payload uses should differ from what
+    games use, once normalized — this compares the full 30-team set from the real
+    fixtures against team_mapping's canonical (games) abbreviation set, rather than
+    special-casing Utah alone, so a future ESPN format change elsewhere is caught."""
+    from src.services.team_mapping import ESPN_TEAM_IDS, from_espn_abbrev
+
+    raw = {
+        entry["team"]["abbreviation"]
+        for data in (PRE, PREV)
+        for child in data.get("children", [])
+        for entry in child.get("standings", {}).get("entries", [])
+    }
+    assert len(raw) == 30  # sanity: fixtures cover the whole league
+
+    normalized = {from_espn_abbrev(a) for a in raw}
+    games_abbrevs = set(ESPN_TEAM_IDS)
+
+    mismatched = normalized - games_abbrevs
+    missing = games_abbrevs - normalized
+    assert not mismatched, f"standings abbreviations with no games match: {mismatched}"
+    assert not missing, f"games abbreviations standings never produces: {missing}"

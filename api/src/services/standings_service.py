@@ -6,7 +6,7 @@ import structlog
 
 from ..models.schemas import StandingsResponse, StandingsTeam
 from . import espn_client
-from .team_mapping import ABBREV_BY_ESPN_ID
+from .team_mapping import ABBREV_BY_ESPN_ID, from_espn_abbrev
 
 logger = structlog.get_logger(__name__)
 
@@ -37,20 +37,9 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
         espn_id = int(team_info.get("id", 0))
         abbrev = team_info.get("abbreviation", ABBREV_BY_ESPN_ID.get(espn_id, "???"))
 
-        # Map ESPN abbreviations to our local ones
-        abbrev_map = {
-            "GS": "GS",
-            "GSW": "GS",
-            "WSH": "WSH",
-            "WAS": "WSH",
-            "NY": "NY",
-            "NYK": "NY",
-            "NO": "NO",
-            "NOP": "NO",
-            "SA": "SA",
-            "SAS": "SA",
-        }
-        abbrev = abbrev_map.get(abbrev, abbrev)
+        # Same ESPN-abbreviation normalization games use (e.g. "UTAH" -> "UTA"),
+        # so standings and games agree on team abbreviations.
+        abbrev = from_espn_abbrev(abbrev)
 
         wins = int(_get_stat(entry, "wins") or _get_stat(entry, "W") or 0)
         losses = int(_get_stat(entry, "losses") or _get_stat(entry, "L") or 0)
