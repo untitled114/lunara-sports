@@ -13,9 +13,9 @@ from datetime import date
 
 import structlog
 
+from src.__main__ import build_io
 from src.collectors.historical import HistoricalLoader
 from src.config import Settings
-from src.producers.kafka_producer import KafkaProducer
 
 logger = structlog.get_logger(__name__)
 
@@ -27,23 +27,27 @@ async def main() -> None:
     parser.add_argument("--game", type=str, help="Single game ID to backfill PBP")
     args = parser.parse_args()
 
-    settings = Settings()
-    producer = KafkaProducer(settings)
-    loader = HistoricalLoader(settings, producer)
-
-    if args.game:
-        logger.info("backfill.single_game", game_id=args.game)
-        await loader.load_game(args.game)
-    elif args.start and args.end:
-        start = date.fromisoformat(args.start)
-        end = date.fromisoformat(args.end)
-        logger.info("backfill.date_range", start=str(start), end=str(end))
-        await loader.load_date_range(start, end)
-    else:
+    if not args.game and not (args.start and args.end):
         parser.print_help()
         return
 
-    producer.flush(timeout=10.0)
+    settings = Settings()
+    sink, http = await build_io(settings)
+    try:
+        loader = HistoricalLoader(settings, sink, http)
+        if args.game:
+            logger.info("backfill.single_game", game_id=args.game)
+            await loader.load_game(args.game)
+        else:
+            start = date.fromisoformat(args.start)
+            end = date.fromisoformat(args.end)
+            logger.info("backfill.date_range", start=str(start), end=str(end))
+            await loader.load_date_range(start, end)
+    finally:
+        try:
+            await sink.close()  # final flush of anything still buffered
+        finally:
+            await http.aclose()
     logger.info("backfill.done")
 
 

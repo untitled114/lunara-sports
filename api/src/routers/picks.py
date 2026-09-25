@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete, select
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import Settings
 from ..db.models import ModelPick, UserTail
 from ..db.session import get_session
+from ..eastern import eastern_today
 from ..models.schemas import ModelPickResponse
 from ..services.auth_deps import get_current_user, get_current_user_optional
 from ..services.pick_sync_service import sync_picks
@@ -28,9 +29,7 @@ def _get_settings() -> Settings:
 
 
 def _eastern_today() -> date:
-    utc_now = datetime.now(timezone.utc)
-    et_now = utc_now - timedelta(hours=5)
-    return et_now.date()
+    return eastern_today()
 
 
 def _gate_pick(pick: ModelPick, is_premium: bool) -> dict:

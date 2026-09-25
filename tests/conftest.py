@@ -1,36 +1,58 @@
-"""Root test conftest — unify the ``src`` namespace.
+"""Root test conftest — load each service's ``src`` package under its own name.
 
-Both ``api/src/`` and ``ingestion/src/`` expose a top-level ``src`` package.
-When pytest collects all test files, whichever ``src`` gets imported first
-shadows the other, causing ``ModuleNotFoundError`` for submodules that live
-in the *other* package (e.g. ``src.kafka`` in api vs ``src.resilience`` in
-ingestion).
+``api/src`` and ``ingestion/src`` are both a top-level package called ``src``,
+so they cannot share one interpreter under that name. Cross-service tests here
+import them through explicit aliases instead:
 
-Fix: add both parent dirs to ``sys.path`` early, import ``src``, then extend
-``src.__path__`` so Python can resolve submodules from *either* location.
+- ``api_src``       -> ``api/src``
+- ``ingestion_src`` -> ``ingestion/src``
+
+Each alias is built with ``importlib`` from the package's ``__init__.py`` and
+registered in ``sys.modules``; submodules then resolve through that package's
+own ``__path__`` (relative imports work). Neither ``src`` directory is put on
+``sys.path``, so ``ingestion/src/http`` can never shadow the stdlib ``http``,
+and nothing here touches the per-service unit suites (``cd api && pytest``
+etc. never load this file).
+
+Only modules that use relative imports (all of ``api/src``) or none at all
+(``ingestion/src/sinks/postgres.py``) are importable through an alias.
+Ingestion modules that do ``from src.x import ...`` are not, by design.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
+from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[1]
 
-_api_dir = str(ROOT / "api")
-_ing_dir = str(ROOT / "ingestion")
+ALIASES: dict[str, Path] = {
+    "api_src": ROOT / "api" / "src",
+    "ingestion_src": ROOT / "ingestion" / "src",
+}
 
-# Ensure both parent dirs are on sys.path so ``import src`` works
-for d in (_api_dir, _ing_dir):
-    if d not in sys.path:
-        sys.path.insert(0, d)
 
-# Now import src (whichever location wins) and extend its __path__
-import src  # noqa: E402
+def load_alias(alias: str, pkg_dir: Path) -> ModuleType:
+    """Import the package at ``pkg_dir`` as top-level module ``alias`` (idempotent)."""
+    existing = sys.modules.get(alias)
+    if existing is not None:
+        return existing
+    spec = importlib.util.spec_from_file_location(
+        alias, pkg_dir / "__init__.py", submodule_search_locations=[str(pkg_dir)]
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {pkg_dir} as {alias}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[alias] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(alias, None)
+        raise
+    return module
 
-_api_src = str(ROOT / "api" / "src")
-_ing_src = str(ROOT / "ingestion" / "src")
 
-for p in (_ing_src, _api_src):
-    if p not in src.__path__:
-        src.__path__.append(p)
+for _alias, _dir in ALIASES.items():
+    load_alias(_alias, _dir)

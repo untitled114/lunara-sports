@@ -5,6 +5,8 @@ Runs two independent loops:
   2. Play-by-play loop (every 3s) — polls ESPN for new plays, fast and independent
 
 Decoupling these ensures play polling is never blocked by scoreboard HTTP calls.
+Every collector shares ONE PostgresSink and ONE EspnHttp (built by ``build_io``);
+only ``run()`` closes them.
 """
 
 from __future__ import annotations
@@ -12,13 +14,17 @@ from __future__ import annotations
 import asyncio
 import os
 import signal
+import time
+from asyncio import wait_for as _bounded  # bound by reference: tests patch asyncio.wait_for
+from collections.abc import Callable
 
 import structlog
 
 from src.collectors.playbyplay import PlayByPlayCollector
 from src.collectors.scoreboard import ScoreboardCollector
 from src.config import Settings
-from src.producers.kafka_producer import KafkaProducer
+from src.http.espn import EspnHttp
+from src.sinks.postgres import PostgresSink
 
 logger = structlog.get_logger(__name__)
 
@@ -26,23 +32,100 @@ LIVE_STATUSES = {"live", "halftime"}
 
 PBP_INTERVAL = 1  # seconds — fast loop for play-by-play
 SCOREBOARD_INTERVAL = 10  # seconds — slower loop for game discovery
+POLL_FAILED_LOG_WINDOW = 60.0  # seconds — at most one pbp_poll_failed per game per window
+# One game's poll (ESPN fetch + its quick retry + sink flush) gets this long; a
+# hanging or flaky game then fails alone instead of stalling every other game.
+PBP_POLL_TIMEOUT = 3.0  # seconds
+
+
+async def build_io(settings: Settings) -> tuple[PostgresSink, EspnHttp]:
+    sink = PostgresSink(settings.database_url)
+    await sink.connect()
+    http = EspnHttp(
+        settings.espn_proxy_url,
+        trigger_failures=settings.proxy_trigger_failures,
+        cooldown_seconds=settings.proxy_cooldown_seconds,
+    )
+    return sink, http
+
+
+async def _quietly(action, event: str, **ctx) -> None:
+    """Await ``action()``; log a failure as ``event`` instead of raising."""
+    try:
+        await action()
+    except Exception as e:
+        logger.warning(event, error=repr(e), **ctx)
+
+
+async def _close_quietly(closer, what: str, **ctx) -> None:
+    """Await a collector's close(); log (don't raise) so the rest still close."""
+    await _quietly(closer, "ingestion.close_failed", what=what, **ctx)
+
+
+class _RateLimitedWarning:
+    """Log ``event`` at most once per key per ``window`` seconds.
+
+    A game that fails every 1s PBP cycle would otherwise flood the journal;
+    the next logged line carries how many were suppressed meanwhile.
+    """
+
+    def __init__(
+        self, event: str, window: float, clock: Callable[[], float] = time.monotonic
+    ) -> None:
+        self._event = event
+        self._window = window
+        self._clock = clock
+        self._state: dict[str, tuple[float, int]] = {}  # key → (last logged, suppressed)
+
+    def __call__(self, key: str, **fields) -> None:
+        now = self._clock()
+        last = self._state.get(key)
+        if last is not None and now - last[0] < self._window:
+            self._state[key] = (last[0], last[1] + 1)
+            return
+        suppressed = last[1] if last is not None else 0
+        logger.warning(self._event, game_id=key, suppressed=suppressed, **fields)
+        self._state[key] = (now, 0)
+
+    def forget(self, key: str) -> None:
+        self._state.pop(key, None)
 
 
 async def run() -> None:
     settings = Settings()
-    # Use Pub/Sub on GCP (pubsub_project set), Kafka locally for dev (lazy import)
-    if settings.pubsub_project:
-        from src.producers.pubsub_producer import PubSubProducer
+    sink, http = await build_io(settings)
+    try:
+        await _run_loops(settings, sink, http)
+    finally:
+        try:
+            await sink.close()  # final flush, then the pool
+        finally:
+            await http.aclose()
 
-        producer = PubSubProducer()
-    else:
-        producer = KafkaProducer(settings)
-    scoreboard = ScoreboardCollector(settings, producer)
+
+async def _run_loops(settings: Settings, sink: PostgresSink, http: EspnHttp) -> None:
+    scoreboard = ScoreboardCollector(settings, sink, http)
 
     # game_id → PlayByPlayCollector for active games
     pbp_collectors: dict[str, PlayByPlayCollector] = {}
     active_game_ids: set[str] = set()
     collector_lock = asyncio.Lock()
+    poll_failed = _RateLimitedWarning("ingestion.pbp_poll_failed", POLL_FAILED_LOG_WINDOW)
+
+    async def retire(gid: str, collector: PlayByPlayCollector) -> None:
+        """Final poll (plays ESPN posts after the flip to final), then close."""
+        await _quietly(
+            lambda: _bounded(collector.poll(), PBP_POLL_TIMEOUT),
+            "ingestion.final_poll_failed",
+            game_id=gid,
+        )
+        logger.info(
+            "ingestion.pbp_stop",
+            game_id=gid,
+            plays_collected=collector.new_play_count,
+        )
+        await _close_quietly(collector.close, "pbp_collector", game_id=gid)
+        poll_failed.forget(gid)
 
     shutdown = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -55,45 +138,50 @@ async def run() -> None:
         scoreboard_interval=SCOREBOARD_INTERVAL,
     )
 
+    async def sync_collectors(games: list[dict]) -> None:
+        """Start collectors for live games; retire those whose game went final."""
+        nonlocal active_game_ids
+        new_active: set[str] = set()
+        retiring: dict[str, PlayByPlayCollector] = {}
+        async with collector_lock:
+            for game in games:
+                gid = game["game_id"]
+                status = game["status"]
+
+                if status in LIVE_STATUSES:
+                    new_active.add(gid)
+                    if gid not in pbp_collectors:
+                        logger.info("ingestion.pbp_start", game_id=gid, status=status)
+                        pbp_collectors[gid] = PlayByPlayCollector(
+                            settings, sink, game_id=gid, http=http
+                        )
+
+            # Finished games leave the active set now; their final
+            # poll + close run below, outside the lock, so an ESPN
+            # retry never stalls PBP polling for the other games.
+            for gid in set(pbp_collectors.keys()) - new_active:
+                retiring[gid] = pbp_collectors.pop(gid)
+
+            active_game_ids = new_active
+
+        # Errors are logged inside retire(); the collector is dropped
+        # either way (unflushed plays stay in the shared sink).
+        await asyncio.gather(*(retire(gid, c) for gid, c in retiring.items()))
+
+        logger.info(
+            "ingestion.scoreboard_cycle",
+            games=len(games),
+            live_games=len(new_active),
+            pbp_collectors=len(pbp_collectors),
+        )
+
     async def scoreboard_loop() -> None:
         """Discover games and manage PBP collectors."""
-        nonlocal active_game_ids
         while not shutdown.is_set():
             try:
-                await scoreboard.poll()
-                games = await scoreboard.collect()
-
-                new_active: set[str] = set()
-                async with collector_lock:
-                    for game in games:
-                        gid = game["game_id"]
-                        status = game["status"]
-
-                        if status in LIVE_STATUSES:
-                            new_active.add(gid)
-                            if gid not in pbp_collectors:
-                                logger.info("ingestion.pbp_start", game_id=gid, status=status)
-                                pbp_collectors[gid] = PlayByPlayCollector(settings, producer, gid)
-
-                    # Clean up finished games
-                    finished = set(pbp_collectors.keys()) - new_active
-                    for gid in finished:
-                        logger.info(
-                            "ingestion.pbp_stop",
-                            game_id=gid,
-                            plays_collected=pbp_collectors[gid].new_play_count,
-                        )
-                        await pbp_collectors[gid].close()
-                        del pbp_collectors[gid]
-
-                    active_game_ids = new_active
-
-                logger.info(
-                    "ingestion.scoreboard_cycle",
-                    games=len(games),
-                    live_games=len(new_active),
-                    pbp_collectors=len(pbp_collectors),
-                )
+                games = await scoreboard.poll()  # the one ESPN scoreboard fetch this cycle
+                if games is not None:  # None: ESPN error, keep every collector as it is
+                    await sync_collectors(games)
             except Exception as e:
                 logger.warning("ingestion.scoreboard_error", error=str(e))
 
@@ -110,10 +198,13 @@ async def run() -> None:
                     active = {gid: c for gid, c in pbp_collectors.items() if gid in active_game_ids}
 
                 if active:
-                    await asyncio.gather(
-                        *(c.poll() for c in active.values()),
+                    results = await asyncio.gather(
+                        *(_bounded(c.poll(), PBP_POLL_TIMEOUT) for c in active.values()),
                         return_exceptions=True,
                     )
+                    for gid, result in zip(active, results, strict=True):
+                        if isinstance(result, BaseException):
+                            poll_failed(gid, error=repr(result))
                     logger.debug(
                         "ingestion.pbp_cycle",
                         games_polled=len(active),
@@ -134,13 +225,18 @@ async def run() -> None:
         )
     finally:
         logger.info("ingestion.shutting_down")
-        for c in pbp_collectors.values():
-            await c.close()
-        await scoreboard.close()
+        for gid, c in pbp_collectors.items():
+            await _close_quietly(c.close, "pbp_collector", game_id=gid)
+        await _close_quietly(scoreboard.close, "scoreboard")
 
 
 async def health_server() -> None:
-    """Minimal HTTP health server — required by Cloud Run to confirm container is up."""
+    """Minimal HTTP health server answering 200 OK on HEALTH_HOST:PORT.
+
+    Binds loopback by default (R21): 0.0.0.0:8080 collides with Airflow on
+    sport-suite-main.
+    """
+    host = os.environ.get("HEALTH_HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8080"))
 
     async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
@@ -149,14 +245,30 @@ async def health_server() -> None:
         await writer.drain()
         writer.close()
 
-    server = await asyncio.start_server(handle, "0.0.0.0", port)
+    server = await asyncio.start_server(handle, host, port)
     async with server:
         await server.serve_forever()
 
 
+async def main() -> None:
+    """Health server alongside run(); returns as soon as run() does.
+
+    The health server never finishes on its own (serve_forever), so it runs as
+    a task that is cancelled when run() returns after SIGTERM/SIGINT —
+    otherwise systemd waits TimeoutStopSec and SIGKILLs on every stop.
+    """
+    health = asyncio.create_task(health_server())
+    try:
+        await run()
+    finally:
+        health.cancel()
+        try:
+            await health
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.warning("ingestion.health_server_failed", error=repr(e))
+
+
 if __name__ == "__main__":
-
-    async def main() -> None:
-        await asyncio.gather(health_server(), run())
-
     asyncio.run(main())

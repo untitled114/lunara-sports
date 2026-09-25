@@ -2,6 +2,8 @@
 
 from datetime import datetime, timezone
 
+import pytest
+
 from src.collectors.scoreboard import _parse_competitor, _parse_game
 
 
@@ -175,6 +177,13 @@ class TestParseGame:
         result = _parse_game({"id": "123", "competitions": []}, datetime.now(timezone.utc))
         assert result is None
 
+    def test_invalid_date_falls_back_to_polled_at(self):
+        """An unparsable/missing start-time string falls back to polled_at."""
+        polled = datetime(2026, 2, 17, 1, 0, 0, tzinfo=timezone.utc)
+        event = _make_espn_event(date="")
+        result = _parse_game(event, polled)
+        assert result.start_time == polled
+
     def test_serializes_to_dict(self):
         polled = datetime(2026, 2, 17, 1, 0, 0, tzinfo=timezone.utc)
         event = _make_espn_event()
@@ -184,3 +193,50 @@ class TestParseGame:
         assert isinstance(d, dict)
         assert d["game_id"] == "401710647"
         assert isinstance(d["polled_at"], str)
+
+
+# --- Final fix wave #9: status comes from ESPN's status.type.state
+# (pre/in/post); the detailed name only refines it. ---
+
+_POLLED = datetime(2026, 10, 4, 0, 0, tzinfo=timezone.utc)
+
+
+def _status(name, state):
+    return _parse_game(_make_espn_event(status_name=name, status_state=state), _POLLED).status
+
+
+@pytest.mark.parametrize(
+    ("name", "state", "expected"),
+    [
+        # live game: unknown or delay names must not flap it to scheduled
+        ("STATUS_DELAYED", "in", "live"),
+        ("STATUS_RAIN_DELAY_OR_WHATEVER", "in", "live"),
+        ("STATUS_END_PERIOD", "in", "live"),
+        ("STATUS_IN_PROGRESS", "in", "live"),
+        ("STATUS_HALFTIME", "in", "halftime"),
+        # pre-game refinements
+        ("STATUS_SCHEDULED", "pre", "scheduled"),
+        ("STATUS_POSTPONED", "pre", "postponed"),
+        ("STATUS_DELAYED", "pre", "delayed"),
+        ("STATUS_SOMETHING_NEW", "pre", "scheduled"),
+        ("STATUS_IN_PROGRESS", "pre", "scheduled"),  # state wins over a stale name
+        # finished
+        ("STATUS_FINAL", "post", "final"),
+        ("STATUS_FINAL_OT", "post", "final"),
+        ("STATUS_POSTPONED", "post", "postponed"),
+        ("STATUS_CANCELED", "post", "canceled"),
+        ("STATUS_IN_PROGRESS", "post", "final"),
+    ],
+)
+def test_status_is_driven_by_state_and_refined_by_name(name, state, expected):
+    assert _status(name, state) == expected
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [("STATUS_IN_PROGRESS", "live"), ("STATUS_FINAL", "final"), ("STATUS_UNKNOWN", "scheduled")],
+)
+def test_missing_state_falls_back_to_the_name(name, expected):
+    event = _make_espn_event(status_name=name)
+    del event["competitions"][0]["status"]["type"]["state"]
+    assert _parse_game(event, _POLLED).status == expected

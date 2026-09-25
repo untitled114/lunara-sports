@@ -6,18 +6,6 @@ version: "3.8"
 
 services:
   # Keep infrastructure services as-is
-  zookeeper:
-    profiles: ["test"]
-
-  kafka:
-    profiles: ["test"]
-
-  schema-registry:
-    profiles: ["test"]
-
-  kafka-init:
-    profiles: ["test"]
-
   postgres:
     profiles: ["test"]
     environment:
@@ -30,13 +18,7 @@ services:
   ingestion:
     profiles: ["disabled"]
 
-  stream-processor:
-    profiles: ["disabled"]
-
   api:
-    profiles: ["disabled"]
-
-  kafka-exporter:
     profiles: ["disabled"]
 
   postgres-exporter:
@@ -49,7 +31,4 @@ services:
     profiles: ["disabled"]
 
   grafana:
-    profiles: ["disabled"]
-
-  minio:
     profiles: ["disabled"]

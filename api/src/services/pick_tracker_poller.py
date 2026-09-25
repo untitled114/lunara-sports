@@ -11,7 +11,7 @@ Every 30 seconds:
 from __future__ import annotations
 
 import asyncio
-from datetime import date, datetime, timedelta, timezone
+from datetime import date
 
 import structlog
 from sqlalchemy import select, update
@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import Settings
 from ..db.models import Game, ModelPick
 from ..db.session import get_session_factory
+from ..eastern import eastern_today
 from ..ws.live_feed import manager
 from .boxscore_service import get_boxscore
 from .sport_suite_client import post_pick_result
@@ -40,9 +41,7 @@ MARKET_STAT_MAP = {
 
 
 def _eastern_today() -> date:
-    utc_now = datetime.now(timezone.utc)
-    et_now = utc_now - timedelta(hours=5)
-    return et_now.date()
+    return eastern_today()
 
 
 def _name_match(pick_name: str, box_name: str) -> bool:

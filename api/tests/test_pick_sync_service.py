@@ -562,6 +562,37 @@ class TestMatchPicksToGames:
         # Direct lookup matched; fallback logic irrelevant
         assert matched[0]["game_id"] == "g1"
 
+    async def test_backfill_loop_skips_mismatched_gid_then_exhausts(self):
+        """Exercises the backfill loop's other two branches together:
+
+        - An unrelated game's lookup entries are skipped (gid mismatch,
+          line 209->208).
+        - The matching game is a degenerate one where home==away ("BOS" is
+          its own opponent), so `inferred == opp` and the loop's `break`
+          (line 211) is never taken; it falls through back to the loop
+          header (211->208) and then exhausts naturally (208->214).
+        """
+        session = _mock_session_with_games(
+            [
+                _fake_game("g_other", "MIA", "IND"),
+                _fake_game("g1", "BOS", "BOS"),
+            ]
+        )
+        picks = [
+            {
+                "player_name": "Ghost",
+                "team": "",
+                "opponent_team": "BOS",
+                "is_home": None,
+            }
+        ]
+        matched = await match_picks_to_games(session, date(2026, 2, 17), picks)
+        assert len(matched) == 1
+        assert matched[0]["game_id"] == "g1"
+        # Backfill never assigned a team: BOS is its own opponent here, so
+        # inferred == opp and the assignment is skipped.
+        assert matched[0]["team"] == ""
+
     async def test_backfill_skips_when_inferred_equals_opponent(self):
         """Back-fill logic skips entries where inferred team == opponent.
 

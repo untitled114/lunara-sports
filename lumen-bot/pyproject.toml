@@ -2,7 +2,7 @@
 name = "cephalon-lumen"
 version = "0.1.0"
 description = "Cephalon Lumen — Lunara Sports NBA pick alerts via Discord DM"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "discord.py>=2.4",
     "httpx>=0.27",
@@ -16,6 +16,9 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "respx>=0.21",
+    "time-machine>=2.13",
     "ruff>=0.8,<0.17",  # capped: new ruff releases change rule defaults
 ]
 
@@ -25,6 +28,12 @@ py-modules = []  # Not a package — just a script collection with deps
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+# strict-mode default requires @pytest.mark.asyncio on every async test, which
+# is easy to forget and fails silently open (test collected but body skipped).
+# auto mode runs every async def test as a coroutine test automatically.
+asyncio_mode = "auto"
 
 [tool.ruff]
 target-version = "py310"
@@ -51,3 +60,13 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E402"]  # tests put the bot dir on sys.path before importing
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+omit = ["tests/*", ".venv/*", "venv/*"]
+
+[tool.coverage.report]
+fail_under = 99.1
+show_missing = true
+skip_covered = true

@@ -44,3 +44,22 @@ class TestPopulateTeamLogos:
         mock_factory = MagicMock(side_effect=Exception("db error"))
         with patch("src.services.team_logos.get_session_factory", return_value=mock_factory):
             await populate_team_logos()  # should not raise
+
+    async def test_no_rows_updated_skips_populated_log(self, capsys):
+        """rowcount 0 for every team means `updated` stays 0 — the
+        "team_logos.populated" info log is skipped (line 70->exit)."""
+        mock_session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.rowcount = 0
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.commit = AsyncMock()
+
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        mock_factory = MagicMock(return_value=mock_ctx)
+
+        with patch("src.services.team_logos.get_session_factory", return_value=mock_factory):
+            await populate_team_logos()
+            assert mock_session.execute.call_count == 30
+        assert "team_logos.populated" not in capsys.readouterr().out

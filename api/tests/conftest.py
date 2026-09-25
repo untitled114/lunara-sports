@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import ARRAY
+from sqlalchemy import ARRAY, BigInteger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 
@@ -22,6 +22,18 @@ from src.main import app
 @compiles(ARRAY, "sqlite")
 def _compile_array_sqlite(type_, compiler, **kw):
     return "TEXT"
+
+
+# BigInteger primary keys (Play, Reaction, ...) render as BIGINT on SQLite, which
+# SQLite does NOT treat as a rowid alias — only an exact "INTEGER PRIMARY KEY"
+# column autoincrements. Without this, any code path that inserts a new
+# BigInteger-PK row without an explicit id (autoincrement, as Postgres BIGSERIAL
+# does in production) fails with "NOT NULL constraint failed" on SQLite. Seeded
+# fixture rows sidestep this by passing explicit ids (see seeded_session), but
+# that's not available to a real INSERT made by application code under test.
+@compiles(BigInteger, "sqlite")
+def _compile_biginteger_sqlite(type_, compiler, **kw):
+    return "INTEGER"
 
 
 @pytest.fixture(scope="session")
@@ -185,12 +197,6 @@ async def client(seeded_session):
         for target, mock in _MOCK_PATCHES
     ]
 
-    # Mock KafkaConsumerLoop so tests don't attempt real Kafka connections
-    mock_consumer_instance = MagicMock()
-    mock_consumer_instance.run = AsyncMock()
-    mock_consumer_instance.stop = MagicMock()
-    mock_consumer_cls = MagicMock(return_value=mock_consumer_instance)
-
     with (
         patch(
             "src.services.game_service.get_cached_game_list",
@@ -219,7 +225,6 @@ async def client(seeded_session):
         patch("src.main.init_db"),
         patch("src.main.close_db", new_callable=AsyncMock),
         patch("src.main.run_play_poller", new_callable=AsyncMock),
-        patch("src.main.KafkaConsumerLoop", mock_consumer_cls),
     ):
         app.dependency_overrides[get_session] = _override_session
         transport = ASGITransport(app=app)

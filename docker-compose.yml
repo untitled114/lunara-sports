@@ -3,82 +3,6 @@ version: "3.8"
 services:
   # --- Infrastructure ---
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.6.0
-    container_name: pbp-zookeeper
-    restart: unless-stopped
-    ports:
-      - "2181:2181"
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    volumes:
-      - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-logs:/var/lib/zookeeper/log
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
-  kafka:
-    image: confluentinc/cp-kafka:7.6.0
-    container_name: pbp-kafka
-    restart: unless-stopped
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
-      - "29092:29092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_LOG_RETENTION_HOURS: 168
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-    volumes:
-      - kafka-data:/var/lib/kafka/data
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-    healthcheck:
-      test: kafka-broker-api-versions --bootstrap-server localhost:9092
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.6.0
-    container_name: pbp-schema-registry
-    restart: unless-stopped
-    depends_on:
-      kafka:
-        condition: service_healthy
-    ports:
-      - "8081:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
-  kafka-init:
-    image: confluentinc/cp-kafka:7.6.0
-    container_name: pbp-kafka-init
-    depends_on:
-      kafka:
-        condition: service_healthy
-    volumes:
-      - ./kafka/create-topics.sh:/create-topics.sh
-    entrypoint: ["/bin/bash", "/create-topics.sh"]
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-
   postgres:
     image: postgres:16
     container_name: pbp-postgres
@@ -119,24 +43,6 @@ services:
       timeout: 3s
       retries: 5
 
-  minio:
-    image: minio/minio
-    container_name: pbp-minio
-    restart: unless-stopped
-    ports:
-      - "9002:9000"
-      - "9003:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-    command: server /data --console-address ":9001"
-    volumes:
-      - minio-data:/data
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
   # --- Application Services ---
 
   ingestion:
@@ -144,36 +50,16 @@ services:
     container_name: pbp-ingestion
     restart: unless-stopped
     depends_on:
-      kafka:
-        condition: service_healthy
       postgres:
         condition: service_healthy
     env_file: .env
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      DATABASE_URL: postgresql://${POSTGRES_USER:-playbyplay}:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/${POSTGRES_DB:-playbyplay}
       ESPN_POLL_INTERVAL_SECONDS: ${ESPN_POLL_INTERVAL_SECONDS:-5}
-    volumes:
-      - ./schemas:/schemas:ro
     deploy:
       resources:
         limits:
           memory: 512M
-
-  stream-processor:
-    build: ./stream-processor
-    container_name: pbp-stream-processor
-    restart: unless-stopped
-    depends_on:
-      kafka:
-        condition: service_healthy
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SCHEMA_REGISTRY_URL: http://schema-registry:8081
-    deploy:
-      resources:
-        limits:
-          memory: 1G
 
   api:
     build: ./api
@@ -186,37 +72,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-playbyplay}:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/${POSTGRES_DB:-playbyplay}
       REDIS_URL: redis://redis:6379/0
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SCHEMA_REGISTRY_URL: http://schema-registry:8081
-    volumes:
-      - ./schemas:/schemas:ro
     deploy:
       resources:
         limits:
           memory: 512M
 
   # --- Exporters ---
-
-  kafka-exporter:
-    image: danielqsj/kafka-exporter:latest
-    container_name: pbp-kafka-exporter
-    restart: unless-stopped
-    depends_on:
-      kafka:
-        condition: service_healthy
-    command: --kafka.server=kafka:9092
-    ports:
-      - "9308:9308"
-    deploy:
-      resources:
-        limits:
-          memory: 128M
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
@@ -284,11 +149,7 @@ services:
           memory: 256M
 
 volumes:
-  zookeeper-data:
-  zookeeper-logs:
-  kafka-data:
   postgres-data:
   redis-data:
-  minio-data:
   prometheus-data:
   grafana-data:

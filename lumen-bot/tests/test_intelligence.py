@@ -3,6 +3,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from game_context import AlertType, BoxScoreContext, GameState, PickContext, PlayerSnapshot
@@ -323,3 +325,163 @@ class TestAlertRouter:
         pick = _pick()
         msg = generate_alert_message(AlertType.DROUGHT, game, pick)
         assert msg is not None
+
+    def test_quarter_summary_route(self):
+        game = _game(status="live", quarter=3, clock="0:00")
+        game.prev_quarter = 2
+        pick = _pick()
+        game.picks[1] = pick
+        msg = generate_alert_message(AlertType.QUARTER_SUMMARY, game, None)
+        assert msg is not None
+        assert "End of Q2" in msg
+
+    def test_quarter_summary_not_routed_without_prev_quarter(self):
+        game = _game(status="live", quarter=1, clock="0:00")
+        game.prev_quarter = 0
+        msg = generate_alert_message(AlertType.QUARTER_SUMMARY, game, None)
+        assert msg is None
+
+    def test_garbage_time_route(self):
+        game = _game(hs=120, as_=80, status="live", quarter=4, clock="2:00")
+        pick = _pick()
+        msg = generate_alert_message(AlertType.GARBAGE_TIME, game, pick)
+        assert msg is not None
+        assert "GARBAGE TIME" in msg
+
+    def test_pace_concern_route(self):
+        game = _game(status="live", quarter=3, clock="0:00")
+        pick = _pick(actual=5.0, pace=10.0)  # far behind a 26.5 OVER line
+        msg = generate_alert_message(AlertType.PACE_CONCERN, game, pick)
+        assert msg is not None
+
+    def test_line_cleared_early_route(self):
+        game = _game(status="live", quarter=2, clock="6:00")
+        pick = _pick(actual=30.0)  # already past line=26.5
+        msg = generate_alert_message(AlertType.LINE_CLEARED_EARLY, game, pick)
+        assert msg is not None
+
+    def test_exception_inside_generator_is_swallowed(self):
+        # game=None makes _score_line(game) raise AttributeError inside the
+        # try block — generate_alert_message must catch it and return None.
+        assert generate_alert_message(AlertType.HALFTIME_REPORT, None) is None
+
+
+class TestQuarterLabelOvertime:
+    def test_second_overtime(self):
+        from intelligence import _quarter_label
+
+        assert _quarter_label(6) == "OT2"
+
+
+class TestOrdinal:
+    @pytest.mark.parametrize(
+        ("n", "expected"),
+        [
+            (1, "1st"),
+            (2, "2nd"),
+            (3, "3rd"),
+            (4, "4th"),
+            (11, "11th"),
+            (12, "12th"),
+            (13, "13th"),
+            (21, "21st"),
+        ],
+    )
+    def test_ordinal(self, n, expected):
+        from intelligence import _ordinal
+
+        assert _ordinal(n) == expected
+
+
+class TestScoreLineFinal:
+    def test_final_status(self):
+        from intelligence import _score_line
+
+        game = _game(status="final", hs=110, as_=100)
+        assert "Final" in _score_line(game)
+
+
+class TestHalftimeReportPaceNarratives:
+    """Covers every pace-narrative branch in generate_halftime_report for
+    both OVER and UNDER picks."""
+
+    @pytest.mark.parametrize(
+        ("actual", "pace", "expected_fragment"),
+        [
+            (20.0, 32.0, "cruising"),  # OVER, diff=5.5>5
+            (20.0, 28.0, "on track"),  # diff=1.5, 0<1.5<=5
+            (20.0, 25.0, "tight"),  # diff=-1.5, >-3
+            (20.0, 20.0, "needs a big second half"),  # diff=-6.5, <=-3
+        ],
+    )
+    def test_over_narratives(self, actual, pace, expected_fragment):
+        from intelligence import generate_halftime_report
+
+        game = _game()
+        pick = _pick(prediction="OVER", line=26.5, actual=actual, pace=pace)
+        game.picks[1] = pick
+        report = generate_halftime_report(game)
+        assert expected_fragment in report
+
+    @pytest.mark.parametrize(
+        ("actual", "pace", "expected_fragment"),
+        [
+            (10.0, 15.0, "well under"),  # UNDER line=26.5, diff=11.5>5
+            (10.0, 22.0, "looking safe"),  # diff=4.5, 0<4.5<=5
+            (10.0, 30.0, "trending over the line"),  # diff=-3.5<=0
+        ],
+    )
+    def test_under_narratives(self, actual, pace, expected_fragment):
+        from intelligence import generate_halftime_report
+
+        game = _game()
+        pick = _pick(prediction="UNDER", line=26.5, actual=actual, pace=pace)
+        game.picks[1] = pick
+        report = generate_halftime_report(game)
+        assert expected_fragment in report
+
+    def test_no_pace_uses_limited_data_narrative(self):
+        from intelligence import generate_halftime_report
+
+        game = _game()
+        pick = _pick(pace=None)
+        game.picks[1] = pick
+        report = generate_halftime_report(game)
+        assert "limited data" in report
+
+    def test_box_score_and_season_avg_context_shown(self):
+        from intelligence import generate_halftime_report
+
+        game = _game()
+        pick = _pick()
+        pick.box_score = BoxScoreContext(minutes=18.0, fg_made=7, fg_attempted=10, fouls=3)
+        pick.season_avg = 27.4
+        game.picks[1] = pick
+        report = generate_halftime_report(game)
+        assert "18 min" in report
+        assert "7/10 FG" in report
+        assert "3 fouls" in report
+        assert "avg 27.4" in report
+
+
+class TestQuarterSummaryEmptyPicks:
+    def test_all_resolved_returns_empty_string(self):
+        from intelligence import generate_quarter_summary
+
+        game = _game(status="live", quarter=2)
+        pick = _pick()
+        pick.is_hit = True
+        game.picks[1] = pick
+        assert generate_quarter_summary(game, 1) == ""
+
+
+class TestGenerateGarbageTime:
+    def test_message_contents(self):
+        from intelligence import generate_garbage_time
+
+        game = _game(hs=120, as_=80, status="live", quarter=4, clock="2:00")
+        pick = _pick(actual=18.0)
+        msg = generate_garbage_time(game, pick)
+        assert "GARBAGE TIME" in msg
+        assert "18" in msg
+        assert str(game.abs_diff) in msg

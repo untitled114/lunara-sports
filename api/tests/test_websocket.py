@@ -81,6 +81,26 @@ async def test_manager_broadcast_removes_dead():
 
 
 @pytest.mark.asyncio
+async def test_manager_broadcast_removes_socket_that_raises_on_send():
+    """A CONNECTED socket whose send_text() itself raises (not merely
+    disconnected) is caught and removed too (lines 62-63), and when it was
+    the only connection, the game_id entry is fully popped (line 70)."""
+    mgr = ConnectionManager()
+    ws_raises = AsyncMock()
+
+    from starlette.websockets import WebSocketState
+
+    ws_raises.client_state = WebSocketState.CONNECTED
+    ws_raises.send_text = AsyncMock(side_effect=RuntimeError("connection closed"))
+
+    await mgr.connect(ws_raises, "game1")
+    await mgr.broadcast("game1", {"type": "ping"})
+
+    assert mgr.connection_count("game1") == 0
+    assert "game1" not in mgr.active_games()
+
+
+@pytest.mark.asyncio
 async def test_manager_broadcast_no_subscribers():
     mgr = ConnectionManager()
     # Should not raise
@@ -94,6 +114,25 @@ async def test_manager_disconnect_idempotent():
     # Disconnect without ever connecting — should not raise
     await mgr.disconnect(ws, "game1")
     assert mgr.connection_count() == 0
+
+
+@pytest.mark.asyncio
+async def test_manager_disconnect_one_of_two_keeps_the_other():
+    """Disconnecting one of two sockets on the same game leaves `conns`
+    non-empty — the `if not conns: del ...` cleanup (line 42) is skipped,
+    and the game_id entry itself survives with the other socket still in
+    it."""
+    mgr = ConnectionManager()
+    ws1, ws2 = AsyncMock(), AsyncMock()
+
+    await mgr.connect(ws1, "game1")
+    await mgr.connect(ws2, "game1")
+    assert mgr.connection_count("game1") == 2
+
+    await mgr.disconnect(ws1, "game1")
+
+    assert mgr.connection_count("game1") == 1
+    assert "game1" in mgr.active_games()
 
 
 # ── REST publish endpoint ───────────────────────────────────────────────

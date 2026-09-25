@@ -5,7 +5,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import get_session
-from ..kafka.producer import get_producer
 from ..models.schemas import PredictionCreate, PredictionResponse
 from ..services.prediction_service import (
     create_prediction,
@@ -35,21 +34,6 @@ async def submit_prediction(
             status_code=409,
             detail="Prediction already exists for this user/game/type",
         ) from exc
-
-    # Publish to Kafka for downstream processing
-    producer = get_producer()
-    if producer is not None:
-        producer.produce(
-            "user.predictions",
-            f"{x_user_id}:{prediction.game_id}",
-            {
-                "prediction_id": str(result.id),
-                "user_id": x_user_id,
-                "game_id": prediction.game_id,
-                "prediction_type": prediction.prediction_type,
-                "prediction_value": prediction.prediction_value,
-            },
-        )
 
     return PredictionResponse.from_orm_prediction(result)
 

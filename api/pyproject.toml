@@ -2,14 +2,13 @@
 name = "playbyplay-api"
 version = "0.1.0"
 description = "FastAPI service for the Play-by-Play real-time sports app"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg>=0.30",
     "redis>=5.2",
-    "confluent-kafka[avro]>=2.6",
     "pydantic>=2.10",
     "pydantic-settings>=2.7",
     "structlog>=24.4",
@@ -18,7 +17,6 @@ dependencies = [
     "pyjwt>=2.8",
     "bcrypt>=4.0",
     "email-validator>=2.0",
-    "google-cloud-storage>=2.16",
     "pyarrow>=15.0",
 ]
 
@@ -35,6 +33,13 @@ dev = [
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Explicit (not `find`): setuptools' automatic src-layout heuristic fires whenever a
+# top-level `src/` dir exists, even with `find` scoped to it, and ends up installing
+# src/'s children a SECOND time as flat top-level packages (db, ws, models, ...) on
+# top of the correctly-nested `src.*` ones. An explicit list sidesteps that heuristic.
+packages = ["src", "src.db", "src.models", "src.routers", "src.services", "src.ws"]
 
 [tool.ruff]
 target-version = "py310"
@@ -68,3 +73,13 @@ ignore = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+concurrency = ["greenlet", "thread"]
+
+[tool.coverage.report]
+fail_under = 99.1
+show_missing = true
+skip_covered = true

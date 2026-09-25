@@ -15,9 +15,7 @@ from starlette.responses import Response
 from .config import Settings
 from .db.redis import close_redis, get_cached_game_list, init_redis, redis_ping
 from .db.session import close_db, create_tables, db_ping, init_db, seed_teams
-from .db.sport_suite import close_sport_suite, init_sport_suite
-from .kafka.consumer import KafkaConsumerLoop
-from .kafka.producer import close_producer, init_producer
+from .eastern import eastern_today
 from .metrics import instrumentator
 from .models.schemas import HealthResponse
 from .routers import (
@@ -57,20 +55,8 @@ async def lifespan(app: FastAPI):
     await seed_teams()
     await init_redis(settings)
     init_espn_client()
-    await init_sport_suite(settings)
     await populate_team_logos()
-    if settings.kafka_bootstrap_servers:
-        init_producer(settings)
     logger.info("api.started", host=settings.api_host, port=settings.api_port)
-
-    # Start background Kafka consumer (writes to DB) — skip if no broker configured
-    kafka_consumer = None
-    consumer_task = None
-    if settings.kafka_bootstrap_servers:
-        kafka_consumer = KafkaConsumerLoop(settings)
-        consumer_task = asyncio.create_task(kafka_consumer.run())
-    else:
-        logger.warning("kafka.skipped", reason="KAFKA_BOOTSTRAP_SERVERS not set")
 
     # Start background play poller (broadcasts to WebSocket clients)
     poller_task = asyncio.create_task(run_play_poller())
@@ -84,24 +70,17 @@ async def lifespan(app: FastAPI):
     # Start pick tracker poller (updates live stats for pending picks)
     pick_tracker_task = asyncio.create_task(run_pick_tracker_poller(settings))
 
-    # Start nightly OLAP exporter (Parquet → GCS for V4 retraining)
+    # Start nightly OLAP exporter (Parquet → local directory for V4 retraining)
     olap_task = asyncio.create_task(run_olap_poller(settings))
 
     yield
 
     # Shutdown
-    if kafka_consumer:
-        kafka_consumer.stop()
     poller_task.cancel()
     scoreboard_task.cancel()
     pick_sync_task.cancel()
     pick_tracker_task.cancel()
     olap_task.cancel()
-    if consumer_task:
-        try:
-            await consumer_task
-        except Exception:
-            pass
     try:
         await poller_task
     except asyncio.CancelledError:
@@ -118,9 +97,7 @@ async def lifespan(app: FastAPI):
         await pick_tracker_task
     except asyncio.CancelledError:
         pass
-    close_producer()
     await close_espn_client()
-    await close_sport_suite()
     await close_redis()
     await close_db()
     logger.info("api.stopped")
@@ -212,11 +189,7 @@ async def scoreboard_ws(websocket: WebSocket):
     await manager.connect(websocket, "scoreboard")
     try:
         # Send current cached game list immediately
-        from datetime import datetime, timedelta, timezone
-
-        utc_now = datetime.now(timezone.utc)
-        et_now = utc_now - timedelta(hours=5)
-        today_str = et_now.date().isoformat()
+        today_str = eastern_today().isoformat()
         cached = await get_cached_game_list(today_str)
         if cached:
             await websocket.send_text(

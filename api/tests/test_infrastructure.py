@@ -1,4 +1,4 @@
-"""Tests for infrastructure — db session, redis, sport_suite, config, schemas."""
+"""Tests for infrastructure — db session, redis, config, schemas."""
 
 from __future__ import annotations
 
@@ -20,13 +20,6 @@ from src.db.redis import (
     redis_ping,
 )
 from src.db.session import close_db, db_ping, get_session, get_session_factory
-from src.db.sport_suite import (
-    close_sport_suite,
-    get_games_pool,
-    get_players_pool,
-    get_teams_pool,
-    init_sport_suite,
-)
 
 # ── Config ────────────────────────────────────────────────────────────
 
@@ -191,58 +184,3 @@ class TestDbSession:
         finally:
             session_mod._engine = old_engine
             session_mod._session_factory = old_factory
-
-
-# ── Sport-Suite Pools ─────────────────────────────────────────────────
-
-
-class TestSportSuite:
-    def test_get_pools_none_by_default(self):
-        import src.db.sport_suite as ss_mod
-
-        old_p, old_g, old_t = ss_mod._players_pool, ss_mod._games_pool, ss_mod._teams_pool
-        ss_mod._players_pool = None
-        ss_mod._games_pool = None
-        ss_mod._teams_pool = None
-        try:
-            assert get_players_pool() is None
-            assert get_games_pool() is None
-            assert get_teams_pool() is None
-        finally:
-            ss_mod._players_pool = old_p
-            ss_mod._games_pool = old_g
-            ss_mod._teams_pool = old_t
-
-    @pytest.mark.asyncio
-    async def test_init_skips_without_credentials(self):
-        settings = MagicMock()
-        settings.sport_suite_db_user = ""
-        settings.sport_suite_db_password = ""
-        settings.sport_suite_db_host = "localhost"
-        await init_sport_suite(settings)
-        assert get_players_pool() is None
-
-    @pytest.mark.asyncio
-    async def test_close_sport_suite(self):
-        import src.db.sport_suite as ss_mod
-
-        mock_pool = AsyncMock()
-        ss_mod._players_pool = mock_pool
-        ss_mod._games_pool = mock_pool
-        ss_mod._teams_pool = mock_pool
-        await close_sport_suite()
-        assert ss_mod._players_pool is None
-        assert ss_mod._games_pool is None
-        assert ss_mod._teams_pool is None
-
-    @pytest.mark.asyncio
-    async def test_init_handles_connection_failure(self):
-        settings = MagicMock()
-        settings.sport_suite_db_user = "user"
-        settings.sport_suite_db_password = "pass"
-        settings.sport_suite_db_host = "localhost"
-        with patch("src.db.sport_suite.asyncpg") as mock_asyncpg:
-            mock_asyncpg.create_pool = AsyncMock(side_effect=Exception("connection refused"))
-            await init_sport_suite(settings)
-            # Should not raise, just log warnings
-            assert get_players_pool() is None

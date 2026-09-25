@@ -105,6 +105,26 @@ class TestParseConference:
         teams = _parse_conference(conf)
         assert teams[0].pct == ".000"
 
+    def test_record_breakdowns_populated(self):
+        """conf/home/road/l10 record fields are each extracted from their
+        matching stats entry (lines 69, 71, 73, 75)."""
+        entry = {
+            "team": {"id": "1", "displayName": "Team", "abbreviation": "TST"},
+            "stats": [
+                {"name": "wins", "displayValue": "50"},
+                {"name": "losses", "displayValue": "10"},
+                {"name": "vsConf", "displayValue": "30-5"},
+                {"name": "Home", "displayValue": "28-2"},
+                {"name": "Road", "displayValue": "22-8"},
+                {"name": "last10", "displayValue": "8-2"},
+            ],
+        }
+        teams = _parse_conference({"standings": {"entries": [entry]}})
+        assert teams[0].conf == "30-5"
+        assert teams[0].home == "28-2"
+        assert teams[0].road == "22-8"
+        assert teams[0].l10 == "8-2"
+
     def test_gb_zero_becomes_dash(self):
         entry = {
             "team": {"id": "1", "displayName": "Team", "abbreviation": "TST"},
@@ -170,6 +190,39 @@ class TestGetStandings:
             assert result.eastern[0].name == "Boston Celtics"
             assert result.western[0].name == "Los Angeles Lakers"
             assert result.season == "2025-26"
+
+    async def test_ignores_non_conference_groups(self):
+        """A children[] entry whose name matches neither "east" nor "west"
+        (e.g. an "Overall" or "Playoffs" group) is skipped (line 121->117)."""
+        mock_data = {
+            "children": [
+                {"name": "Overall Standings", "standings": {"entries": []}},
+                {
+                    "name": "Eastern Conference",
+                    "standings": {
+                        "entries": [
+                            {
+                                "team": {
+                                    "id": "2",
+                                    "displayName": "Boston Celtics",
+                                    "abbreviation": "BOS",
+                                },
+                                "stats": [
+                                    {"name": "wins", "displayValue": "40"},
+                                    {"name": "losses", "displayValue": "10"},
+                                ],
+                            }
+                        ]
+                    },
+                },
+            ],
+            "seasons": [{"displayName": "2025-26"}],
+        }
+        with patch("src.services.standings_service.espn_client") as mock_espn:
+            mock_espn.get_standings = AsyncMock(return_value=mock_data)
+            result = await get_standings()
+            assert len(result.eastern) == 1
+            assert result.western == []
 
     async def test_empty_on_no_data(self):
         with patch("src.services.standings_service.espn_client") as mock_espn:

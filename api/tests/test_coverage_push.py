@@ -17,16 +17,21 @@ from src.services.reaction_service import delete_reaction, get_play_game_id
 class TestOlapPollerStartup:
     async def test_startup_catchup_and_loop(self):
         settings = MagicMock()
-        settings.gcs_olap_bucket = "test-bucket"
+        settings.olap_export_dir = "/tmp/test-export-dir"
 
         call_count = 0
 
-        async def mock_export(bucket, export_date):
+        async def mock_export(export_dir, export_date):
             nonlocal call_count
             call_count += 1
 
+        sleep_calls = 0
+
         async def mock_sleep(secs):
-            raise asyncio.CancelledError()
+            nonlocal sleep_calls
+            sleep_calls += 1
+            if sleep_calls >= 2:
+                raise asyncio.CancelledError()
 
         with (
             patch("src.services.olap_poller._export_date", side_effect=mock_export),
@@ -34,7 +39,8 @@ class TestOlapPollerStartup:
         ):
             with pytest.raises(asyncio.CancelledError):
                 await run_olap_poller(settings)
-            assert call_count == 2
+            # 2 startup catchup exports + 1 nightly-loop export after the first sleep
+            assert call_count == 3
 
 
 # ── reaction_service — cover create/delete (lines 23-33, 75-76) ─────

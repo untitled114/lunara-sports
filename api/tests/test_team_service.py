@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -85,6 +85,26 @@ class TestGetTeams:
         assert "Boston Celtics" in names
         assert "Los Angeles Lakers" in names
         assert "Miami Heat" in names
+
+    async def test_last_game_lookup_error_is_swallowed(self, team_session):
+        """A failure looking up a team's last game is caught and the team
+        still appears in the result with last_game left empty."""
+        original_execute = team_session.execute
+        call_count = 0
+
+        async def flaky_execute(stmt, *args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                # First call is the `select(Team)` query — let it through.
+                return await original_execute(stmt, *args, **kwargs)
+            raise RuntimeError("db unavailable")
+
+        with patch.object(team_session, "execute", side_effect=flaky_execute):
+            teams = await get_teams(team_session)
+
+        assert len(teams) == 3
+        assert all(t["last_game"] == "" for t in teams)
 
     async def test_home_team_win_last_game(self, team_session):
         """BOS won g1 at home 110-105 vs LAL. But g3 is later (LAL@MIA)
@@ -633,130 +653,8 @@ class TestGetTeamSchedule:
 
 @pytest.mark.asyncio
 class TestGetTeamStats:
-    async def test_returns_empty_without_pool(self):
-        """No Sport-Suite pool → empty list."""
-        with patch("src.services.team_service.get_players_pool", return_value=None):
-            result = await get_team_stats("BOS")
-            assert result == []
-
-    async def test_returns_empty_on_db_error(self):
-        """DB query raises exception → returns empty list (not crash)."""
-        mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(side_effect=Exception("connection refused"))
-
-        mock_ctx = AsyncMock()
-        mock_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_ctx.__aexit__ = AsyncMock(return_value=False)
-
-        mock_pool = AsyncMock()
-        mock_pool.acquire = MagicMock(return_value=mock_ctx)
-        with patch("src.services.team_service.get_players_pool", return_value=mock_pool):
-            result = await get_team_stats("BOS")
-            assert result == []
-
-    async def test_returns_stats_from_db(self):
-        """Successful DB query → returns TeamPlayerStats list."""
-        mock_rows = [
-            {
-                "full_name": "Jayson Tatum",
-                "gp": 50,
-                "mpg": 36.2,
-                "ppg": 27.1,
-                "rpg": 8.3,
-                "apg": 4.6,
-                "spg": 1.1,
-                "bpg": 0.6,
-                "fg_pct": 47.2,
-                "three_pct": 38.1,
-            },
-            {
-                "full_name": "Jaylen Brown",
-                "gp": 48,
-                "mpg": 34.5,
-                "ppg": 23.8,
-                "rpg": 5.9,
-                "apg": 3.4,
-                "spg": 1.2,
-                "bpg": 0.5,
-                "fg_pct": 49.1,
-                "three_pct": 35.6,
-            },
-        ]
-
-        mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(return_value=mock_rows)
-
-        mock_ctx = AsyncMock()
-        mock_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_ctx.__aexit__ = AsyncMock(return_value=False)
-
-        mock_pool = AsyncMock()
-        mock_pool.acquire = MagicMock(return_value=mock_ctx)
-
-        with patch("src.services.team_service.get_players_pool", return_value=mock_pool):
-            result = await get_team_stats("BOS")
-
-            assert len(result) == 2
-            assert result[0].player == "Jayson Tatum"
-            assert result[0].gp == 50
-            assert result[0].mpg == 36.2
-            assert result[0].ppg == 27.1
-            assert result[0].rpg == 8.3
-            assert result[0].apg == 4.6
-            assert result[0].spg == 1.1
-            assert result[0].bpg == 0.6
-            assert result[0].fg_pct == "47.2%"
-            assert result[0].three_pct == "38.1%"
-
-            assert result[1].player == "Jaylen Brown"
-
-    async def test_maps_pbp_to_sport_suite_abbrev(self):
-        """GS → GSW mapping for Sport-Suite query."""
-        mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(return_value=[])
-
-        mock_ctx = AsyncMock()
-        mock_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_ctx.__aexit__ = AsyncMock(return_value=False)
-
-        mock_pool = AsyncMock()
-        mock_pool.acquire = MagicMock(return_value=mock_ctx)
-
-        with patch("src.services.team_service.get_players_pool", return_value=mock_pool):
-            await get_team_stats("GS")
-            # The query should be called with "GSW" (Sport-Suite abbreviation)
-            call_args = mock_conn.fetch.call_args
-            assert call_args[0][1] == "GSW"
-
-    async def test_unmapped_abbrev_passes_through(self):
-        """BOS has no PBP→SS mapping, passes through unchanged."""
-        mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(return_value=[])
-
-        mock_ctx = AsyncMock()
-        mock_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_ctx.__aexit__ = AsyncMock(return_value=False)
-
-        mock_pool = AsyncMock()
-        mock_pool.acquire = MagicMock(return_value=mock_ctx)
-
-        with patch("src.services.team_service.get_players_pool", return_value=mock_pool):
-            await get_team_stats("BOS")
-            call_args = mock_conn.fetch.call_args
-            assert call_args[0][1] == "BOS"
-
-    async def test_returns_empty_list_from_empty_query(self):
-        """DB returns no rows → empty list."""
-        mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(return_value=[])
-
-        mock_ctx = AsyncMock()
-        mock_ctx.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_ctx.__aexit__ = AsyncMock(return_value=False)
-
-        mock_pool = AsyncMock()
-        mock_pool.acquire = MagicMock(return_value=mock_ctx)
-
-        with patch("src.services.team_service.get_players_pool", return_value=mock_pool):
-            result = await get_team_stats("BOS")
-            assert result == []
+    async def test_always_empty(self):
+        """No data source since the Sport-suite DB pools were retired
+        (owner-approved); always returns empty."""
+        result = await get_team_stats("BOS")
+        assert result == []

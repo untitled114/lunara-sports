@@ -167,6 +167,86 @@ class TestUpdatePicksForGame:
             updates = await _update_picks_for_game(mock_session, "g1", "final", [pick])
             assert updates[0]["is_hit"] is True
 
+    async def test_boxscore_missing_home_still_checks_away(self):
+        """boxscore.home is None: the home-extend is skipped (100->102)
+        but away players are still collected and matched.
+
+        get_boxscore() itself never returns a BoxScoreResponse with a None
+        team (Pydantic requires both), so this uses a duck-typed
+        SimpleNamespace to exercise the defensive check directly.
+        """
+        boxscore = SimpleNamespace(
+            home=None,
+            away=BoxScoreTeam(
+                team="LAL",
+                abbrev="LAL",
+                players=[_make_boxscore_player("LeBron James", points=28)],
+                totals={},
+            ),
+        )
+        pick = _make_pick("LeBron James", "POINTS", 24.5)
+        mock_session = AsyncMock()
+
+        with patch(
+            "src.services.pick_tracker_poller.get_boxscore",
+            new_callable=AsyncMock,
+            return_value=boxscore,
+        ):
+            updates = await _update_picks_for_game(mock_session, "g1", "live", [pick])
+        assert len(updates) == 1
+        assert updates[0]["actual_value"] == 28.0
+
+    async def test_boxscore_missing_away_only_home_players(self):
+        """boxscore.away is None: the away-extend is skipped (102->105).
+
+        Same rationale as above — SimpleNamespace bypasses BoxScoreResponse's
+        required-field validation to exercise this defensive branch.
+        """
+        boxscore = SimpleNamespace(
+            home=BoxScoreTeam(
+                team="BOS",
+                abbrev="BOS",
+                players=[_make_boxscore_player("Jayson Tatum", points=30)],
+                totals={},
+            ),
+            away=None,
+        )
+        pick = _make_pick("Jayson Tatum", "POINTS", 24.5)
+        mock_session = AsyncMock()
+
+        with patch(
+            "src.services.pick_tracker_poller.get_boxscore",
+            new_callable=AsyncMock,
+            return_value=boxscore,
+        ):
+            updates = await _update_picks_for_game(mock_session, "g1", "live", [pick])
+        assert len(updates) == 1
+        assert updates[0]["actual_value"] == 30.0
+
+    async def test_unknown_market_stat_value_none_skips_pick(self):
+        """A pick whose market has no stat mapping (_get_stat_value returns
+        None) is skipped without erroring (line 121)."""
+        boxscore = BoxScoreResponse(
+            game_id="g1",
+            home=BoxScoreTeam(
+                team="BOS",
+                abbrev="BOS",
+                players=[_make_boxscore_player("Jayson Tatum", points=30)],
+                totals={},
+            ),
+            away=BoxScoreTeam(team="LAL", abbrev="LAL", players=[], totals={}),
+        )
+        pick = _make_pick("Jayson Tatum", "TURNOVERS", 2.5)  # not in MARKET_STAT_MAP
+        mock_session = AsyncMock()
+
+        with patch(
+            "src.services.pick_tracker_poller.get_boxscore",
+            new_callable=AsyncMock,
+            return_value=boxscore,
+        ):
+            updates = await _update_picks_for_game(mock_session, "g1", "live", [pick])
+        assert updates == []
+
     async def test_no_boxscore_returns_empty(self):
         mock_session = AsyncMock()
         pick = _make_pick("Player", "POINTS", 20)

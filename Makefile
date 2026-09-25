@@ -1,16 +1,13 @@
 COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: infra up down logs db-migrate db-reset topics topics-list \
+.PHONY: infra up down logs db-migrate db-reset \
        dev-ingestion dev-api dev-frontend test lint build deploy \
        test-infra test-infra-down test-integration
 
 # --- Infrastructure ---
 
-infra: ## Start infrastructure only (kafka, pg, redis, minio, monitoring)
-	$(COMPOSE) up -d zookeeper kafka schema-registry kafka-init \
-		postgres redis minio \
-		kafka-exporter postgres-exporter redis-exporter \
-		prometheus grafana
+infra: ## Start infrastructure only (pg, redis, monitoring)
+	$(COMPOSE) up -d postgres redis postgres-exporter redis-exporter prometheus grafana
 
 up: ## Start all services
 	$(COMPOSE) up -d
@@ -43,15 +40,6 @@ db-reset: ## Drop and recreate database
 		-c "CREATE DATABASE $${POSTGRES_DB:-playbyplay};"
 	@$(MAKE) db-migrate
 
-# --- Kafka ---
-
-topics: ## Create Kafka topics
-	$(COMPOSE) exec kafka bash /create-topics.sh || \
-		$(COMPOSE) run --rm kafka-init
-
-topics-list: ## List existing topics
-	$(COMPOSE) exec kafka kafka-topics --bootstrap-server localhost:9092 --list
-
 # --- Local Development ---
 
 dev-ingestion: ## Run ingestion locally (outside Docker)
@@ -68,16 +56,9 @@ dev-frontend: ## Run frontend dev server
 test: ## Run all tests
 	cd ingestion && pytest tests/ -v
 	cd api && pytest tests/ -v
-	cd frontend && npm test
-	cd stream-processor && ./gradlew test
 
-test-infra: ## Start test infrastructure (kafka, schema-registry, postgres, redis)
-	$(COMPOSE) up -d zookeeper kafka schema-registry kafka-init postgres redis
-	@echo "Waiting for Kafka to be ready..."
-	@for i in $$(seq 1 30); do \
-		$(COMPOSE) exec -T kafka kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1 && break; \
-		sleep 1; \
-	done
+test-infra: ## Start test infrastructure (postgres, redis)
+	$(COMPOSE) up -d postgres redis
 	@echo "Test infrastructure ready."
 
 test-infra-down: ## Tear down test infrastructure
@@ -85,14 +66,12 @@ test-infra-down: ## Tear down test infrastructure
 
 test-integration: test-infra ## Run integration tests (starts infra, runs tests, tears down)
 	@echo "Running integration tests..."
-	cd tests && python3 -m pytest integration/ -v --timeout=60 || ($(MAKE) test-infra-down && exit 1)
+	python3 -m pytest tests/integration -q || ($(MAKE) test-infra-down && exit 1)
 	@$(MAKE) test-infra-down
 
 lint: ## Run linters
 	cd ingestion && ruff check src/ tests/
 	cd api && ruff check src/ tests/
-	cd frontend && npm run lint
-	cd stream-processor && ./gradlew checkstyleMain
 
 # --- Build ---
 
@@ -101,15 +80,11 @@ build: ## Build all Docker images
 
 # --- Deployment ---
 
-deploy: ## Deploy to production server
-	@echo "Deploying to production server..."
-	rsync -avz --exclude='.git' --exclude='node_modules' --exclude='__pycache__' \
-		--exclude='.gradle' --exclude='build' --exclude='.next' \
-		. $${DEPLOY_HOST}:$${DEPLOY_PATH:-/opt/play-by-play}/
-	ssh $${DEPLOY_HOST} "cd $${DEPLOY_PATH:-/opt/play-by-play} && docker-compose up -d --build"
+deploy: ## Deploy to OCI sport-suite-main (see deploy/oci/README.md)
+	bash deploy/oci/deploy.sh
 
-deploy-logs: ## Tail production logs
-	ssh $${DEPLOY_HOST} "cd $${DEPLOY_PATH:-/opt/play-by-play} && docker-compose logs -f --tail=100"
+deploy-logs: ## Tail production logs (OCI sport-suite-main, via the ss-admin SSH alias)
+	ssh ss-admin 'sudo journalctl -u lunara-api -u lunara-ingestion -u cephalon-lumen -n 100 -f'
 
 # --- Help ---
 

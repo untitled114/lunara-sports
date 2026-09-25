@@ -7,12 +7,13 @@ and triggers sync if not.
 from __future__ import annotations
 
 import asyncio
-from datetime import date, datetime
+from datetime import date
 
 import structlog
 
 from ..config import Settings
 from ..db.session import get_session_factory
+from ..eastern import eastern_today
 from .pick_sync_service import sync_picks
 
 logger = structlog.get_logger(__name__)
@@ -22,9 +23,7 @@ POLL_INTERVAL = 300  # 5 minutes
 
 def _eastern_today() -> date:
     """Return today's date in US Eastern time (handles EST/EDT)."""
-    from zoneinfo import ZoneInfo
-
-    return datetime.now(ZoneInfo("America/New_York")).date()
+    return eastern_today()
 
 
 async def run_pick_sync_poller(settings: Settings) -> None:
