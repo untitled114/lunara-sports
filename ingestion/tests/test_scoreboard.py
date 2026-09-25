@@ -83,6 +83,9 @@ class TestParseCompetitor:
         assert result["score"] == 55
 
     def test_away_team(self):
+        # NY (not the ESPN long-form "NYK") — this test is about home/away
+        # selection, not abbreviation normalization; see
+        # test_normalizes_espn_long_form_abbreviations below for that.
         competitors = [
             {
                 "homeAway": "home",
@@ -92,12 +95,22 @@ class TestParseCompetitor:
             {
                 "homeAway": "away",
                 "score": "48",
-                "team": {"abbreviation": "NYK", "displayName": "New York Knicks"},
+                "team": {"abbreviation": "NY", "displayName": "New York Knicks"},
             },
         ]
         result = _parse_competitor(competitors, "away")
-        assert result["abbrev"] == "NYK"
+        assert result["abbrev"] == "NY"
         assert result["score"] == 48
+
+    def test_normalizes_espn_long_form_abbreviations(self):
+        """ESPN's raw abbreviations get normalized to the canonical (games) form —
+        UTAH is the live bug; the others are the shared table's other entries."""
+        competitors = [
+            {"homeAway": "home", "score": "0", "team": {"abbreviation": "UTAH"}},
+            {"homeAway": "away", "score": "0", "team": {"abbreviation": "GSW"}},
+        ]
+        assert _parse_competitor(competitors, "home")["abbrev"] == "UTA"
+        assert _parse_competitor(competitors, "away")["abbrev"] == "GS"
 
     def test_missing_team_returns_defaults(self):
         result = _parse_competitor([], "home")
@@ -124,6 +137,16 @@ class TestParseGame:
         assert result.clock == "5:42"
         assert result.venue == "TD Garden"
         assert result.polled_at == polled
+
+    def test_produces_canonical_utah_abbreviation(self):
+        """The scoreboard collector must produce 'UTA' (games' canonical form),
+        never ESPN's raw 'UTAH' — this is the live UTAH/UTA consistency bug."""
+        polled = datetime(2026, 2, 17, 1, 0, 0, tzinfo=timezone.utc)
+        event = _make_espn_event(home_abbrev="UTAH")
+        result = _parse_game(event, polled)
+
+        assert result is not None
+        assert result.home_team == "UTA"
 
     def test_scheduled_game(self):
         polled = datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc)
