@@ -89,6 +89,38 @@ describe('ui', () => {
     expect(screen.getByRole('columnheader', { name: 'W' })).toBeInTheDocument()
     expect(screen.getByText('60')).toHaveClass('tnum')
   })
+  it('DataTable is unsorted by default: no button, no aria-sort, when sortable is absent', () => {
+    render(<DataTable columns={[{ key: 'w', label: 'W', numeric: true }]} rows={[{ w: 60 }]} getKey={(r) => r.w} />)
+    const header = screen.getByRole('columnheader', { name: 'W' })
+    expect(header).not.toHaveAttribute('aria-sort')
+    expect(screen.queryByRole('button', { name: 'W' })).not.toBeInTheDocument()
+  })
+  it('DataTable sortable columns render a button with aria-sort and report clicks via onSortChange', async () => {
+    const onSortChange = vi.fn()
+    const columns = [
+      { key: 'team', label: 'Team', sortable: true },
+      { key: 'w', label: 'W', numeric: true, sortable: true },
+    ]
+    const rows = [{ team: 'DET', w: 60 }, { team: 'BOS', w: 56 }]
+    const { rerender } = render(
+      <DataTable columns={columns} rows={rows} getKey={(r) => r.team} sort={{ key: 'w', dir: 'desc' }} onSortChange={onSortChange} />
+    )
+    const wHeader = screen.getByRole('columnheader', { name: 'W' })
+    expect(wHeader).toHaveAttribute('aria-sort', 'descending')
+    const wGlyph = screen.getByText('▼')
+    expect(wGlyph).toHaveAttribute('aria-hidden', 'true')
+
+    const teamHeader = screen.getByRole('columnheader', { name: 'Team' })
+    expect(teamHeader).toHaveAttribute('aria-sort', 'none')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Team' }))
+    expect(onSortChange).toHaveBeenCalledWith('team')
+
+    rerender(
+      <DataTable columns={columns} rows={rows} getKey={(r) => r.team} sort={{ key: 'w', dir: 'asc' }} onSortChange={onSortChange} />
+    )
+    expect(screen.getByText('▲')).toHaveAttribute('aria-hidden', 'true')
+  })
   it('TeamMark shows abbreviation and logo alt', () => {
     render(<TeamMark abbrev="MIA" logoUrl="https://x/mia.png" />)
     expect(screen.getByText('MIA')).toBeInTheDocument()

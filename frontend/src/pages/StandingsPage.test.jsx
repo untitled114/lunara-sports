@@ -193,7 +193,7 @@ describe('StandingsPage', () => {
     expect(screen.getByRole('link', { name: 'Stats' })).toHaveAttribute('href', '/stats')
   })
 
-  it('toggling to Division shows the 6 division headings and 5 rows each, with no play-in line', async () => {
+  it('toggling to Division shows the 6 division headings and 5 rows each; per-table dividers follow that division’s own seed mix', async () => {
     fetchStandings.mockResolvedValue(FIXTURE)
     renderPage()
 
@@ -207,7 +207,91 @@ describe('StandingsPage', () => {
       expect(within(container).getAllByRole('img').length).toBe(5)
     }
 
-    expect(screen.queryByText('Play-in line')).not.toBeInTheDocument()
+    // Computed from the real fixture's seeds per division (5/6 and 7/8 tiebreak swaps
+    // included): Atlantic, Southeast, Northwest and Pacific each hold a seed 1-6, a
+    // seed 7-10 and a seed 11-15 team, so both dividers show; Central and Southwest
+    // have no seed 7-10 team, so only the play-in (top-10/rest) line shows.
+    const both = ['atlantic', 'southeast', 'northwest', 'pacific']
+    const playInOnly = ['central', 'southwest']
+    for (const name of both) {
+      const container = screen.getByTestId(`division-${name}`)
+      expect(within(container).getByText('Playoff line')).toBeInTheDocument()
+      expect(within(container).getByText('Play-in line')).toBeInTheDocument()
+    }
+    for (const name of playInOnly) {
+      const container = screen.getByTestId(`division-${name}`)
+      expect(within(container).queryByText('Playoff line')).not.toBeInTheDocument()
+      expect(within(container).getByText('Play-in line')).toBeInTheDocument()
+    }
+
     expect(screen.queryByText('Eastern Conference')).not.toBeInTheDocument()
+  })
+
+  it('splits the play-in line by seed, not array order (real rows, seeds swapped at the 10/11 boundary)', async () => {
+    // Same real fixture rows (unmodified stats) — only the `seed` label is swapped
+    // between the rank-10 and rank-11 teams, mirroring the tiebreak swaps already
+    // present elsewhere in the live data (e.g. ranks 5/6, 7/8).
+    const swappedEastern = FIXTURE.eastern.map((t) => {
+      if (t.abbrev === 'MIA') return { ...t, seed: 11 } // was seed 10 / rank 10
+      if (t.abbrev === 'MIL') return { ...t, seed: 10 } // was seed 11 / rank 11
+      return t
+    })
+    fetchStandings.mockResolvedValue({ ...FIXTURE, eastern: swappedEastern })
+    renderPage()
+
+    await screen.findByText('Eastern Conference')
+    const eastern = screen.getByTestId('conference-eastern')
+    const text = eastern.textContent
+
+    expect(text.indexOf('Milwaukee Bucks')).toBeLessThan(text.indexOf('Play-in line'))
+    expect(text.indexOf('Play-in line')).toBeLessThan(text.indexOf('Miami Heat'))
+  })
+
+  it('sorting by a column header reorders the table (controlled DataTable sort, restored from the base)', async () => {
+    fetchStandings.mockResolvedValue(FIXTURE)
+    renderPage()
+
+    await screen.findByText('Eastern Conference')
+    const eastern = screen.getByTestId('conference-eastern')
+
+    const beforeText = eastern.textContent
+    expect(beforeText.indexOf('Detroit Pistons')).toBeLessThan(beforeText.indexOf('Washington Wizards'))
+
+    const [lButton] = within(eastern).getAllByRole('button', { name: 'L' })
+    await userEvent.click(lButton)
+
+    const afterText = eastern.textContent
+    expect(afterText.indexOf('Washington Wizards')).toBeLessThan(afterText.indexOf('Detroit Pistons'))
+    expect(within(eastern).getByRole('columnheader', { name: 'L' })).toHaveAttribute('aria-sort', 'descending')
+  })
+
+  it('shows a Key (Playoff/Play-in via Badge) and a Details glossary in plain words', async () => {
+    fetchStandings.mockResolvedValue(FIXTURE)
+    renderPage()
+
+    await screen.findByText('Eastern Conference')
+
+    expect(screen.getByText('Key')).toBeInTheDocument()
+    expect(screen.getByText('Details')).toBeInTheDocument()
+    expect(screen.getByText('Playoff')).toBeInTheDocument()
+    expect(screen.getAllByText('Play-in').length).toBeGreaterThan(0)
+    expect(screen.getByText(/clinch a playoff spot/)).toBeInTheDocument()
+    expect(screen.getByText(/play-in tournament/)).toBeInTheDocument()
+    expect(screen.getByText('Games behind the conference leader')).toBeInTheDocument()
+    expect(screen.getByText('Win percentage')).toBeInTheDocument()
+    expect(screen.getByText('Record in the last 10 games')).toBeInTheDocument()
+    expect(screen.getByText('Current win or loss streak')).toBeInTheDocument()
+  })
+
+  it('uses the em dash for every empty value, including GB for the conference leader', async () => {
+    fetchStandings.mockResolvedValue(FIXTURE)
+    renderPage()
+
+    await screen.findByText('Eastern Conference')
+    const eastern = screen.getByTestId('conference-eastern')
+
+    expect(within(eastern).queryByText('-')).not.toBeInTheDocument()
+    const detroitRow = within(eastern).getByText('Detroit Pistons').closest('tr')
+    expect(within(detroitRow).getByText('—')).toBeInTheDocument()
   })
 })
