@@ -16,6 +16,12 @@ import * as api from '@/services/api'
 import REAL_GAME from '@/test/fixtures/game-401811037.json'
 import REAL_BOX_DATA from '@/test/fixtures/boxscore-401811037.json'
 import REAL_PLAYS from '@/test/fixtures/plays-401811037.json'
+// Our own live API keeps no historical play-by-play for this game (see REAL_PLAYS above —
+// a real, verified `[]`) and no game is live right now, so two real plays came from ESPN's
+// summary endpoint instead, mapped to our shape the same way
+// ingestion/src/collectors/playbyplay.py's _parse_play does. Source URL and mapping notes
+// are recorded in the fixture file itself.
+import REAL_ESPN_PLAYS from '@/test/fixtures/plays-401811037-espn.json'
 
 // The mocked hook must return stable function references across re-renders —
 // GameDetailPage's data-loading effect depends on `setArenaTheme`, so a fresh
@@ -144,44 +150,51 @@ describe('GameDetailPage', () => {
 })
 
 describe('LiveFeed play card', () => {
-  // This API does not retain historical play-by-play for any completed game (checked
-  // 401811037 and 15+ other 2025-26 games — every /plays response is `[]`) and no game
-  // is live right now (/ws/stats reports 0 active games), so there is no real captured
-  // play to fetch. This single play's team and running score are anchored to the real
-  // game 401811037 (DEN home, OKC away, final 127-107); only the shot description text
-  // — which the API simply does not retain historically — is a minimal representative
-  // string needed to exercise the "made shot" render branch.
-  const REPRESENTATIVE_PLAY = {
-    id: 1,
-    game_id: '401811037',
-    sequence_number: 1,
-    quarter: 4,
-    clock: '0:00',
-    event_type: 'shot',
-    description: 'Julian Strawther makes two point shot',
-    team: 'DEN',
-    player_name: 'Julian Strawther',
-    home_score: 127,
-    away_score: 107,
-  }
+  // Real plays, verbatim from ESPN (see plays-401811037-espn.json for the source URL and
+  // field mapping). LiveFeed renders newest-first, so [1] (Strawther's assisted layup,
+  // sequence 30) is the top card and [0] (Wiggins' three, sequence 27) is second.
+  const [WIGGINS_THREE, STRAWTHER_LAYUP] = REAL_ESPN_PLAYS.plays
+  const PLAYS_NEWEST_FIRST = [STRAWTHER_LAYUP, WIGGINS_THREE]
 
-  it('shows the team logo and the score after the play', () => {
+  it('shows the team logo and the score after a real scoring play', () => {
     render(
       <LiveFeed
         gameId="401811037"
         status="final"
         homeTeam="DEN"
         awayTeam="OKC"
-        plays={[REPRESENTATIVE_PLAY]}
+        plays={PLAYS_NEWEST_FIRST}
         connected
         boxData={REAL_BOX_DATA}
       />
     )
-    // Team logo appears at least once on the play card (avatar fallback + name line).
+    // Team logo appears at least once on the play cards (avatar fallback + name line, for
+    // both the OKC and DEN plays).
     const teamLogos = document.querySelectorAll('img[src*="teamlogos/nba"]')
     expect(teamLogos.length).toBeGreaterThan(0)
-    // Score after the play — the real final score.
-    expect(screen.getByText('107')).toBeInTheDocument()
-    expect(screen.getByText('127')).toBeInTheDocument()
+    // Score after each real play — read the score-row spans directly (not RTL's getByText,
+    // since "4" legitimately repeats: Strawther's play is 4-4, Wiggins' is 2-4).
+    const scoreTexts = Array.from(document.querySelectorAll('.tnum.font-semibold')).map(
+      (el) => el.textContent
+    )
+    expect(scoreTexts).toContain('2') // Wiggins' home score after his three (2-4, real)
+    expect(scoreTexts.filter((t) => t === '4').length).toBeGreaterThanOrEqual(2) // both plays' "4"s
+  })
+
+  it('shows the real assist on the assisted play', () => {
+    render(
+      <LiveFeed
+        gameId="401811037"
+        status="final"
+        homeTeam="DEN"
+        awayTeam="OKC"
+        plays={PLAYS_NEWEST_FIRST}
+        connected
+        boxData={REAL_BOX_DATA}
+      />
+    )
+    // "Julian Strawther makes layup (Bruce Brown assists)" — real ESPN text — should
+    // surface the real assisting player on the assist line, with a team logo beside it.
+    expect(screen.getByText('B. Brown')).toBeInTheDocument()
   })
 })
