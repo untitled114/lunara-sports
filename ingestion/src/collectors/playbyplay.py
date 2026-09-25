@@ -22,6 +22,7 @@ from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
 from src.resilience.retry import espn_retry_pbp
 from src.schemas.events import PlayEvent
 from src.sinks.base import EventSink
+from src.team_abbrev import normalize_abbrev
 
 logger = structlog.get_logger(__name__)
 
@@ -119,7 +120,7 @@ def _build_team_map(header: dict) -> dict[str, str]:
             team_id = str(team.get("id", ""))
             abbrev = team.get("abbreviation", "")
             if team_id and abbrev:
-                team_map[team_id] = abbrev
+                team_map[team_id] = normalize_abbrev(abbrev)
     return team_map
 
 

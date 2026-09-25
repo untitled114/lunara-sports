@@ -15,7 +15,7 @@ from ..models.schemas import (
     TeamScheduleGame,
 )
 from . import espn_client
-from .team_mapping import espn_id_for
+from .team_mapping import espn_id_for, from_espn_abbrev
 
 logger = structlog.get_logger(__name__)
 
@@ -24,7 +24,10 @@ async def get_teams(session: AsyncSession) -> list[dict]:
     """Get all teams grouped by conference/division with last game result."""
     stmt = select(Team).order_by(Team.conference, Team.division, Team.name)
     result = await session.execute(stmt)
-    teams = result.scalars().all()
+    # The DB may carry alias rows (e.g. "UTAH" alongside "UTA") seeded so raw
+    # ingestion FKs never failed before normalization existed — exclude any row
+    # whose abbrev maps to a *different* canonical abbrev, so each team lists once.
+    teams = [t for t in result.scalars().all() if from_espn_abbrev(t.abbrev) == t.abbrev]
 
     items = []
     for t in teams:
