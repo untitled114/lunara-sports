@@ -43,23 +43,6 @@
   "src/components/sport/BottomNav.jsx": {
     "effect": 1
   },
-  "src/components/sport/BoxScore.jsx": {
-    "heavy": 17,
-    "palette": 52,
-    "hex": 6,
-    "radius": 12,
-    "italic": 1,
-    "tracking": 8
-  },
-  "src/components/sport/CourtView.jsx": {
-    "radius": 10,
-    "effect": 3,
-    "palette": 29,
-    "heavy": 7,
-    "tracking": 7,
-    "banned": 2,
-    "hex": 1
-  },
   "src/components/sport/DateNav.jsx": {
     "heavy": 6,
     "tracking": 7,
@@ -86,36 +69,10 @@
     "tracking": 3,
     "palette": 2
   },
-  "src/components/sport/LiveFeed.jsx": {
-    "palette": 33,
-    "hex": 8,
-    "effect": 6,
-    "heavy": 11,
-    "radius": 10,
-    "colorFn": 3,
-    "tracking": 6
-  },
-  "src/components/sport/MomentumMeter.jsx": {
-    "hex": 1,
-    "radius": 5,
-    "palette": 18,
-    "heavy": 8,
-    "tracking": 6,
-    "banned": 1,
-    "effect": 1
-  },
   "src/components/sport/PickCard.jsx": {
     "palette": 50,
     "hex": 5,
     "radius": 3
-  },
-  "src/components/sport/PickTracker.jsx": {
-    "hex": 2,
-    "radius": 4,
-    "palette": 21,
-    "effect": 2,
-    "heavy": 7,
-    "tracking": 3
   },
   "src/components/sport/PredictionSlip.jsx": {
     "radius": 8,
@@ -200,16 +157,6 @@
     "radius": 1,
     "effect": 1,
     "hex": 1
-  },
-  "src/pages/GameDetailPage.jsx": {
-    "radius": 20,
-    "hex": 1,
-    "palette": 51,
-    "effect": 8,
-    "heavy": 21,
-    "italic": 3,
-    "tracking": 19,
-    "banned": 3
   },
   "src/pages/GamesPage.jsx": {
     "hex": 1,
