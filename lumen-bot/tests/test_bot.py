@@ -3,12 +3,14 @@
 import asyncio
 import logging
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import discord
 import pytest
+import time_machine
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -211,6 +213,38 @@ class TestOnMessage:
         msg2 = FakeMessage(author_id=111, content="hi again", channel=channel)
         await b.on_message(msg2)
         assert fake_brain.clear_history.call_count == 1  # same day: not cleared again
+
+    async def test_history_clear_date_uses_eastern_time_not_utc(self, monkeypatch):
+        """The day-boundary date recorded on `_last_history_clear_date` must be
+        the Eastern calendar date, not the UTC date."""
+        b = Lumen(_cfg())
+        fake_brain = Mock()
+        fake_brain.available = True
+        fake_brain.respond = AsyncMock(return_value="ok")
+        fake_brain.clear_history = Mock()
+        b._brain = fake_brain
+
+        channel = _dm_channel()
+        msg = FakeMessage(author_id=111, content="hi", channel=channel)
+
+        # 03:00 UTC on Jan 1 is still Dec 31 in Eastern time (EST, UTC-5).
+        with time_machine.travel(datetime(2026, 1, 1, 3, 0, tzinfo=timezone.utc)):
+            await b.on_message(msg)
+        assert b._last_history_clear_date == "2025-12-31"
+        assert fake_brain.clear_history.call_count == 1
+
+        # Still Dec 31 ET a few hours later (04:00 UTC) — no second clear.
+        msg2 = FakeMessage(author_id=111, content="hi again", channel=channel)
+        with time_machine.travel(datetime(2026, 1, 1, 4, 0, tzinfo=timezone.utc)):
+            await b.on_message(msg2)
+        assert fake_brain.clear_history.call_count == 1
+
+        # Past real ET midnight (05:00 UTC = 00:00 EST) — new ET day, clears again.
+        msg3 = FakeMessage(author_id=111, content="hi once more", channel=channel)
+        with time_machine.travel(datetime(2026, 1, 1, 5, 0, tzinfo=timezone.utc)):
+            await b.on_message(msg3)
+        assert b._last_history_clear_date == "2026-01-01"
+        assert fake_brain.clear_history.call_count == 2
 
 
 # ---------------------------------------------------------------------------

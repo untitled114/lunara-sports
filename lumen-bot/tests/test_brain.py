@@ -102,15 +102,34 @@ class TestRateLimiter:
             "Daily limit reached. My systems need to cool down, Operator. Try again tomorrow."
         )
 
-    def test_reset_on_new_day(self, monkeypatch):
+    def test_reset_on_new_day(self):
         limiter = RateLimiter(cooldown_seconds=0, daily_limit=1)
-        monkeypatch.setattr(brain.time, "strftime", lambda fmt: "2026-01-01")
-        assert limiter.check(1) is None
-        limiter.record(1)
-        assert limiter.check(1) is not None  # daily limit hit
+        with time_machine.travel(datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)):
+            assert limiter.check(1) is None
+            limiter.record(1)
+            assert limiter.check(1) is not None  # daily limit hit
 
-        monkeypatch.setattr(brain.time, "strftime", lambda fmt: "2026-01-02")
-        assert limiter.check(1) is None  # new day, counter reset
+        with time_machine.travel(datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)):
+            assert limiter.check(1) is None  # new day, counter reset
+
+    def test_day_key_uses_eastern_time_not_utc(self):
+        """The day key must be the Eastern calendar date, not the UTC date
+        (and not the machine-local date, which `time.strftime` used to read)."""
+        limiter = RateLimiter(cooldown_seconds=0, daily_limit=1)
+        # 03:00 UTC on Jan 1 is still Dec 31 in Eastern time (EST, UTC-5).
+        with time_machine.travel(datetime(2026, 1, 1, 3, 0, tzinfo=timezone.utc)):
+            assert limiter.check(1) is None
+            limiter.record(1)
+            assert limiter._day_key[1] == "2025-12-31"
+
+        # Still Dec 31 ET a few hours later — daily limit stays hit, no reset.
+        with time_machine.travel(datetime(2026, 1, 1, 4, 0, tzinfo=timezone.utc)):
+            assert limiter.check(1) is not None
+
+        # Past real ET midnight (05:00 UTC = 00:00 EST) — new ET day, resets.
+        with time_machine.travel(datetime(2026, 1, 1, 5, 0, tzinfo=timezone.utc)):
+            assert limiter.check(1) is None
+            assert limiter._day_key[1] == "2026-01-01"
 
 
 # ---------------------------------------------------------------------------

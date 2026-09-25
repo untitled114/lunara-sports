@@ -17,6 +17,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import discord
 import httpx
@@ -29,6 +30,8 @@ from settings import resolve_lunara_urls
 from ws_listener import WSListener
 
 log = logging.getLogger("lumen")
+
+EASTERN = ZoneInfo("America/New_York")
 
 # ---------------------------------------------------------------------------
 # Lumen personality — NBA Game-Time Copilot
@@ -223,8 +226,8 @@ class Lumen(discord.Client):
 
         # Everything else goes to the AI brain
         if self._brain and self._brain.available:
-            # Auto-clear history at day boundary
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            # Auto-clear history at day boundary (Eastern calendar day, not UTC).
+            today = datetime.now(EASTERN).strftime("%Y-%m-%d")
             if self._last_history_clear_date != today:
                 self._brain.clear_history(message.author.id)
                 self._last_history_clear_date = today

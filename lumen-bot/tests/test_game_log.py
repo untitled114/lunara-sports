@@ -3,11 +3,10 @@
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import pytest
 import time_machine
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -36,24 +35,26 @@ def _mk_pick(**overrides) -> PickContext:
 
 class TestEasternToday:
     def test_standard_time_matches_real_et(self):
-        # January = EST (UTC-5) both for the hardcoded offset and real ET.
+        # January = EST (UTC-5) in real ET.
         frozen = datetime(2026, 1, 15, 4, 30, tzinfo=timezone.utc)
         with time_machine.travel(frozen):
             assert _eastern_today() == frozen.astimezone(ZoneInfo("America/New_York")).date()
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "bug: _eastern_today hardcodes a fixed UTC-5 offset instead of "
-            "ZoneInfo('America/New_York'). During EDT (UTC-4, roughly mid-March "
-            "to early November) it returns the wrong calendar date for anything "
-            "in the last hour before real ET midnight."
-        ),
-    )
-    def test_daylight_time_currently_wrong(self):
-        # July = EDT (UTC-4) in real ET, but the function always subtracts 5h.
+    def test_daylight_time_matches_real_et(self):
+        # July = EDT (UTC-4) in real ET. _eastern_today uses ZoneInfo, so it
+        # tracks the DST transition correctly instead of a fixed UTC-5 offset.
         frozen = datetime(2026, 7, 15, 4, 30, tzinfo=timezone.utc)
         with time_machine.travel(frozen):
+            assert _eastern_today() == frozen.astimezone(ZoneInfo("America/New_York")).date()
+
+    def test_daylight_time_differs_from_fixed_utc5_offset(self):
+        # Concrete regression guard for the fixed-offset bug: at this instant,
+        # a hardcoded UTC-5 subtraction would land on the wrong calendar date
+        # relative to real (DST-aware) Eastern time.
+        frozen = datetime(2026, 7, 15, 4, 30, tzinfo=timezone.utc)
+        with time_machine.travel(frozen):
+            wrong_fixed_offset_date = (frozen - timedelta(hours=5)).date()
+            assert _eastern_today() != wrong_fixed_offset_date
             assert _eastern_today() == frozen.astimezone(ZoneInfo("America/New_York")).date()
 
 

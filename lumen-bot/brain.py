@@ -12,12 +12,15 @@ import os
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 log = logging.getLogger("lumen.brain")
 
 MODEL = "claude-sonnet-4-5-20250929"
 MAX_TOOL_TURNS = 5
+EASTERN = ZoneInfo("America/New_York")
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +74,8 @@ class RateLimiter:
 
     def check(self, user_id: int) -> str | None:
         now = time.time()
-        today = time.strftime("%Y-%m-%d")
+        # Calendar day boundary in Eastern time, not the machine's local clock.
+        today = datetime.now(EASTERN).strftime("%Y-%m-%d")
 
         if self._day_key.get(user_id) != today:
             self._daily_counts[user_id] = 0
