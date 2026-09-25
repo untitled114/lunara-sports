@@ -2,7 +2,8 @@
 
 Runs as an asyncio background task during the API lifespan. For each game
 with active WebSocket subscribers, it polls PG for plays with sequence_number
-above the last-seen watermark and broadcasts them.
+above the last-seen watermark and broadcasts them. Ingestion writes plays
+straight to Postgres, so this poll is the sole play-broadcast path.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import asyncio
 
 import structlog
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ..db.models import Play
 from ..db.session import get_session_factory
@@ -22,25 +24,7 @@ logger = structlog.get_logger(__name__)
 # Track the highest sequence number we've broadcast per game
 _watermarks: dict[str, int] = {}
 
-POLL_INTERVAL = 0.25  # seconds — safety net; primary delivery is via Kafka consumer broadcast
-
-
-def _play_to_dict_raw(data: dict) -> dict:
-    """Convert a raw play dict (from Kafka) to the WebSocket payload format."""
-    return {
-        "id": data.get("id"),
-        "game_id": data.get("game_id"),
-        "sequence_number": data.get("sequence_number"),
-        "quarter": data.get("quarter"),
-        "clock": data.get("clock"),
-        "event_type": data.get("event_type"),
-        "description": data.get("description"),
-        "team": data.get("team"),
-        "player_name": data.get("player_name"),
-        "home_score": data.get("home_score"),
-        "away_score": data.get("away_score"),
-        "created_at": None,
-    }
+POLL_INTERVAL = 0.25  # seconds — the only path from a new DB play to WebSocket clients
 
 
 def _play_to_dict(play: Play) -> dict:
@@ -60,18 +44,17 @@ def _play_to_dict(play: Play) -> dict:
     }
 
 
-async def _poll_once() -> None:
-    """Check for new plays in games that have WebSocket subscribers."""
+async def poll_once(session_factory: async_sessionmaker[AsyncSession] | None) -> None:
+    """Run one poll cycle: broadcast new plays for games that have WebSocket subscribers."""
     espn_polls_total.labels(collector="play_poller").inc()
     active_games = manager.active_games()
     if not active_games:
         return
 
-    factory = get_session_factory()
-    if factory is None:
+    if session_factory is None:
         return
 
-    async with factory() as session:
+    async with session_factory() as session:
         for game_id in active_games:
             watermark = _watermarks.get(game_id, 0)
 
@@ -100,6 +83,11 @@ async def _poll_once() -> None:
                 new_plays=len(new_plays),
                 watermark=max_seq,
             )
+
+
+async def _poll_once() -> None:
+    """One cycle against the app's session factory (resolved each cycle; set in lifespan)."""
+    await poll_once(get_session_factory())
 
 
 async def run_play_poller() -> None:
