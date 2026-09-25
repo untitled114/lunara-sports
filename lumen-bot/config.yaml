@@ -3,8 +3,8 @@ discord:
   owner_id: 759254862423916564
 
 lunara:
-  api_url: "https://lunara-api-889243758895.us-central1.run.app"
-  ws_url: "wss://lunara-api-889243758895.us-central1.run.app/ws"
+  api_url: "http://127.0.0.1:8010"
+  ws_url: "ws://127.0.0.1:8010/ws"
 
 alerts:
   # Legacy DM triggers (still active alongside copilot)

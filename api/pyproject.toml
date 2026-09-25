@@ -9,7 +9,6 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg>=0.30",
     "redis>=5.2",
-    "confluent-kafka[avro]>=2.6",
     "pydantic>=2.10",
     "pydantic-settings>=2.7",
     "structlog>=24.4",
@@ -34,6 +33,13 @@ dev = [
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Explicit (not `find`): setuptools' automatic src-layout heuristic fires whenever a
+# top-level `src/` dir exists, even with `find` scoped to it, and ends up installing
+# src/'s children a SECOND time as flat top-level packages (db, ws, models, ...) on
+# top of the correctly-nested `src.*` ones. An explicit list sidesteps that heuristic.
+packages = ["src", "src.db", "src.models", "src.routers", "src.services", "src.ws"]
 
 [tool.ruff]
 target-version = "py310"
