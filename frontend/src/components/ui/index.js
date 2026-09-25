@@ -20,3 +20,12 @@ export { default as Dropdown } from './Dropdown';
 export { default as Pagination } from './Pagination';
 export { default as Tabs } from './Tabs';
 export { default as Table } from './Table';
+
+// Design-system Components (tokens-only, see docs/superpowers/specs/2026-09-25-lunara-design-system-design.md)
+export { Card } from './Card';
+export { SectionHeader } from './SectionHeader';
+export { Stat } from './Stat';
+export { Segmented } from './Segmented';
+export { DataTable } from './DataTable';
+export { TeamMark } from './TeamMark';
+export { PageState } from './PageState';
