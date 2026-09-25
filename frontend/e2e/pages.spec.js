@@ -110,23 +110,67 @@ for (const width of [390, 1280]) {
         expect([...new Set(frameChrome)], 'distinct table-frame chrome').toHaveLength(1)
       }
 
+      // No text dimmer than --text-3: every visible neutral (gray) text color is at least
+      // as light as the token, fully opaque. Colored text (accent, live, loss, warn) is
+      // covered by axe's contrast check below.
+      const dimText = await page.evaluate(() => {
+        const toRgba = (c) => {
+          const m = c.match(/rgba?\(([^)]+)\)/)
+          if (!m) return null
+          const [r, g, b, a = '1'] = m[1].split(/[\s,/]+/).filter(Boolean)
+          return [Number(r), Number(g), Number(b), Number(a)]
+        }
+        const lum = ([r, g, b]) => {
+          const f = (v) => {
+            const x = v / 255
+            return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
+          }
+          return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+        }
+        const probe = document.createElement('span')
+        probe.style.color = 'var(--text-3)'
+        document.body.appendChild(probe)
+        const floor = lum(toRgba(getComputedStyle(probe).color))
+        probe.remove()
+        const bad = []
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          if (!n.textContent.trim()) continue
+          const el = n.parentElement
+          if (!el || !el.getClientRects().length) continue
+          const s = getComputedStyle(el)
+          if (s.visibility === 'hidden') continue
+          const c = toRgba(s.color)
+          if (!c) continue
+          const neutral = Math.max(c[0], c[1], c[2]) - Math.min(c[0], c[1], c[2]) <= 24
+          if (neutral && (c[3] < 1 || lum(c) < floor - 1e-6)) bad.push(`${n.textContent.trim().slice(0, 40)} (${s.color})`)
+        }
+        return bad
+      })
+      expect(dimText, 'text dimmer than --text-3').toEqual([])
+
+      // Tabular numbers on every score and every numeric table cell.
+      const proportional = await page.$$eval('.t-score, td.text-right', (els) =>
+        els
+          .filter((e) => e.textContent.trim() && !getComputedStyle(e).fontVariantNumeric.includes('tabular-nums'))
+          .map((e) => e.textContent.trim().slice(0, 20)),
+      )
+      expect(proportional, 'scores and stat cells without tabular-nums').toEqual([])
+
       // No banned words in the rendered text.
       if (!legalText) {
         const text = await page.evaluate(() => document.body.innerText)
         expect(text).not.toMatch(BANNED)
       }
 
-      // Accessibility: zero color-contrast violations. Other serious/critical findings are
-      // reported (once per page, at 1280) but do not fail the run.
+      // Accessibility: zero color-contrast violations and zero other serious or critical
+      // findings, at both widths.
       const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
       expect(axe.violations.filter((v) => v.id === 'color-contrast')).toEqual([])
-      if (width === 1280) {
-        const other = axe.violations.filter(
-          (v) => v.id !== 'color-contrast' && (v.impact === 'serious' || v.impact === 'critical'),
-        )
-        const summary = other.map((v) => `${v.id} (${v.impact}) x${v.nodes.length}`).join(', ')
-        console.log(`[axe] ${path}: ${summary || 'none'}`)
-      }
+      const serious = axe.violations
+        .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+        .map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => n.target.join(' ')).join('; ')}`)
+      expect(serious, 'serious or critical axe findings').toEqual([])
 
       await unpinShell(page)
       await expect(page).toHaveScreenshot(`${name}-${width}.png`, {
