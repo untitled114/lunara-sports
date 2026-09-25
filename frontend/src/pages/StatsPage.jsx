@@ -29,7 +29,7 @@ function LeaderboardCard({ title, icon: Icon, data, unit, delay = 0 }) {
         <table className="w-full text-left border-collapse">
           <tbody className="divide-y divide-border">
             {data.map((row, idx) => (
-              <tr key={row.player_id + idx} className="group/row hover:bg-surface-2 transition-colors cursor-default">
+              <tr key={row.player_id + idx} className="group/row hover:bg-surface-2 transition-colors duration-300 cursor-default">
                 <td className="py-4 px-6 w-10">
                   <span className="t-small tnum text-text-3">{row.rank}</span>
                 </td>

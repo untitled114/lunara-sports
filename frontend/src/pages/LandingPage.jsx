@@ -22,7 +22,7 @@ function FeatureCard({ icon: Icon, title, desc, link, delay = '0s', color = 'var
     <a
       href={link}
       onClick={handleClick}
-      className="group block bg-surface-1 border border-border rounded-lg p-7 sm:p-10 transition-all duration-500 hover:border-border-strong hover:-translate-y-2 animate-float relative overflow-hidden h-full"
+      className="group block bg-surface-1 border border-border rounded-lg p-7 sm:p-10 transition-all duration-1000 hover:border-border-strong hover:-translate-y-2 animate-float relative overflow-hidden h-full"
       style={{ animationDelay: delay }}
     >
       {image && (
@@ -61,9 +61,13 @@ export default function LandingPage() {
       {/* Hero */}
       <div className="relative text-center flex flex-col items-center justify-center min-h-[70vh]">
         <div className="relative z-10 flex flex-col items-center gap-8">
-          <Badge variant="live" dot>
-            Live now
-          </Badge>
+          <div className="inline-flex items-center gap-2 rounded-sm bg-live/10 border border-live/20 px-3 py-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-sm bg-live opacity-75 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-sm bg-live" />
+            </span>
+            <span className="t-label text-live">Live now</span>
+          </div>
 
           <h1 className="t-title text-text-1">Lunara Sports</h1>
 
@@ -75,7 +79,7 @@ export default function LandingPage() {
           <div className="pt-6 flex flex-col sm:flex-row justify-center items-center gap-4 px-4 sm:px-0">
             <button
               onClick={handleEnterArena}
-              className="w-full sm:w-auto px-10 py-4 rounded-md bg-accent-fill hover:bg-accent-fill-hover text-white t-small font-semibold transition-colors text-center"
+              className="w-full sm:w-auto px-10 py-4 rounded-md bg-accent-fill hover:bg-accent-fill-hover text-white t-small font-semibold transition-colors duration-500 text-center"
             >
               View live scores
             </button>
@@ -126,14 +130,14 @@ export default function LandingPage() {
         </div>
 
         {/* What we offer */}
-        <div className="bg-surface-1 border border-border rounded-lg p-8 sm:p-16 relative overflow-hidden">
+        <div className="group bg-surface-1 border border-border rounded-lg p-8 sm:p-16 relative overflow-hidden">
           <img
             src={BRANDING_IMAGES.transitions.main1}
             alt=""
             width={1200}
             height={800}
             loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover opacity-10"
+            className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-30 transition-opacity duration-[2s]"
           />
 
           <div className="relative z-10 space-y-10">

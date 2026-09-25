@@ -1,0 +1,4 @@
+{
+  "_source": "GET https://api.lunara-app.com/stats/teams, captured 2026-09-25T16:55:30Z. Team advanced-stats table is not yet populated in production; real, unmodified empty response.",
+  "data": []
+}

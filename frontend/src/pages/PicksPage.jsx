@@ -4,6 +4,17 @@ import { Skeleton, Card, Stat, Segmented, SectionHeader, PageState } from '@/com
 import { PickCard } from '@/components/sport/PickCard';
 import { useAuth } from '@/context/AuthContext';
 import { TrendingUp } from 'lucide-react';
+import { todayET } from '@/lib/et';
+
+// UTC-noon anchored, like lib/et.js's own formatters, so this never gets
+// reinterpreted by the machine's local timezone — todayET() is already the
+// ET calendar date, and formatting it needs to stay on that exact date.
+function formatLongDate(iso) {
+  const d = new Date(`${iso}T12:00:00Z`);
+  return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(
+    d
+  );
+}
 
 function StatBox({ label, value, sub, delay = 0 }) {
   return (
@@ -108,12 +119,7 @@ export default function PicksPage() {
   const winRate = decided > 0 ? Math.round((hits / decided) * 100) : null;
   const avgEdge = picks.length > 0 ? (picks.reduce((s, p) => s + (p.edge ?? 0), 0) / picks.length).toFixed(1) : '--';
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const today = formatLongDate(todayET());
 
   if (error) {
     return (
@@ -156,7 +162,7 @@ export default function PicksPage() {
         </div>
         <div className="flex items-center gap-3 text-text-3">
           <TrendingUp className="h-5 w-5 text-accent" />
-          <span className="t-label">
+          <span className="t-label tnum">
             {picks.length} pick{picks.length !== 1 ? 's' : ''} today
           </span>
         </div>

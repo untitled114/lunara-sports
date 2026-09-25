@@ -24,7 +24,7 @@ const sections = [
   },
   {
     title: "6. Children's Privacy",
-    body: 'Lunara Sports is a general-audience informational service. We do not knowingly collect information from children under 13. Since no personal data is collected from any user, no special provisions for children’s data are necessary.',
+    body: 'Lunara Sports is a general-audience informational service. We do not knowingly collect information from children under 13. Since no personal data is collected from any user, no special provisions for children\'s data are necessary.',
   },
   {
     title: '7. Changes to This Policy',

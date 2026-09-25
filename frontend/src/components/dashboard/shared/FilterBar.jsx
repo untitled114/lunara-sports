@@ -33,7 +33,7 @@ const FilterBar = ({
     <div className="space-y-4">
       {/* Search and Date Range */}
       {(onSearchChange || showDateRange) && (
-        <div className="bg-surface-1 border border-border rounded-lg p-3 sm:p-4">
+        <div className="bg-surface-1 border border-border rounded-lg p-3 sm:p-4 transition-all duration-300 hover:-translate-y-2 hover:border-border-strong">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             {onSearchChange && (
               <div className="flex-1 relative">
@@ -79,7 +79,7 @@ const FilterBar = ({
 
       {/* Filter Buttons */}
       {filters.length > 0 && (
-        <div className="bg-surface-1 border border-border rounded-lg p-3 sm:p-4 flex flex-wrap gap-2">
+        <div className="bg-surface-1 border border-border rounded-lg p-3 sm:p-4 flex flex-wrap gap-2 transition-all duration-300 hover:-translate-y-2 hover:border-border-strong">
           {filters.map((filter) => {
             const isActive = activeFilter === filter.value || filter.active;
             return (

@@ -64,13 +64,20 @@ const Tabs = ({ tabs = [], activeTab, onChange, variant = 'underline', urlSync =
     }
   };
 
-  // Roving tabindex selection, matching Segmented: wraps, skips disabled tabs,
-  // moves focus and selection together.
-  const selectByIndex = (index) => {
+  // Roving tabindex selection, matching Segmented's wrap-around focus model,
+  // plus the base Tabs component's disabled-skipping: advancing in `direction`
+  // (wrapping) until a non-disabled tab is found, same as the pre-rollout
+  // while-loop skip in handleKeyDown.
+  const selectByIndex = (index, direction = 1) => {
     if (tabs.length === 0) return;
-    const wrapped = (index + tabs.length) % tabs.length;
+    let wrapped = ((index % tabs.length) + tabs.length) % tabs.length;
+    let attempts = 0;
+    while (tabs[wrapped]?.disabled && attempts < tabs.length) {
+      wrapped = ((wrapped + direction) % tabs.length + tabs.length) % tabs.length;
+      attempts++;
+    }
     const tab = tabs[wrapped];
-    if (!tab || tab.disabled) return;
+    if (!tab || tab.disabled) return; // every tab disabled
     handleTabChange(tab.id);
     tabRefs.current[tab.id]?.focus();
   };
@@ -79,22 +86,22 @@ const Tabs = ({ tabs = [], activeTab, onChange, variant = 'underline', urlSync =
     switch (e.key) {
       case 'ArrowRight':
         e.preventDefault();
-        selectByIndex(currentIndex + 1);
+        selectByIndex(currentIndex + 1, 1);
         break;
 
       case 'ArrowLeft':
         e.preventDefault();
-        selectByIndex(currentIndex - 1);
+        selectByIndex(currentIndex - 1, -1);
         break;
 
       case 'Home':
         e.preventDefault();
-        selectByIndex(0);
+        selectByIndex(0, 1);
         break;
 
       case 'End':
         e.preventDefault();
-        selectByIndex(tabs.length - 1);
+        selectByIndex(tabs.length - 1, -1);
         break;
 
       default:

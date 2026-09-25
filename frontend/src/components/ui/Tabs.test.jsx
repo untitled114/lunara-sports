@@ -62,8 +62,17 @@ describe('Tabs', () => {
 
     overview.focus()
     await userEvent.keyboard('{ArrowRight}')
-    // Stats is disabled, selection should skip over it
+    // Stats is disabled: ArrowRight from Overview skips straight over it to Log,
+    // matching the base (pre-rollout) Tabs component's disabled-skip behavior.
     expect(onChange).not.toHaveBeenCalledWith('stats')
+    expect(onChange).toHaveBeenLastCalledWith('log')
+    expect(log).toHaveFocus()
+
+    await userEvent.keyboard('{ArrowLeft}')
+    // ArrowLeft from Log skips backward over Stats to Overview.
+    expect(onChange).not.toHaveBeenCalledWith('stats')
+    expect(onChange).toHaveBeenLastCalledWith('overview')
+    expect(overview).toHaveFocus()
 
     await userEvent.keyboard('{End}')
     expect(onChange).toHaveBeenLastCalledWith('log')

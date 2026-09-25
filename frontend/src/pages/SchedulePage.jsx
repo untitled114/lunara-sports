@@ -4,19 +4,19 @@ import { ChevronRight, Clock, ChevronLeft } from 'lucide-react';
 import { Skeleton, Badge, PageState, SectionHeader, DataTable } from '@/components/ui';
 import { fetchGames } from '@/services/api';
 import { useFormatTime } from '@/utils/formatTime';
+import { todayET, addDaysISO } from '@/lib/et';
 
+// UTC-noon anchored, like lib/et.js's own formatters, so the weekday/month
+// never get reinterpreted by the machine's local timezone.
 function formatDate(dateStr) {
-  const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).format(d);
 }
 
 function getDateRange(centerDate, days = 3) {
   const dates = [];
-  const center = new Date(centerDate);
   for (let i = -days; i <= days; i++) {
-    const d = new Date(center);
-    d.setDate(d.getDate() + i);
-    dates.push(d.toISOString().split('T')[0]);
+    dates.push(addDaysISO(centerDate, i));
   }
   return dates;
 }
@@ -25,7 +25,7 @@ export default function SchedulePage() {
   const fmt = useFormatTime();
   const [schedule, setSchedule] = useState({});
   const [loading, setLoading] = useState(true);
-  const [centerDate, setCenterDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [centerDate, setCenterDate] = useState(() => todayET());
   const [error, setError] = useState(false);
   const [retryNonce, setRetryNonce] = useState(0);
 
@@ -62,9 +62,7 @@ export default function SchedulePage() {
   }, [centerDate, retryNonce]);
 
   const shiftDate = (days) => {
-    const d = new Date(centerDate);
-    d.setDate(d.getDate() + days);
-    setCenterDate(d.toISOString().split('T')[0]);
+    setCenterDate(addDaysISO(centerDate, days));
   };
 
   const sortedDates = Object.keys(schedule).sort();
@@ -98,13 +96,10 @@ export default function SchedulePage() {
     {
       key: 'status',
       label: 'Status',
-      align: 'center',
       render: (game) => (
-        <div className="text-center">
-          <Badge variant={game.status === 'live' ? 'live' : game.status === 'final' ? 'neutral' : 'accent'} dot={game.status === 'live'}>
-            {game.status === 'live' ? 'Live' : game.status === 'final' ? 'Final' : 'Scheduled'}
-          </Badge>
-        </div>
+        <Badge variant={game.status === 'live' ? 'live' : game.status === 'final' ? 'neutral' : 'accent'} dot={game.status === 'live'}>
+          {game.status === 'live' ? 'Live' : game.status === 'final' ? 'Final' : 'Scheduled'}
+        </Badge>
       ),
     },
     {

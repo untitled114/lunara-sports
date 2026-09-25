@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Signal } from 'lucide-react';
 import clsx from 'clsx';
@@ -6,7 +6,25 @@ import { getLogoUrl } from '@/utils/teamColors';
 import { useTheme } from '@/context/ThemeContext';
 import { useScoreboard } from '@/hooks/useScoreboard';
 import { useFormatTime } from '@/utils/formatTime';
-import { Badge, PageState } from '@/components/ui';
+import { Badge, Skeleton } from '@/components/ui';
+import { todayET, formatLongDay } from '@/lib/et';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Mirrors the api.js fetch* convention (read-only GET, tolerant of failure).
+// Lives here rather than in services/api.js because that file is owned by
+// another task in this rollout; once it lands its own fetchNextGameDate this
+// local copy can be swapped out.
+async function fetchNextGameDate(afterIso) {
+  try {
+    const res = await fetch(`${API_URL}/games/next?after=${afterIso}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.date ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function TickerItem({ game }) {
   const isLive = game.status === 'live' || game.status === 'halftime';
@@ -90,7 +108,7 @@ function TickerItem({ game }) {
               Live
             </Badge>
             <span className="t-small tnum text-text-1">{game.status === 'halftime' ? 'Halftime' : `Q${game.quarter}`}</span>
-            {game.clock && <span className="t-label text-text-3">{game.clock}</span>}
+            {game.clock && <span className="t-label tnum text-text-3">{game.clock}</span>}
           </>
         ) : isFinal ? (
           <>
@@ -116,22 +134,48 @@ function TickerItem({ game }) {
   );
 }
 
+// Loaded, no games today: plain text plus a link to the next game day when
+// the read-only lookup resolves one.
+function EmptyTicker() {
+  const [next, setNext] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchNextGameDate(todayET()).then((date) => {
+      if (!cancelled) setNext(date);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="h-[120px] flex items-center justify-center gap-3 border-b border-border bg-surface-1 px-8">
+      <span className="t-small text-text-2">No games today</span>
+      {next && (
+        <Link to={`/scoreboard?date=${next}`} className="t-small text-accent hover:text-accent-hover transition-colors">
+          Next game: {formatLongDay(next)} →
+        </Link>
+      )}
+    </div>
+  );
+}
+
 export function ScoreTicker() {
   const { playGlassClick } = useTheme();
-  // Eastern time "today" for scoreboard
-  const now = new Date();
-  const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  const todayStr = `${et.getFullYear()}-${String(et.getMonth() + 1).padStart(2, '0')}-${String(et.getDate()).padStart(2, '0')}`;
-  const { games } = useScoreboard(todayStr);
+  const todayStr = todayET();
+  const { games, loading } = useScoreboard(todayStr);
 
-  if (games.length === 0) {
+  if (loading) {
     return (
-      <div className="h-[120px] overflow-hidden flex items-center border-b border-border bg-surface-0 px-8 w-full">
-        <div className="w-full">
-          <PageState kind="loading" />
-        </div>
+      <div className="h-[120px] flex items-center border-b border-border bg-surface-1 px-8">
+        <Skeleton variant="rectangle" height="h-12" className="w-full max-w-sm rounded-md" />
       </div>
     );
+  }
+
+  if (games.length === 0) {
+    return <EmptyTicker />;
   }
 
   // Sort: live first, then scheduled, then final
@@ -141,6 +185,8 @@ export function ScoreTicker() {
   });
 
   const liveCount = games.filter((g) => g.status === 'live' || g.status === 'halftime').length;
+  const allFinal = games.every((g) => g.status === 'final');
+  const statusLabel = liveCount > 0 ? `${liveCount} live` : allFinal ? 'Final scores' : `${games.length} games today`;
 
   return (
     <div className="h-[120px] flex items-stretch overflow-hidden relative bg-surface-1 border-b border-border">
@@ -156,7 +202,7 @@ export function ScoreTicker() {
 
           <div className="flex items-center gap-2 mt-1">
             {liveCount > 0 && <span className="h-2 w-2 rounded-sm bg-live animate-pulse" />}
-            <span className="t-label text-text-3">{liveCount > 0 ? `${liveCount} live` : 'Final scores'}</span>
+            <span className="t-label tnum text-text-3">{statusLabel}</span>
           </div>
         </div>
       </div>

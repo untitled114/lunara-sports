@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import picksToday from '@/test/fixtures/picksToday.json'
+import statsLeaders from '@/test/fixtures/statsLeaders.json'
+import statsTeams from '@/test/fixtures/statsTeams.json'
+import gamesOct03 from '@/test/fixtures/gamesOct03.json'
 
 vi.mock('@/context/ThemeContext', () => ({
   useTheme: () => ({
@@ -103,40 +107,25 @@ describe('LandingPage', () => {
   })
 })
 
+// picksToday.json is the real (unmodified) GET /picks/today response, captured
+// while this task was in flight — see the fixture's _source. It's empty: no
+// props are populated in production right now (preseason). There is no real
+// populated-picks response available anywhere on the read-only API (checked
+// /picks/today, several real completed game IDs via /games/{id}/picks — every
+// one is []), so there is no "renders a populated pick card" test here; a
+// fabricated one would be exactly the invented fixture this rule prohibits.
 describe('PicksPage', () => {
   afterEach(() => vi.clearAllMocks())
 
-  it('renders picks with no banned words', async () => {
-    api.fetchTodayPicks.mockResolvedValue([
-      {
-        id: 1,
-        player_name: 'Test Player',
-        market: 'POINTS',
-        prediction: 'OVER',
-        line: 24.5,
-        tier: 'X',
-        model_version: 'v5',
-        book: 'draftkings',
-        edge: 4.2,
-        edge_pct: 18,
-        p_over: 0.61,
-        actual_value: null,
-        is_hit: null,
-      },
-    ])
+  it('renders the real (empty) picks response as a plain empty state with no banned words', async () => {
+    api.fetchTodayPicks.mockResolvedValue(picksToday.data)
     wrap(<PicksPage />)
-    await waitFor(() => expect(screen.getByText('Test Player')).toBeInTheDocument())
+    expect(await screen.findByText('No picks match these filters.')).toBeInTheDocument()
     assertNoBannedWords(document.body.textContent)
   })
 
-  it('shows a plain empty state when there are no picks', async () => {
-    api.fetchTodayPicks.mockResolvedValue([])
-    wrap(<PicksPage />)
-    expect(await screen.findByText('No picks match these filters.')).toBeInTheDocument()
-  })
-
   it('error path shows PageState with Try again and retries', async () => {
-    api.fetchTodayPicks.mockRejectedValueOnce(new Error('down')).mockResolvedValue([])
+    api.fetchTodayPicks.mockRejectedValueOnce(new Error('down')).mockResolvedValue(picksToday.data)
     wrap(<PicksPage />)
     expect(await screen.findByText("Couldn't load picks.")).toBeInTheDocument()
     const retry = screen.getByRole('button', { name: 'Try again' })
@@ -149,20 +138,13 @@ describe('PicksPage', () => {
 describe('SchedulePage', () => {
   afterEach(() => vi.clearAllMocks())
 
-  it('renders the schedule table with no banned words', async () => {
-    api.fetchGames.mockResolvedValue([
-      {
-        id: 'g1',
-        away_team: 'MIA',
-        home_team: 'TOR',
-        away_score: 0,
-        home_score: 0,
-        status: 'scheduled',
-        start_time: '2026-10-03T23:00:00Z',
-      },
-    ])
+  it('renders the schedule table with real game data and no banned words', async () => {
+    // Real scheduled game from GET /games/?game_date=2026-10-03 (see fixture _source).
+    api.fetchGames.mockResolvedValue(gamesOct03.data)
     wrap(<SchedulePage />)
     await waitFor(() => expect(screen.getAllByRole('columnheader', { name: 'Matchup' }).length).toBeGreaterThan(0))
+    const [game] = gamesOct03.data
+    expect(screen.getAllByText(game.away_team, { exact: false }).length).toBeGreaterThan(0)
     assertNoBannedWords(document.body.textContent)
   })
 
@@ -186,20 +168,14 @@ describe('SchedulePage', () => {
 describe('StatsPage', () => {
   afterEach(() => vi.clearAllMocks())
 
-  it('renders league stats with no banned words', async () => {
-    api.fetchStatLeaders.mockResolvedValue({
-      categories: {
-        pts: [{ player_id: 1, player: 'Test Player', team: 'MIA', value: 30.1, rank: 1 }],
-        ast: [],
-        threes: [],
-        reb: [],
-        blk: [],
-        stl: [],
-      },
-    })
-    api.fetchTeamStatsList.mockResolvedValue([])
+  it('renders real league leaders with no banned words', async () => {
+    // Real GET /stats/leaders?limit=10 response (see fixture _source).
+    api.fetchStatLeaders.mockResolvedValue(statsLeaders.data)
+    api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
     wrap(<StatsPage />)
-    await waitFor(() => expect(screen.getByText('Test Player')).toBeInTheDocument())
+    const [topScorer] = statsLeaders.data.categories.pts
+    await waitFor(() => expect(screen.getByText(topScorer.player)).toBeInTheDocument())
+    expect(screen.getAllByText(topScorer.team).length).toBeGreaterThan(0)
     expect(screen.getByText('League stats', { exact: false })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Offense' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Defense' })).toBeInTheDocument()
@@ -207,9 +183,9 @@ describe('StatsPage', () => {
     assertNoBannedWords(document.body.textContent)
   })
 
-  it('shows a plain empty state for team stats not yet available', async () => {
-    api.fetchStatLeaders.mockResolvedValue({ categories: {} })
-    api.fetchTeamStatsList.mockResolvedValue([])
+  it('shows a plain empty state for team stats not yet available (real, unpopulated response)', async () => {
+    api.fetchStatLeaders.mockResolvedValue(statsLeaders.data)
+    api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
     wrap(<StatsPage />)
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Statistics' })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('tab', { name: 'Franchise' }))
@@ -221,8 +197,8 @@ describe('StatsPage', () => {
     api.fetchTeamStatsList.mockRejectedValueOnce(new Error('down'))
     wrap(<StatsPage />)
     expect(await screen.findByText("Couldn't load stats.")).toBeInTheDocument()
-    api.fetchStatLeaders.mockResolvedValue({ categories: {} })
-    api.fetchTeamStatsList.mockResolvedValue([])
+    api.fetchStatLeaders.mockResolvedValue(statsLeaders.data)
+    api.fetchTeamStatsList.mockResolvedValue(statsTeams.data)
     const retry = screen.getByRole('button', { name: 'Try again' })
     await userEvent.click(retry)
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Statistics' })).toBeInTheDocument())
