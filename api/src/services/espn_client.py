@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+from datetime import date, datetime
 
 import httpx
 import structlog
 
 from ..db.redis import get_redis
+from ..eastern import ET
 
 logger = structlog.get_logger(__name__)
 
@@ -164,3 +166,15 @@ async def get_scoreboard(date_str: str | None = None) -> dict | None:
         SCOREBOARD_TTL,
         params=params or None,
     )
+
+
+async def get_scoreboard_calendar() -> list[date]:
+    """Dates (ET) that have NBA games in the current ESPN season calendar."""
+    data = await get_scoreboard(None)
+    raw = ((data or {}).get("leagues") or [{}])[0].get("calendar") or []
+    out = set()
+    for item in raw:
+        s = item if isinstance(item, str) else item.get("startDate", "")
+        if s:
+            out.add(datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(ET).date())
+    return sorted(out)

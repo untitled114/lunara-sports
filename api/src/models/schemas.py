@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date as _date
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -23,6 +24,14 @@ class GameResponse(BaseModel):
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class NextGameResponse(BaseModel):
+    """A field named `date` shadows the `date` type during pydantic's annotation
+    resolution (pydantic v2 + `from __future__ import annotations`), so the type is
+    imported under an alias here; the field name and wire format are unaffected."""
+
+    date: _date | None = None
 
 
 # ── Plays ──────────────────────────────────────────────────────────────
