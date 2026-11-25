@@ -1,0 +1,218 @@
+"""Play-by-Play API - FastAPI application entry point."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+from contextlib import asynccontextmanager
+
+import structlog
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+from .addons import load_addons
+from .config import Settings
+from .db.redis import close_redis, get_cached_game_list, init_redis, redis_ping
+from .db.session import close_db, create_tables, db_ping, init_db, seed_teams
+from .eastern import eastern_today
+from .logging_setup import configure_logging
+from .metrics import instrumentator
+from .models.schemas import HealthResponse
+from .routers import (
+    auth,
+    boxscore,
+    comments,
+    games,
+    leaderboard,
+    players,
+    plays,
+    predictions,
+    reactions,
+    standings,
+    stats,
+    teams,
+)
+from .services.espn_client import close_espn_client, init_espn_client
+from .services.scoreboard_poller import run_scoreboard_poller
+from .services.team_logos import populate_team_logos
+from .ws.live_feed import manager
+from .ws.play_poller import get_recent_plays, run_play_poller
+
+logger = structlog.get_logger(__name__)
+
+ADDONS = load_addons()
+
+
+def mount_addon_routers(target: FastAPI, found: list) -> None:
+    """Mount every router each add-on exposes, after the core routers."""
+    for addon in found:
+        for router in addon.routers:
+            target.include_router(router)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    configure_logging()
+    settings = Settings()
+
+    # Startup
+    init_db(settings)
+    await create_tables()
+    await seed_teams()
+    await init_redis(settings)
+    init_espn_client()
+    await populate_team_logos()
+    logger.info("api.started", host=settings.api_host, port=settings.api_port)
+
+    # Core pollers: recent plays to WebSocket clients, and ESPN scores into PG + Redis.
+    # Add-ons contribute their own background tasks.
+    coros = [run_play_poller(), run_scoreboard_poller()]
+    for addon in ADDONS:
+        coros.extend(addon.background_tasks())
+    tasks = [asyncio.create_task(c) for c in coros]
+
+    yield
+
+    # Shutdown
+    for task in tasks:
+        task.cancel()
+    for task in tasks:
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+    await close_espn_client()
+    await close_redis()
+    await close_db()
+    logger.info("api.stopped")
+
+
+app = FastAPI(
+    title="Lunara Sports API",
+    version="0.1.0",
+    description="Real-time sports data, social interactions, and prediction games.",
+    lifespan=lifespan,
+)
+
+
+class NoCacheMiddleware(BaseHTTPMiddleware):
+    """Prevent CDNs and browsers from caching API responses."""
+
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        if request.url.path not in ("/metrics", "/docs", "/openapi.json"):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["CDN-Cache-Control"] = "no-store"
+        return response
+
+
+app.add_middleware(NoCacheMiddleware)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+instrumentator.instrument(app).expose(app)
+
+app.include_router(games.router)
+app.include_router(plays.router)
+app.include_router(predictions.router)
+app.include_router(leaderboard.router)
+app.include_router(standings.router)
+app.include_router(teams.router)
+app.include_router(players.router)
+app.include_router(stats.router)
+app.include_router(boxscore.router)
+app.include_router(reactions.router)
+app.include_router(comments.router)
+app.include_router(auth.router)
+mount_addon_routers(app, ADDONS)
+
+
+@app.get("/health", response_model=HealthResponse, tags=["system"])
+async def health():
+    """Check connectivity to PostgreSQL and Redis."""
+    pg_ok = await db_ping()
+    redis_ok = await redis_ping()
+    status = "ok" if (pg_ok and redis_ok) else "degraded"
+    return HealthResponse(status=status, postgres=pg_ok, redis=redis_ok)
+
+
+@app.get("/ws/stats", tags=["system"])
+async def ws_stats():
+    """Return WebSocket connection stats."""
+    return {
+        "total_connections": manager.connection_count(),
+        "active_games": manager.active_games(),
+    }
+
+
+@app.websocket("/ws/scoreboard")
+async def scoreboard_ws(websocket: WebSocket):
+    """WebSocket endpoint for live scoreboard updates.
+
+    On connect: sends cached game list.
+    Then streams scoreboard_update messages from the poller.
+    """
+    await manager.connect(websocket, "scoreboard")
+    try:
+        # Send current cached game list immediately
+        today_str = eastern_today().isoformat()
+        cached = await get_cached_game_list(today_str)
+        if cached:
+            await websocket.send_text(
+                json.dumps({"type": "scoreboard_update", "data": cached}, default=str)
+            )
+
+        # Keep-alive loop
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text(json.dumps({"type": "pong"}))
+    except WebSocketDisconnect:
+        await manager.disconnect(websocket, "scoreboard")
+    except Exception:
+        await manager.disconnect(websocket, "scoreboard")
+
+
+@app.websocket("/ws/{game_id}")
+async def websocket_endpoint(websocket: WebSocket, game_id: str):
+    """WebSocket endpoint for live game feeds.
+
+    On connect:
+    1. Sends recent play history as {"type": "history", "data": [...]}
+    2. Streams new plays as {"type": "play", "data": {...}}
+
+    The client should merge history with any REST-fetched data by play id (a
+    play's sequence number can change when ESPN renumbers).
+    """
+    await manager.connect(websocket, game_id)
+    try:
+        # Send recent play history
+        recent = await get_recent_plays(game_id, limit=500)
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "history",
+                    "data": recent,
+                },
+                default=str,
+            )
+        )
+
+        # Keep-alive loop - read client messages (pings, etc.)
+        while True:
+            data = await websocket.receive_text()
+            # Client can send ping
+            if data == "ping":
+                await websocket.send_text(json.dumps({"type": "pong"}))
+    except WebSocketDisconnect:
+        await manager.disconnect(websocket, game_id)
+    except Exception:
+        await manager.disconnect(websocket, game_id)

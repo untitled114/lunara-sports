@@ -1,0 +1,19 @@
+"""Prometheus metrics for the Play-by-Play API."""
+
+from prometheus_client import Counter, Gauge
+from prometheus_fastapi_instrumentator import Instrumentator
+
+instrumentator = Instrumentator(
+    excluded_handlers=["/health", "/metrics"],
+)
+
+websocket_connections_active = Gauge(
+    "websocket_connections_active",
+    "Number of active WebSocket connections",
+)
+
+espn_polls_total = Counter(
+    "espn_polls_total",
+    "Poll cycles of the API's background pollers (label: which poller)",
+    ["collector"],
+)

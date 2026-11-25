@@ -1,0 +1,248 @@
+"""ESPN scoreboard collector.
+
+Polls the ESPN scoreboard endpoint for current NBA game states and publishes
+each game snapshot to the shared event sink under the ``raw.scoreboard`` topic.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import signal
+from datetime import datetime, timezone
+
+import httpx
+import structlog
+
+from src.collectors.base import BaseCollector
+from src.config import Settings
+from src.http.espn import EspnHttp
+from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
+from src.resilience.retry import espn_retry
+from src.schemas.events import ScoreboardEvent
+from src.sinks.base import EventSink
+from src.team_abbrev import normalize_abbrev
+
+logger = structlog.get_logger(__name__)
+
+TOPIC = "raw.scoreboard"
+
+# ESPN status.type.state is the coarse, stable phase; it drives our status.
+_STATE_STATUS = {"pre": "scheduled", "in": "live", "post": "final"}
+
+# Detailed status.type.name values that refine a phase - only accepted when they
+# agree with it, so an unknown or odd name (e.g. DELAYED mid-game) can never flap
+# a live game back to scheduled and retire its play-by-play collector.
+_STATE_REFINEMENTS = {
+    "pre": {"scheduled", "postponed", "canceled", "delayed"},
+    "in": {"live", "halftime"},
+    "post": {"final", "postponed", "canceled"},
+}
+
+# ESPN status.type.name -> our status string
+_STATUS_MAP = {
+    "STATUS_SCHEDULED": "scheduled",
+    "STATUS_IN_PROGRESS": "live",
+    "STATUS_HALFTIME": "halftime",
+    "STATUS_END_PERIOD": "live",
+    "STATUS_FINAL": "final",
+    "STATUS_POSTPONED": "postponed",
+    "STATUS_CANCELED": "canceled",
+    "STATUS_DELAYED": "delayed",
+}
+
+
+def _derive_status(status_type: dict) -> str:
+    """Our status from ESPN's phase (``state``), refined by the detailed ``name``."""
+    named = _STATUS_MAP.get(status_type.get("name", "STATUS_SCHEDULED"))
+    state = status_type.get("state")
+    if state not in _STATE_STATUS:
+        return named or "scheduled"  # no usable phase: the name is all we have
+    if named in _STATE_REFINEMENTS[state]:
+        return named
+    return _STATE_STATUS[state]
+
+
+def _parse_competitor(competitors: list[dict], home_away: str) -> dict:
+    """Extract team info for the home or away side."""
+    for c in competitors:
+        if c.get("homeAway") == home_away:
+            team = c.get("team", {})
+            return {
+                "abbrev": normalize_abbrev(team.get("abbreviation", "UNK")),
+                "name": team.get("displayName", "Unknown"),
+                "score": int(c.get("score", 0)),
+            }
+    return {"abbrev": "UNK", "name": "Unknown", "score": 0}
+
+
+def _parse_game(event: dict, polled_at: datetime) -> ScoreboardEvent | None:
+    """Parse a single ESPN event into a ScoreboardEvent."""
+    competitions = event.get("competitions", [])
+    if not competitions:
+        return None
+
+    comp = competitions[0]
+    competitors = comp.get("competitors", [])
+    status_obj = comp.get("status", {})
+    status_type = status_obj.get("type", {})
+
+    home = _parse_competitor(competitors, "home")
+    away = _parse_competitor(competitors, "away")
+
+    status = _derive_status(status_type)
+    status_detail = status_type.get("shortDetail", status_type.get("detail", ""))
+
+    period = status_obj.get("period")
+    display_clock = status_obj.get("displayClock")
+
+    venue_obj = comp.get("venue", {})
+    venue = venue_obj.get("fullName")
+
+    start_time_str = event.get("date", comp.get("date", ""))
+    try:
+        start_time = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        start_time = polled_at
+
+    return ScoreboardEvent(
+        game_id=event.get("id", ""),
+        home_team=home["abbrev"],
+        away_team=away["abbrev"],
+        home_team_name=home["name"],
+        away_team_name=away["name"],
+        home_score=home["score"],
+        away_score=away["score"],
+        status=status,
+        status_detail=status_detail,
+        quarter=period if period and period > 0 else None,
+        clock=display_clock if display_clock and display_clock != "0.0" else None,
+        start_time=start_time,
+        venue=venue,
+        polled_at=polled_at,
+    )
+
+
+class ScoreboardCollector(BaseCollector):
+    """Fetches the NBA scoreboard from ESPN's public API.
+
+    Parameters:
+        settings: Application configuration.
+        sink: Shared event sink the snapshots are produced to.
+        http: Shared ESPN HTTP client (owned - and closed - by the caller).
+    """
+
+    def __init__(self, settings: Settings, sink: EventSink, http: EspnHttp) -> None:
+        self.settings = settings
+        self.sink = sink
+        self.http = http
+        self._circuit_breaker = CircuitBreaker()
+
+    @espn_retry
+    async def _fetch(self) -> dict:
+        """Fetch scoreboard JSON from ESPN with retry."""
+        url = f"{self.settings.espn_base_url}/scoreboard"
+        params = {}
+        if self.settings.espn_date:
+            params["dates"] = self.settings.espn_date
+        logger.debug("scoreboard.fetching", url=url, date=self.settings.espn_date or "auto")
+
+        resp = await self.http.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def collect(self) -> list[dict]:
+        """GET /scoreboard and return a list of parsed ScoreboardEvent dicts."""
+        data = await self._circuit_breaker.call(self._fetch())
+
+        polled_at = datetime.now(timezone.utc)
+        events = data.get("events", [])
+        results = []
+
+        for event in events:
+            parsed = _parse_game(event, polled_at)
+            if parsed:
+                results.append(parsed.model_dump(mode="json"))
+
+        logger.debug("scoreboard.collected", games=len(results))
+        return results
+
+    async def poll(self) -> list[dict] | None:
+        """Run one poll cycle: collect scoreboard data, produce it and flush the sink.
+
+        Returns the games produced - the orchestrator manages play-by-play from
+        them, so the scoreboard is fetched once per cycle - or ``None`` when an
+        ESPN error skipped the cycle (no news, not "no games"). A sink flush
+        error propagates to the caller.
+        """
+        try:
+            games = await self.collect()
+        except CircuitOpenError:
+            logger.warning("scoreboard.circuit_open", action="skipping_cycle")
+            return None
+        except httpx.HTTPStatusError as exc:
+            logger.error("scoreboard.http_error", status=exc.response.status_code)
+            return None
+        except httpx.RequestError as exc:
+            logger.error("scoreboard.request_error", error=str(exc))
+            return None
+
+        for game in games:
+            game_id = game["game_id"]
+            self.sink.produce(topic=TOPIC, key=game_id, value=game)
+            logger.debug(
+                "scoreboard.produced",
+                game_id=game_id,
+                matchup=f"{game['away_team']} @ {game['home_team']}",
+                status=game["status"],
+                score=f"{game['away_score']}-{game['home_score']}",
+            )
+
+        await self.sink.flush()
+        logger.debug("scoreboard.poll_complete", games_published=len(games))
+        return games
+
+    async def close(self) -> None:
+        """Flush the sink. The shared http and sink are closed by their owner."""
+        await self.sink.flush()
+
+
+async def main() -> None:
+    """Standalone scoreboard poller: shared IO from ``build_io``, polled on an interval."""
+    # Imported lazily: src.__main__ imports this module at load time.
+    from src.__main__ import build_io
+
+    settings = Settings()
+    sink, http = await build_io(settings)
+    try:
+        collector = ScoreboardCollector(settings, sink, http)
+
+        shutdown = asyncio.Event()
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, shutdown.set)
+
+        logger.info(
+            "scoreboard.starting",
+            interval=settings.espn_poll_interval_seconds,
+            espn_url=settings.espn_base_url,
+        )
+
+        while not shutdown.is_set():
+            await collector.poll()
+            try:
+                await asyncio.wait_for(
+                    shutdown.wait(),
+                    timeout=settings.espn_poll_interval_seconds,
+                )
+            except TimeoutError:
+                pass
+    finally:
+        logger.info("scoreboard.shutting_down")
+        try:
+            await sink.close()
+        finally:
+            await http.aclose()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

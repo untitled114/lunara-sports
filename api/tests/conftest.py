@@ -1,0 +1,240 @@
+"""Shared test fixtures for the API service."""
+
+from __future__ import annotations
+
+import asyncio
+import uuid
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+import structlog
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import ARRAY, BigInteger
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.compiler import compiles
+
+from src.db.models import Base, Game, Leaderboard, Play, Team, User
+from src.db.session import get_session
+from src.main import app
+
+
+@pytest.fixture(autouse=True)
+def _reset_structlog_config():
+    """The app lifespan sets a log-level filter; keep it from leaking into later tests."""
+    yield
+    structlog.reset_defaults()
+
+
+# Make ARRAY render as TEXT in SQLite (PG-only type)
+@compiles(ARRAY, "sqlite")
+def _compile_array_sqlite(type_, compiler, **kw):
+    return "TEXT"
+
+
+# BigInteger primary keys (Play, Reaction, ...) render as BIGINT on SQLite, which
+# SQLite does NOT treat as a rowid alias - only an exact "INTEGER PRIMARY KEY"
+# column autoincrements. Without this, any code path that inserts a new
+# BigInteger-PK row without an explicit id (autoincrement, as Postgres BIGSERIAL
+# does in production) fails with "NOT NULL constraint failed" on SQLite. Seeded
+# fixture rows sidestep this by passing explicit ids (see seeded_session), but
+# that's not available to a real INSERT made by application code under test.
+@compiles(BigInteger, "sqlite")
+def _compile_biginteger_sqlite(type_, compiler, **kw):
+    return "INTEGER"
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture
+async def engine():
+    """In-memory async SQLite engine."""
+    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield eng
+    await eng.dispose()
+
+
+@pytest.fixture
+async def session(engine):
+    """Async session bound to the in-memory database."""
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with factory() as sess:
+        yield sess
+
+
+@pytest.fixture
+async def session_factory(engine):
+    """Return the session factory itself (for play_poller tests)."""
+    return async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+@pytest.fixture
+async def seeded_session(session):
+    """Session with seed data: 2 teams, 1 game, 3 plays, 1 user."""
+    # Teams
+    session.add_all(
+        [
+            Team(abbrev="BOS", name="Boston Celtics", conference="Eastern", division="Atlantic"),
+            Team(abbrev="LAL", name="Los Angeles Lakers", conference="Western", division="Pacific"),
+        ]
+    )
+    await session.flush()
+
+    # Game - 7:30pm ET on Feb 17 = midnight+30min timezone.utc Feb 18
+    # This falls in the ET-aware query window for Feb 17.
+    game = Game(
+        id="401810001",
+        home_team="BOS",
+        away_team="LAL",
+        status="live",
+        home_score=55,
+        away_score=48,
+        quarter=3,
+        clock="8:30",
+        start_time=datetime(2026, 2, 18, 0, 30, tzinfo=timezone.utc),
+        venue="TD Garden",
+    )
+    session.add(game)
+    await session.flush()
+
+    # Plays (explicit IDs for SQLite compatibility)
+    session.add_all(
+        [
+            Play(
+                id=1,
+                game_id="401810001",
+                sequence_number=1,
+                quarter=1,
+                clock="12:00",
+                event_type="jump_ball",
+                description="Tip-off",
+                team="BOS",
+                home_score=0,
+                away_score=0,
+            ),
+            Play(
+                id=2,
+                game_id="401810001",
+                sequence_number=10,
+                quarter=1,
+                clock="11:00",
+                event_type="jump_shot",
+                description="Tatum makes jumper",
+                team="BOS",
+                player_name="Jayson Tatum",
+                home_score=2,
+                away_score=0,
+            ),
+            Play(
+                id=3,
+                game_id="401810001",
+                sequence_number=20,
+                quarter=1,
+                clock="10:30",
+                event_type="layup",
+                description="LeBron makes layup",
+                team="LAL",
+                player_name="LeBron James",
+                home_score=2,
+                away_score=2,
+            ),
+        ]
+    )
+    await session.flush()
+
+    # User
+    user_id = uuid.UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
+    session.add(User(id=user_id, username="testuser", display_name="Test User"))
+    await session.flush()
+
+    # Leaderboard
+    session.add(
+        Leaderboard(
+            user_id=user_id,
+            season="2025-26",
+            total_points=150,
+            correct_predictions=30,
+            total_predictions=50,
+            streak=5,
+            rank=1,
+        )
+    )
+    await session.commit()
+
+    yield session
+
+
+# Shared mock context manager for patching Redis, DB init, and the play poller
+_MOCK_PATCHES = [
+    ("src.services.game_service.get_cached_game_list", AsyncMock(return_value=None)),
+    ("src.services.game_service.get_cached_game_state", AsyncMock(return_value=None)),
+    ("src.services.game_service.cache_game_list", AsyncMock()),
+    ("src.services.game_service.cache_game_state", AsyncMock()),
+    ("src.main.init_redis", AsyncMock()),
+    ("src.main.close_redis", AsyncMock()),
+    ("src.main.redis_ping", AsyncMock(return_value=True)),
+    ("src.main.db_ping", AsyncMock(return_value=True)),
+    ("src.main.init_db", lambda *a, **kw: None),
+    ("src.main.close_db", AsyncMock()),
+    ("src.main.run_play_poller", AsyncMock()),
+]
+
+
+@pytest.fixture
+async def client(seeded_session):
+    """HTTPX async client with DB session and Redis mocked."""
+
+    async def _override_session():
+        yield seeded_session
+
+    patches = [
+        patch(
+            target,
+            new_callable=lambda: type(mock) if callable(mock) else lambda: mock,
+            return_value=mock() if isinstance(mock, type) else mock,
+        )
+        if isinstance(mock, type)
+        else patch(target, mock)
+        for target, mock in _MOCK_PATCHES
+    ]
+
+    with (
+        patch(
+            "src.services.game_service.get_cached_game_list",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "src.services.game_service.get_cached_game_state",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch("src.services.game_service.cache_game_list", new_callable=AsyncMock),
+        patch("src.services.game_service.cache_game_state", new_callable=AsyncMock),
+        patch(
+            "src.services.game_service.espn_client",
+            MagicMock(
+                get_scoreboard=AsyncMock(return_value=None),
+                get_game_summary=AsyncMock(return_value=None),
+            ),
+        ),
+        patch("src.main.init_redis", new_callable=AsyncMock),
+        patch("src.main.close_redis", new_callable=AsyncMock),
+        patch("src.main.redis_ping", new_callable=AsyncMock, return_value=True),
+        patch("src.main.db_ping", new_callable=AsyncMock, return_value=True),
+        patch("src.main.init_db"),
+        patch("src.main.close_db", new_callable=AsyncMock),
+        patch("src.main.run_play_poller", new_callable=AsyncMock),
+    ):
+        app.dependency_overrides[get_session] = _override_session
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as c:
+            yield c
+        app.dependency_overrides.clear()

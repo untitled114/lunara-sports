@@ -1,0 +1,84 @@
+[project]
+name = "playbyplay-api"
+version = "0.1.0"
+description = "FastAPI service for the Play-by-Play real-time sports app"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "redis>=5.2",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "structlog>=24.4",
+    "httpx>=0.27",
+    "prometheus-fastapi-instrumentator>=7.0",
+    "pyjwt>=2.8",
+    "bcrypt>=4.0",
+    "email-validator>=2.0",
+    "pyarrow>=15.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "httpx>=0.27",
+    "aiosqlite>=0.20",
+    "ruff>=0.8,<0.17",  # capped: new ruff releases change rule defaults
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Only the `src` package and its subpackages, nested under `src` (a wheel built from this
+# has exactly one top-level package). Optional subpackages are picked up when present.
+where = ["."]
+include = ["src", "src.*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long - handled by ruff-format
+    "B008",  # Depends() in defaults - standard FastAPI pattern
+    "B023",  # loop variable binding - false positives in closures
+    "E741",  # ambiguous variable name (l for losses)
+    "N806",  # uppercase in function - SQL constant naming
+    "SIM105", # contextlib.suppress - try/except/pass is fine
+    "SIM108", # ternary - if/else is clearer with comments
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402", "SIM117", "SIM105", "F841"]
+"src/services/game_service.py" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+concurrency = ["greenlet", "thread"]
+
+[tool.coverage.report]
+fail_under = 99.1
+show_missing = true
+skip_covered = true

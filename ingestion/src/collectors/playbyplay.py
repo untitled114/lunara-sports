@@ -1,0 +1,342 @@
+"""ESPN play-by-play collector.
+
+Polls the ESPN game summary endpoint for individual play events and produces
+each play to the shared event sink under the ``raw.plays`` topic. A play is
+identified by ESPN's play id; a play is produced when it is new or when any of
+its stored fields changed (ESPN renumbers and corrects plays mid-game). A
+restarted collector resends every play; the sink's upsert writes only changes.
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import datetime, timezone
+
+import httpx
+import structlog
+
+from src.collectors.base import BaseCollector
+from src.config import Settings
+from src.http.espn import EspnHttp
+from src.resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
+from src.resilience.retry import espn_retry_pbp
+from src.schemas.events import PlayEvent
+from src.sinks.base import EventSink
+from src.team_abbrev import normalize_abbrev
+
+logger = structlog.get_logger(__name__)
+
+TOPIC = "raw.plays"
+
+# Normalize ESPN type.text -> snake_case event type
+_EVENT_TYPE_MAP = {
+    "jumpball": "jump_ball",
+    "jump shot": "jump_shot",
+    "pullup jump shot": "jump_shot",
+    "floating jump shot": "jump_shot",
+    "turnaround jump shot": "jump_shot",
+    "step back jump shot": "jump_shot",
+    "fadeaway jump shot": "jump_shot",
+    "hook shot": "hook_shot",
+    "driving layup": "layup",
+    "layup": "layup",
+    "cutting layup shot": "layup",
+    "finger roll layup": "layup",
+    "reverse layup": "layup",
+    "running layup": "layup",
+    "driving floating jump shot": "floater",
+    "dunk": "dunk",
+    "driving dunk": "dunk",
+    "alley oop dunk": "dunk",
+    "cutting dunk shot": "dunk",
+    "running dunk": "dunk",
+    "tip shot": "tip_shot",
+    "free throw 1 of 1": "free_throw",
+    "free throw 1 of 2": "free_throw",
+    "free throw 2 of 2": "free_throw",
+    "free throw 1 of 3": "free_throw",
+    "free throw 2 of 3": "free_throw",
+    "free throw 3 of 3": "free_throw",
+    "offensive rebound": "rebound_offensive",
+    "defensive rebound": "rebound_defensive",
+    "team offensive rebound": "rebound_offensive",
+    "team defensive rebound": "rebound_defensive",
+    "turnover": "turnover",
+    "steal": "steal",
+    "block": "block",
+    "personal foul": "foul",
+    "shooting foul": "foul_shooting",
+    "offensive foul": "foul_offensive",
+    "loose ball foul": "foul_loose_ball",
+    "flagrant foul type 1": "foul_flagrant",
+    "technical foul": "foul_technical",
+    "substitution": "substitution",
+    "timeout": "timeout",
+    "official timeout": "timeout",
+    "end of period": "period_end",
+    "end of game": "game_end",
+}
+
+# Regex to extract the first player name from ESPN play text.
+# Matches patterns like "LeBron James makes..." or "De'Aaron Fox misses..."
+_PLAYER_RE = re.compile(r"^([A-Z][a-zA-Z'\-\.]+(?: (?:Jr\.|Sr\.|III|II|IV|[A-Z][a-zA-Z'\-\.]+))+)")
+
+
+def _normalize_event_type(event_text: str) -> str:
+    """Map ESPN event text to a normalized snake_case type."""
+    key = event_text.strip().lower()
+    if key in _EVENT_TYPE_MAP:
+        return _EVENT_TYPE_MAP[key]
+    # Fallback: generic free throw
+    if "free throw" in key:
+        return "free_throw"
+    # Fallback: generic foul
+    if "foul" in key:
+        return "foul"
+    # Fallback: generic rebound
+    if "rebound" in key:
+        return "rebound"
+    # Fallback: snake_case the raw text
+    return re.sub(r"[^a-z0-9]+", "_", key).strip("_")
+
+
+def _extract_player_name(text: str) -> str | None:
+    """Extract the primary player name from ESPN play description text."""
+    if not text:
+        return None
+    m = _PLAYER_RE.match(text)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _build_team_map(header: dict) -> dict[str, str]:
+    """Build a team_id -> abbreviation map from the summary header."""
+    team_map = {}
+    competitions = header.get("competitions", [])
+    if competitions:
+        for comp in competitions[0].get("competitors", []):
+            team = comp.get("team", {})
+            team_id = str(team.get("id", ""))
+            abbrev = team.get("abbreviation", "")
+            if team_id and abbrev:
+                team_map[team_id] = normalize_abbrev(abbrev)
+    return team_map
+
+
+def _parse_play(
+    play: dict, game_id: str, team_map: dict[str, str], polled_at: datetime
+) -> PlayEvent | None:
+    """Parse a single ESPN play dict into a PlayEvent."""
+    try:
+        seq = int(play.get("sequenceNumber", 0))
+    except (ValueError, TypeError):
+        return None
+
+    period_obj = play.get("period", {})
+    quarter = period_obj.get("number", 0)
+
+    clock_obj = play.get("clock", {})
+    clock = clock_obj.get("displayValue", "0:00")
+
+    type_obj = play.get("type", {})
+    event_text = type_obj.get("text", "Unknown")
+    event_type = _normalize_event_type(event_text)
+
+    description = play.get("text", "")
+    player_name = _extract_player_name(description)
+
+    team_obj = play.get("team", {})
+    team_id = str(team_obj.get("id", ""))
+    team_abbrev = team_map.get(team_id)
+
+    wallclock_str = play.get("wallclock")
+    wallclock = None
+    if wallclock_str:
+        try:
+            wallclock = datetime.fromisoformat(wallclock_str.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            pass
+
+    return PlayEvent(
+        game_id=game_id,
+        play_id=play.get("id", ""),
+        sequence_number=seq,
+        quarter=quarter,
+        clock=clock,
+        event_type=event_type,
+        event_text=event_text,
+        description=description,
+        team=team_abbrev,
+        player_name=player_name,
+        home_score=play.get("homeScore", 0),
+        away_score=play.get("awayScore", 0),
+        scoring_play=play.get("scoringPlay", False),
+        score_value=play.get("scoreValue", 0),
+        wallclock=wallclock,
+        polled_at=polled_at,
+    )
+
+
+def _fingerprint(play: PlayEvent) -> tuple:
+    """The stored fields of a play: a change in any of them is written again."""
+    return (
+        play.sequence_number,
+        play.quarter,
+        play.clock,
+        play.event_type,
+        play.description,
+        play.team,
+        play.player_name,
+        play.home_score,
+        play.away_score,
+        play.espn_order,
+        play.scoring_play,
+        play.score_value,
+    )
+
+
+class PlayByPlayCollector(BaseCollector):
+    """Fetches play-by-play data for a single NBA game from ESPN.
+
+    Uses the ``/summary?event={game_id}`` endpoint to retrieve plays. ESPN identifies a
+    play by its id and renumbers plays during a game (a play recorded late is inserted
+    and the ones after it shift), so the collector remembers each id with the fields it
+    last produced and produces a play again only when it is new or changed.
+
+    Parameters:
+        settings: Application configuration.
+        sink: Shared event sink the plays are produced to.
+        game_id: ESPN game identifier to poll.
+        http: Shared ESPN HTTP client (owned - and closed - by the caller).
+    """
+
+    def __init__(self, settings: Settings, sink: EventSink, game_id: str, http: EspnHttp) -> None:
+        self.settings = settings
+        self.sink = sink
+        self.game_id = game_id
+        self.http = http
+        self._produced: dict[str, tuple] = {}  # ESPN play id -> fields last produced
+        self._skipped: set[str] = set()  # ids that did not parse (warned once)
+        self._circuit_breaker = CircuitBreaker()
+
+    @property
+    def new_play_count(self) -> int:
+        """Number of distinct ESPN plays produced so far. Useful for monitoring."""
+        return len(self._produced)
+
+    @espn_retry_pbp
+    async def _fetch(self) -> dict:
+        """Fetch game summary JSON from ESPN (one quick retry; the next cycle retries)."""
+        url = f"{self.settings.espn_base_url}/summary"
+        params = {"event": self.game_id}
+        logger.debug("playbyplay.fetching", game_id=self.game_id)
+
+        resp = await self.http.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def collect(self) -> list[dict]:
+        """GET /summary?event={game_id} and return the plays that are new or changed.
+
+        A play is identified by ESPN's id; one seen before is returned again only when
+        its fields (position, clock, text, score...) differ from what was produced.
+        """
+        data = await self._circuit_breaker.call(self._fetch())
+        return self.changed_plays(data)
+
+    def changed_plays(self, data: dict) -> list[dict]:
+        """The plays in an ESPN summary that are new or changed since the last call."""
+        polled_at = datetime.now(timezone.utc)
+        team_map = _build_team_map(data.get("header", {}))
+        raw_plays = data.get("plays", [])
+
+        changed = []
+        for position, raw in enumerate(raw_plays):
+            play_id = str(raw.get("id") or "")
+            if not play_id or play_id in self._skipped:
+                continue
+            # One malformed play (e.g. null text) must not fail every cycle
+            # and block the rest of the game: skip it, loudly, once.
+            try:
+                parsed = _parse_play(raw, self.game_id, team_map, polled_at)
+                error = None if parsed else "unparseable"
+            except Exception as exc:
+                parsed, error = None, repr(exc)
+            if parsed is None:
+                self._skipped.add(play_id)
+                logger.warning(
+                    "pbp.play_skipped",
+                    game_id=self.game_id,
+                    play_id=play_id,
+                    sequence=raw.get("sequenceNumber"),
+                    error=error,
+                )
+                continue
+            parsed.espn_order = position
+            fields = _fingerprint(parsed)
+            if self._produced.get(play_id) == fields:
+                continue
+            self._produced[play_id] = fields
+            changed.append(parsed.model_dump(mode="json"))
+
+        logger.info(
+            "playbyplay.collected",
+            game_id=self.game_id,
+            changed_plays=len(changed),
+            total_in_response=len(raw_plays),
+            known_plays=len(self._produced),
+        )
+        return changed
+
+    async def poll(self) -> None:
+        """Run one poll cycle: produce new plays to the sink and flush it.
+
+        ESPN errors skip the cycle; a sink flush error propagates to the caller
+        (the plays stay in the sink's buffer for its next flush).
+        """
+        try:
+            plays = await self.collect()
+        except CircuitOpenError:
+            logger.warning(
+                "playbyplay.circuit_open",
+                game_id=self.game_id,
+                action="skipping_cycle",
+            )
+            return
+        except httpx.HTTPStatusError as exc:
+            logger.error(
+                "playbyplay.http_error",
+                game_id=self.game_id,
+                status=exc.response.status_code,
+            )
+            return
+        except httpx.RequestError as exc:
+            logger.error(
+                "playbyplay.request_error",
+                game_id=self.game_id,
+                error=str(exc),
+            )
+            return
+
+        for play in plays:
+            self.sink.produce(topic=TOPIC, key=self.game_id, value=play)
+            logger.debug(
+                "playbyplay.produced",
+                game_id=self.game_id,
+                seq=play["sequence_number"],
+                event_type=play["event_type"],
+                desc=play["description"][:80],
+            )
+
+        if plays:
+            await self.sink.flush()
+            logger.info(
+                "playbyplay.poll_complete",
+                game_id=self.game_id,
+                new_plays_published=len(plays),
+            )
+
+    async def close(self) -> None:
+        """Flush the sink. The shared http and sink are closed by their owner."""
+        await self.sink.flush()

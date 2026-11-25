@@ -1,0 +1,373 @@
+"""Extra tests for stats_service - player season stats, game log, athlete lookup."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, patch
+
+from src.services.stats_service import (
+    _build_athlete_lookup,
+    _resolve_athlete,
+    _safe_float,
+    get_player_game_log,
+    get_player_season_stats,
+)
+
+
+class TestSafeFloat:
+    def test_valid_float(self):
+        assert _safe_float("3.5") == "3.5"
+
+    def test_invalid_float(self):
+        assert _safe_float("bad") == "0.0"
+
+    def test_range_format(self):
+        assert _safe_float("4.2-9.8") == "0.0"
+
+    def test_none(self):
+        assert _safe_float(None) == "0.0"
+
+
+class TestGetPlayerSeasonStats:
+    async def test_reads_espn(self):
+        espn_data = {
+            "categories": [
+                {
+                    "displayName": "Regular Season Averages",
+                    "labels": [
+                        "GP",
+                        "GS",
+                        "MIN",
+                        "FG",
+                        "FG%",
+                        "3PT",
+                        "3P%",
+                        "FT",
+                        "FT%",
+                        "OR",
+                        "DR",
+                        "REB",
+                        "AST",
+                        "BLK",
+                        "STL",
+                        "PF",
+                        "TO",
+                        "PTS",
+                    ],
+                    "statistics": [
+                        {
+                            "stats": [
+                                "70",
+                                "70",
+                                "36.5",
+                                "9.2",
+                                ".521",
+                                "2.5",
+                                ".385",
+                                "7.0",
+                                ".852",
+                                "1.2",
+                                "6.0",
+                                "7.2",
+                                "8.1",
+                                "0.8",
+                                "1.5",
+                                "2.1",
+                                "3.5",
+                                "25.3",
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
+            result = await get_player_season_stats("12345")
+            assert result is not None
+            assert result.gp == 70
+
+    async def test_espn_fallback_no_average_category(self):
+        espn_data = {
+            "categories": [
+                {"displayName": "Regular Season Totals", "labels": [], "statistics": []},
+            ]
+        }
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
+            result = await get_player_season_stats("12345")
+            assert result is None
+
+    async def test_espn_error(self):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_stats = AsyncMock(side_effect=Exception("ESPN down"))
+            result = await get_player_season_stats("12345")
+            assert result is None
+
+    async def test_espn_average_category_empty_statistics_list(self):
+        """Category name matches "average" but has no statistics rows at
+        all - skipped via `continue`, function returns None."""
+        espn_data = {
+            "categories": [
+                {"displayName": "Regular Season Averages", "labels": ["GP"], "statistics": []},
+            ]
+        }
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
+            result = await get_player_season_stats("12345")
+            assert result is None
+
+    async def test_espn_average_category_last_entry_has_no_stats_values(self):
+        """The most recent season entry has an empty "stats" list - skipped
+        via `continue`."""
+        espn_data = {
+            "categories": [
+                {
+                    "displayName": "Regular Season Averages",
+                    "labels": ["GP", "PTS"],
+                    "statistics": [{"stats": []}],
+                },
+            ]
+        }
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
+            result = await get_player_season_stats("12345")
+            assert result is None
+
+    async def test_espn_average_category_more_labels_than_values(self):
+        """More labels than values in the current season row - the trailing
+        labels are skipped by the `i < len(vals)` bounds check
+        instead of raising an IndexError."""
+        espn_data = {
+            "categories": [
+                {
+                    "displayName": "Regular Season Averages",
+                    "labels": ["GP", "PTS", "REB", "AST"],  # 4 labels
+                    "statistics": [{"stats": ["10", "25.0"]}],  # only 2 values
+                },
+            ]
+        }
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_stats = AsyncMock(return_value=espn_data)
+            result = await get_player_season_stats("12345")
+            assert result is not None
+            assert result.gp == 10
+            assert result.ppg == "25.0"
+
+
+class TestGetPlayerGameLog:
+    async def test_reads_espn(self):
+        espn_data = {
+            "labels": [
+                "MIN",
+                "FG",
+                "FG%",
+                "3PT",
+                "3P%",
+                "FT",
+                "FT%",
+                "REB",
+                "AST",
+                "BLK",
+                "STL",
+                "PF",
+                "TO",
+                "PTS",
+            ],
+            "events": {
+                "ev1": {
+                    "gameDate": "2026-03-20T02:30:00Z",
+                    "opponent": {"abbreviation": "LAL"},
+                    "team": {"abbreviation": "BOS"},
+                    "atVs": "vs",
+                    "gameResult": "W",
+                    "score": "110-98",
+                },
+            },
+            "seasonTypes": [
+                {
+                    "categories": [
+                        {
+                            "events": [
+                                {
+                                    "eventId": "ev1",
+                                    "stats": [
+                                        "36",
+                                        "12-22",
+                                        ".545",
+                                        "3-8",
+                                        ".375",
+                                        "5-6",
+                                        ".833",
+                                        "7",
+                                        "8",
+                                        "1",
+                                        "2",
+                                        "2",
+                                        "3",
+                                        "30",
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        }
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_gamelog = AsyncMock(return_value=espn_data)
+            result = await get_player_game_log("12345")
+            assert len(result) == 1
+            assert result[0]["pts"] == 30
+
+    async def test_espn_gamelog_skips_event_missing_from_events_meta(self):
+        """An event referenced from seasonTypes but absent from the top-level `events`
+        metadata map is skipped rather than crashing on missing keys."""
+        espn_data = {
+            "labels": ["PTS"],
+            "events": {
+                "ev1": {
+                    "gameDate": "2026-03-20T02:30:00Z",
+                    "opponent": {"abbreviation": "LAL"},
+                    "team": {"abbreviation": "BOS"},
+                    "atVs": "vs",
+                },
+                # "ev2" intentionally absent from events metadata
+            },
+            "seasonTypes": [
+                {
+                    "categories": [
+                        {
+                            "events": [
+                                {"eventId": "ev2", "stats": ["99"]},  # no metadata -> skipped
+                                {"eventId": "ev1", "stats": ["30"]},
+                            ]
+                        }
+                    ]
+                },
+            ],
+        }
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_gamelog = AsyncMock(return_value=espn_data)
+            result = await get_player_game_log("12345")
+            assert len(result) == 1
+            assert result[0]["pts"] == 30
+
+    async def test_espn_gamelog_missing_label_uses_default(self):
+        """A stat label not present in this response's `labels` list falls
+        back to `_get`'s default value instead of KeyError."""
+        espn_data = {
+            "labels": ["PTS"],  # REB/AST/etc. are all absent
+            "events": {
+                "ev1": {
+                    "gameDate": "2026-03-20T02:30:00Z",
+                    "opponent": {"abbreviation": "LAL"},
+                    "team": {"abbreviation": "BOS"},
+                    "atVs": "vs",
+                },
+            },
+            "seasonTypes": [
+                {"categories": [{"events": [{"eventId": "ev1", "stats": ["30"]}]}]},
+            ],
+        }
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_gamelog = AsyncMock(return_value=espn_data)
+            result = await get_player_game_log("12345")
+            assert len(result) == 1
+            assert result[0]["pts"] == 30
+            assert result[0]["reb"] == 0  # defaulted to "0" -> int(float("0"))
+            assert result[0]["fg"] == "0-0"  # defaulted string field
+
+    async def test_espn_error(self):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_gamelog = AsyncMock(side_effect=Exception("ESPN down"))
+            result = await get_player_game_log("12345")
+            assert result == []
+
+
+class TestBuildAthleteLookup:
+    async def test_builds_lookup(self):
+        roster_data = {
+            "team": {
+                "athletes": [
+                    {"id": "123", "displayName": "LeBron James"},
+                    {"id": "456", "displayName": "Anthony Davis"},
+                ]
+            }
+        }
+        with (
+            patch("src.services.stats_service.espn_client") as mock_espn,
+            patch("src.services.team_mapping.ESPN_TEAM_IDS", {"LAL": 13}),
+        ):
+            mock_espn.get_team_roster = AsyncMock(return_value=roster_data)
+            result = await _build_athlete_lookup()
+            assert "123" in result
+            assert result["123"]["name"] == "LeBron James"
+
+    async def test_handles_error(self):
+        with (
+            patch("src.services.stats_service.espn_client") as mock_espn,
+            patch("src.services.team_mapping.ESPN_TEAM_IDS", {"LAL": 13}),
+        ):
+            mock_espn.get_team_roster = AsyncMock(side_effect=Exception("error"))
+            result = await _build_athlete_lookup()
+            assert result == {}
+
+    async def test_athlete_without_id_is_skipped(self):
+        """An athlete dict with no (or empty) "id" contributes no lookup
+        entry, while a valid sibling still gets added."""
+        roster_data = {
+            "team": {
+                "athletes": [
+                    {"displayName": "No ID Guy"},  # missing "id" entirely
+                    {"id": "123", "displayName": "LeBron James"},
+                ]
+            }
+        }
+        with (
+            patch("src.services.stats_service.espn_client") as mock_espn,
+            patch("src.services.team_mapping.ESPN_TEAM_IDS", {"LAL": 13}),
+        ):
+            mock_espn.get_team_roster = AsyncMock(return_value=roster_data)
+            result = await _build_athlete_lookup()
+            assert list(result.keys()) == ["123"]
+
+
+class TestResolveAthlete:
+    async def test_from_map(self):
+        athlete_map = {"123": {"name": "LeBron James", "abbrev": "LAL"}}
+        result = await _resolve_athlete("123", athlete_map)
+        assert result["name"] == "LeBron James"
+
+    async def test_from_espn(self):
+        espn_data = {
+            "displayName": "Anthony Davis",
+            "team": {"abbreviation": "LAL"},
+        }
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_info = AsyncMock(return_value=espn_data)
+            result = await _resolve_athlete("456", {})
+            assert result["name"] == "Anthony Davis"
+
+    async def test_espn_returns_none(self):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_info = AsyncMock(return_value=None)
+            result = await _resolve_athlete("999", {})
+            assert "Player 999" in result["name"]
+
+    async def test_espn_error(self):
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_info = AsyncMock(side_effect=Exception("err"))
+            result = await _resolve_athlete("999", {})
+            assert "Player 999" in result["name"]
+
+    async def test_espn_data_without_a_name_falls_through_to_default(self):
+        """ESPN returns data, but the athlete has neither displayName nor
+        fullName - `if name:` is False, so nothing is
+        cached and the generic "Player {id}" fallback is used instead."""
+        athlete_map: dict = {}
+        with patch("src.services.stats_service.espn_client") as mock_espn:
+            mock_espn.get_athlete_info = AsyncMock(return_value={"team": {"abbreviation": "LAL"}})
+            result = await _resolve_athlete("777", athlete_map)
+            assert result["name"] == "Player 777"
+            assert "777" not in athlete_map  # not cached
