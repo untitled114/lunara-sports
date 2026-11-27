@@ -85,6 +85,16 @@ async def get_standings(season: int | None = None) -> dict | None:
     return await _cached_get(key, url, STANDINGS_TTL)
 
 
+async def get_roster(espn_id: int) -> dict | None:
+    """A team's roster from ESPN's /roster endpoint: the athletes carry experience (years),
+    which the team endpoint's ``enable=roster`` list leaves out."""
+    return await _cached_get(
+        f"espn:roster:v2:{espn_id}",
+        f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{espn_id}/roster",
+        ROSTER_TTL,
+    )
+
+
 async def get_team_roster(espn_id: int) -> dict | None:
     """Fetch team roster from ESPN by team ID."""
     return await _cached_get(
@@ -95,17 +105,86 @@ async def get_team_roster(espn_id: int) -> dict | None:
     )
 
 
-async def get_stat_leaders(season: int, limit: int = 10) -> dict | None:
-    """Fetch league stat leaders (per-game) for one regular season from the ESPN core API.
+BYATHLETE_URL = (
+    "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/statistics/byathlete"
+)
 
-    `season` is ESPN's end-year (2026 = 2025-26); types/2 is the regular season.
+
+async def get_qualified_leaders(season: int, sort: str, limit: int) -> dict | None:
+    """One stat's leaders for a regular season under the NBA's qualifying rules (ESPN's
+    ``isqualified=true`` list), best first. ``season`` is ESPN's end-year (2027 = 2026-27)."""
+    return await _cached_get(
+        f"espn:leaders:q:{season}:{sort}:{limit}",
+        BYATHLETE_URL,
+        LEADERS_TTL,
+        params={
+            "region": "us",
+            "lang": "en",
+            "contentorigin": "espn",
+            "isqualified": "true",
+            "page": "1",
+            "limit": str(limit),
+            "sort": f"{sort}:desc",
+            "season": str(season),
+            "seasontype": "2",
+        },
+    )
+
+
+async def get_all_player_stats(season: int) -> dict | None:
+    """Every player with stats in a regular season (ESPN's unqualified list, one request):
+    each athlete's age, position, team and per-game numbers, for the Players table."""
+    return await _cached_get(
+        f"espn:players:all:{season}",
+        BYATHLETE_URL,
+        LEADERS_TTL,
+        params={
+            "region": "us",
+            "lang": "en",
+            "contentorigin": "espn",
+            "isqualified": "false",
+            "page": "1",
+            "limit": "600",
+            "sort": "offensive.avgPoints:desc",
+            "season": str(season),
+            "seasontype": "2",
+        },
+    )
+
+
+async def get_player_count(season: int) -> int | None:
+    """How many players have stats in a regular season (ESPN's total for an unqualified
+    list); None when ESPN does not answer."""
+    data = await _cached_get(
+        f"espn:players:count:{season}",
+        BYATHLETE_URL,
+        LEADERS_TTL,
+        params={
+            "region": "us",
+            "lang": "en",
+            "contentorigin": "espn",
+            "isqualified": "false",
+            "page": "1",
+            "limit": "1",
+            "sort": "offensive.avgPoints:desc",
+            "season": str(season),
+            "seasontype": "2",
+        },
+    )
+    count = ((data or {}).get("pagination") or {}).get("count")
+    return int(count) if isinstance(count, int | float) else None
+
+
+async def get_team_stats(season: int) -> dict | None:
+    """Every team's per-game season statistics (and its opponents') for one regular season.
+
+    `season` is ESPN's end-year (2027 = 2026-27). One request covers all 30 teams.
     """
     return await _cached_get(
-        f"espn:leaders:v3:{season}:{limit}",
-        "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/"
-        f"{season}/types/2/leaders",
-        LEADERS_TTL,
-        params={"limit": str(limit)},
+        f"espn:teamstats:{season}",
+        f"{COMMON_V3}/statistics/byteam",
+        STANDINGS_TTL,
+        params={"limit": "30", "season": str(season), "seasontype": "2"},
     )
 
 

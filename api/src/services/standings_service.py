@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import ROUND_HALF_UP, Decimal
 
 import structlog
 
@@ -11,6 +12,16 @@ from . import espn_client
 from .team_mapping import ABBREV_BY_ESPN_ID, from_espn_abbrev
 
 logger = structlog.get_logger(__name__)
+
+
+def win_pct(wins: int, losses: int) -> str:
+    """Winning percentage as standings print it: three places, rounded half up (.667)."""
+    games = wins + losses
+    if games == 0:
+        return ".000"
+    if wins == games:
+        return "1.000"
+    return str((Decimal(wins) / Decimal(games)).quantize(Decimal("0.001"), ROUND_HALF_UP))[1:]
 
 
 def _parse_record(entry: dict, record_type: str) -> str:
@@ -45,8 +56,7 @@ def _parse_conference(conf_data: dict) -> list[StandingsTeam]:
 
         wins = int(_get_stat(entry, "wins") or _get_stat(entry, "W") or 0)
         losses = int(_get_stat(entry, "losses") or _get_stat(entry, "L") or 0)
-        total = wins + losses
-        pct = f".{int(wins / total * 1000):03d}" if total > 0 else ".000"
+        pct = win_pct(wins, losses)
         gb = _get_stat(entry, "gamesBehind") or _get_stat(entry, "GB") or "-"
         streak = _get_stat(entry, "streak") or ""
 

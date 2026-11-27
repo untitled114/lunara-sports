@@ -1,0 +1,459 @@
+import { useEffect, useState, useCallback } from "react";
+import { fetchPlays, fetchBoxScore } from "@/services/api";
+import { Skeleton, Card, DataTable, TeamMark, PageState } from "@/components/ui";
+import { useTheme } from "@/context/ThemeContext";
+import { getLogoUrl, getHeadshotUrl, playerIdFromHeadshot } from "@/utils/teamColors";
+import { hasStarted } from "@/lib/gameMath";
+import { PlayerLink } from "@/components/sport/PlayerLink";
+import { oldestFirst } from "@/lib/playOrder";
+
+/* --- On-Court Tracking --- */
+
+function getOnCourtNames(plays, boxData, homeTeam, awayTeam) {
+  // Start with starters from box score
+  const homeSet = new Set();
+  const awaySet = new Set();
+
+  if (boxData) {
+    for (const p of boxData.home?.players || []) {
+      if (p.starter) homeSet.add(p.name);
+    }
+    for (const p of boxData.away?.players || []) {
+      if (p.starter) awaySet.add(p.name);
+    }
+  }
+
+  // Process plays chronologically to track subs
+  const sorted = [...plays].sort(oldestFirst);
+
+  for (const play of sorted) {
+    const desc = play.description || "";
+    const m = desc.match(/^(.+?)\s+enters the game for\s+(.+?)$/i);
+    if (!m) continue;
+
+    const entering = m[1].trim();
+    const leaving = m[2].trim();
+    const team = play.team;
+
+    if (team === homeTeam || homeSet.has(leaving)) {
+      homeSet.delete(leaving);
+      homeSet.add(entering);
+    } else if (team === awayTeam || awaySet.has(leaving)) {
+      awaySet.delete(leaving);
+      awaySet.add(entering);
+    }
+  }
+
+  return { homeOnCourt: homeSet, awayOnCourt: awaySet };
+}
+
+/* --- Components --- */
+
+// A box-score player's name: a link to their profile when the row carries a real ESPN
+// id (from its headshot URL), otherwise plain text. Never a made-up id.
+// The player's ESPN id: the API's, or the one in the headshot URL.
+const playerId = (p) => p.id || playerIdFromHeadshot(p.headshot_url);
+
+// Stable row key: two players can share a name, not a name and a jersey number.
+const playerKey = (p) => `${p.name}#${p.jersey ?? ''}`;
+
+function StatBlock({ label, value, isPrimary = false }) {
+  return (
+    <div className="flex flex-col items-center min-w-0">
+      <span className={`tnum leading-none mb-1 ${isPrimary ? 't-body font-semibold text-text-1' : 't-small text-text-2'}`}>
+        {value}
+      </span>
+      <span className="t-label text-text-3">{label}</span>
+    </div>
+  );
+}
+
+function PlayerRow({ player, teamAbbrev }) {
+  const headshot = player.headshot_url ? getHeadshotUrl(player.headshot_url) : null;
+  const teamLogo = teamAbbrev ? getLogoUrl(teamAbbrev) : null;
+
+  return (
+    <PlayerLink id={playerId(player)} className="group flex items-center gap-3 py-3">
+      <div className="h-10 w-10 rounded-md overflow-hidden bg-surface-2 border border-border shrink-0 flex items-center justify-center">
+        {headshot ? (
+          <img src={headshot} alt="" width={40} height={40} loading="lazy" className="w-full h-full object-cover" />
+        ) : teamLogo ? (
+          <img src={teamLogo} alt="" width={40} height={40} loading="lazy" className="w-full h-full object-contain p-2" />
+        ) : (
+          <span className="t-small font-semibold text-text-3">{player.name?.[0]}</span>
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="t-small font-semibold text-text-1 truncate group-hover:text-accent transition-colors">{player.name}</span>
+          {player.jersey && (
+            <span className="t-label text-text-3">
+              #{player.jersey}{player.position ? ` · ${player.position}` : ''}
+            </span>
+          )}
+        </div>
+
+        {/* Five equal columns that always fit the card: PF is never clipped at any width. */}
+        <div className="grid grid-cols-5 gap-1">
+          <StatBlock label="PTS" value={player.points ?? 0} isPrimary />
+          <StatBlock label="FG" value={player.fg || "0-0"} />
+          <StatBlock label="REB" value={player.rebounds ?? 0} />
+          <StatBlock label="AST" value={player.assists ?? 0} />
+          <StatBlock label="PF" value={player.fouls ?? 0} />
+        </div>
+      </div>
+    </PlayerLink>
+  );
+}
+
+// Empty copy for the on-court card and the full box score, by game status. Only a game
+// that hasn't started says it is waiting for tip-off.
+export function boxScoreEmptyText(status) {
+  if (status === "scheduled") return "Box score starts at tip-off.";
+  if (status === "final") return "The box score isn't available for this game.";
+  return "No box score yet.";
+}
+
+function onCourtEmptyText(status) {
+  return status === "scheduled" ? "Waiting for tip-off." : boxScoreEmptyText(status);
+}
+
+// What the side panel really lists. Live: the five on court now (starters, then every
+// "X enters the game for Y" substitution in the plays). Final with plays: the same
+// tracking run to the last play, so the five who closed the game. Final with no plays:
+// nothing to track, so the panel lists the box score's starters (flagged by the API);
+// with no starter flags either, it is just the first five box-score players.
+export function onCourtLabel(status, playsCount, hasStarters) {
+  if (status !== "final") return "On court";
+  if (playsCount > 0) return "Closing lineup";
+  return hasStarters ? "Starters" : "Players";
+}
+
+function TeamSection({ teamAbbrev, players, status, label = "On court" }) {
+  const logo = getLogoUrl(teamAbbrev);
+
+  return (
+    <Card className="mb-4 last:mb-0">
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
+        <TeamMark abbrev={teamAbbrev} logoUrl={logo} size="sm" />
+        <span className="t-label text-text-3">{label}</span>
+      </div>
+
+      {players.length === 0 ? (
+        <p className="py-8 text-center t-small text-text-3">{onCourtEmptyText(status)}</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {players.map((p, i) => (
+            <PlayerRow key={p.name ? playerKey(p) : i} player={p} teamAbbrev={teamAbbrev} />
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/* --- Full Box Score Table --- */
+
+// Each stat has a snake_case player-row key (what a player object from the box score
+// API uses) and the short label the `totals` object is keyed by (e.g. totals['3PT']) -
+// see buildTotalsRow, which copies totals onto both key shapes so a single render
+// function can read `r[key]` for a player row, a totals row, or a blank label row.
+const STAT_DEFS = [
+  { key: 'minutes', totalsKey: 'MIN', label: 'MIN' },
+  { key: 'fg', totalsKey: 'FG', label: 'FG' },
+  { key: 'three_pt', totalsKey: '3PT', label: '3PT' },
+  { key: 'ft', totalsKey: 'FT', label: 'FT' },
+  { key: 'rebounds', totalsKey: 'REB', label: 'REB' },
+  { key: 'assists', totalsKey: 'AST', label: 'AST' },
+  { key: 'steals', totalsKey: 'STL', label: 'STL' },
+  { key: 'blocks', totalsKey: 'BLK', label: 'BLK' },
+  { key: 'turnovers', totalsKey: 'TO', label: 'TO' },
+  { key: 'fouls', totalsKey: 'PF', label: 'PF' },
+  { key: 'plus_minus', totalsKey: '+/-', label: '+/-', isPlusMinus: true },
+  { key: 'points', totalsKey: 'PTS', label: 'PTS' },
+];
+
+function statCellValue(row, key, isPlusMinus) {
+  if (row.__kind === 'label') return '';
+  const raw = row[key];
+  if (isPlusMinus && (row.__kind === 'player' || row.__kind === 'totals')) {
+    // The API already sends a signed string (e.g. "+16"); parse to a number and re-sign
+    // from that, rather than prefixing "+" onto the already-signed raw string (which
+    // produced "++16").
+    const n = parseInt(raw, 10);
+    if (!Number.isNaN(n)) {
+      return <span className={n > 0 ? 'text-live' : n < 0 ? 'text-loss' : ''}>{n > 0 ? `+${n}` : String(n)}</span>;
+    }
+  }
+  return raw === '' || raw === null || raw === undefined ? '-' : raw;
+}
+
+const STAT_COLUMNS = STAT_DEFS.map(({ key, label, isPlusMinus }) => ({
+  key,
+  label,
+  numeric: true,
+  render: (r) => statCellValue(r, key, isPlusMinus),
+}));
+
+// ESPN leaves a team's total minutes and plus/minus empty. Plus/minus is the team's points
+// minus the opponent's. Once a game is final, total minutes are five players times its length
+// (48 minutes, plus 5 for each overtime), the figure a box score prints. The length comes from
+// the game's period count; a record without one takes the length whose total is nearest the
+// players' minutes added up (whole minutes, so off by a few at most). While a game is live the
+// total stays "-".
+export function teamMinutes(status, periods, players = []) {
+  if (status !== 'final') return '';
+  const n = parseInt(periods, 10);
+  if (!Number.isNaN(n) && n >= 4) return String(5 * (48 + 5 * (n - 4)));
+  const mins = players.map((p) => parseInt(p.minutes, 10)).filter((m) => !Number.isNaN(m));
+  const sum = mins.reduce((a, b) => a + b, 0);
+  if (!sum) return '';
+  const total = 240 + 25 * Math.max(0, Math.round((sum - 240) / 25));
+  return Math.abs(sum - total) <= 12 ? String(total) : '';
+}
+
+function buildTotalsRow(totals, opponentPoints, minutes) {
+  const row = { name: 'Totals', __kind: 'totals', ...totals };
+  for (const { key, totalsKey } of STAT_DEFS) row[key] = totals[totalsKey];
+  if (!row.minutes) row.minutes = minutes;
+  const own = parseInt(totals.PTS, 10);
+  const opp = parseInt(opponentPoints, 10);
+  if (!row.plus_minus && !Number.isNaN(own) && !Number.isNaN(opp)) {
+    const d = own - opp;
+    row.plus_minus = d > 0 ? `+${d}` : String(d);
+  }
+  return row;
+}
+
+function buildRows(players) {
+  const starters = players.filter((p) => p.starter);
+  const bench = players.filter((p) => !p.starter);
+  const rows = [];
+  if (starters.length) {
+    rows.push({ name: '__starters_label__', __kind: 'label', __label: 'Starters' });
+    for (const p of starters) rows.push({ ...p, __kind: 'player' });
+  }
+  if (bench.length) {
+    rows.push({ name: '__bench_label__', __kind: 'label', __label: 'Bench' });
+    for (const p of bench) rows.push({ ...p, __kind: 'player' });
+  }
+  return rows;
+}
+
+function playerColumnCell(row) {
+  if (row.__kind === 'label') return <span className="t-label text-text-3">{row.__label}</span>;
+  if (row.__kind === 'totals') return <span className="t-small font-semibold text-text-1">Totals</span>;
+
+  const headshot = row.headshot_url ? getHeadshotUrl(row.headshot_url, 48) : null;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <PlayerLink id={playerId(row)} className="inline-flex items-center gap-2 text-text-1 hover:text-accent transition-colors">
+        <span className="h-6 w-6 rounded-sm overflow-hidden bg-surface-2 border border-border shrink-0">
+          {headshot && <img src={headshot} alt="" width={24} height={24} loading="lazy" className="w-full h-full object-cover" />}
+        </span>
+        {row.name}
+      </PlayerLink>
+      {row.position && <span className="t-label text-text-3">{row.position}</span>}
+    </span>
+  );
+}
+
+function FullTeamTable({ teamAbbrev, players, totals, opponentPoints, minutes }) {
+  const logo = getLogoUrl(teamAbbrev);
+
+  const rows = buildRows(players);
+  if (totals && Object.keys(totals).length > 0) rows.push(buildTotalsRow(totals, opponentPoints, minutes));
+
+  const columns = [
+    {
+      key: 'player',
+      label: 'Player',
+      render: (r) => playerColumnCell(r),
+    },
+    ...STAT_COLUMNS,
+  ];
+
+  return (
+    <Card>
+      <div className="mb-3">
+        <TeamMark abbrev={teamAbbrev} logoUrl={logo} size="sm" />
+      </div>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        getKey={(r) => (r.__kind === 'player' ? playerKey(r) : r.name)}
+        fullWidthRow={(r) => r.__kind === 'label'}
+        rowLink={(r) => (r.__kind === 'player' && playerId(r) ? `/player/${playerId(r)}` : null)}
+      />
+    </Card>
+  );
+}
+
+export function FullBoxScore({ gameId, homeTeam, awayTeam, status, periods, boxData: boxDataProp }) {
+  const started = hasStarted(status);
+  const [boxData, setBoxData] = useState(boxDataProp || null);
+  const [loading, setLoading] = useState(!boxDataProp && started);
+
+  // Sync from the parent's data when it has it (GameDetailPage)
+  useEffect(() => {
+    if (boxDataProp) {
+      setBoxData(boxDataProp);
+      setLoading(false);
+    }
+  }, [boxDataProp]);
+
+  const refresh = useCallback(() => {
+    return fetchBoxScore(gameId).catch(() => null).then(box => {
+      if (box) setBoxData(box);
+    });
+  }, [gameId]);
+
+  // Only fetch independently when the parent passes no data, and only once the game has started.
+  useEffect(() => {
+    if (boxDataProp || !started) return;
+    setLoading(true);
+    refresh().finally(() => setLoading(false));
+  }, [refresh, boxDataProp, started]);
+
+  const isLive = status === "live" || status === "halftime";
+  useEffect(() => {
+    if (!isLive || boxDataProp) return;
+    const id = setInterval(refresh, 30000);
+    return () => clearInterval(id);
+  }, [isLive, refresh, boxDataProp]);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton variant="rectangle" height="h-64" className="rounded-lg" />
+        <Skeleton variant="rectangle" height="h-64" className="rounded-lg" />
+      </div>
+    );
+  }
+
+  if (!boxData) return <PageState kind="empty" title={boxScoreEmptyText(status)} />;
+
+  return (
+    <div className="space-y-4">
+      <FullTeamTable
+        teamAbbrev={awayTeam}
+        players={boxData.away?.players || []}
+        totals={boxData.away?.totals}
+        opponentPoints={boxData.home?.totals?.PTS}
+        minutes={teamMinutes(status, periods, boxData.away?.players)}
+      />
+      <FullTeamTable
+        teamAbbrev={homeTeam}
+        players={boxData.home?.players || []}
+        totals={boxData.home?.totals}
+        opponentPoints={boxData.away?.totals?.PTS}
+        minutes={teamMinutes(status, periods, boxData.home?.players)}
+      />
+    </div>
+  );
+}
+
+/* --- On-Court (Sidebar) --- */
+
+export function BoxScore({ gameId, homeTeam, awayTeam, status, side, plays: playsProp, boxData: boxDataProp }) {
+  const hasProps = playsProp !== undefined && boxDataProp !== undefined;
+  const [boxData, setBoxData] = useState(boxDataProp || null);
+  const [plays, setPlays] = useState(playsProp || []);
+  const [loading, setLoading] = useState(!hasProps);
+
+  // Sync from the parent's data when it has it (GameDetailPage)
+  useEffect(() => {
+    if (playsProp !== undefined) setPlays(playsProp);
+  }, [playsProp]);
+  useEffect(() => {
+    if (boxDataProp) {
+      setBoxData(boxDataProp);
+      setLoading(false);
+    }
+  }, [boxDataProp]);
+
+  const started = hasStarted(status);
+  const refresh = useCallback(() => {
+    return Promise.all([
+      started ? fetchBoxScore(gameId).catch(() => null) : Promise.resolve(null),
+      fetchPlays(gameId).catch(() => []),
+    ]).then(([box, playsData]) => {
+      if (box) setBoxData(box);
+      if (Array.isArray(playsData)) setPlays(playsData);
+    });
+  }, [gameId, started]);
+
+  // Only fetch independently when the parent passes no data
+  useEffect(() => {
+    if (hasProps) return;
+    refresh().finally(() => setLoading(false));
+  }, [refresh, hasProps]);
+
+  // Poll only when standalone (no props) and game is live
+  const isLive = status === "live" || status === "halftime";
+  useEffect(() => {
+    if (!isLive || hasProps) return;
+    const id = setInterval(refresh, 30000);
+    return () => clearInterval(id);
+  }, [isLive, refresh, hasProps]);
+
+  // Compute on-court players
+  const { homeOnCourt, awayOnCourt } = getOnCourtNames(plays, boxData, homeTeam, awayTeam);
+
+  // Filter box score players to on-court only, always return exactly 5
+  const filterOnCourt = (teamPlayers, onCourtSet) => {
+    if (!teamPlayers) return [];
+    if (onCourtSet.size === 0) return teamPlayers.slice(0, 5);
+    const onCourt = teamPlayers.filter(p => onCourtSet.has(p.name));
+    // Pad to 5 if name mismatches caused drops
+    if (onCourt.length < 5) {
+      const onCourtNames = new Set(onCourt.map(p => p.name));
+      for (const p of teamPlayers) {
+        if (onCourt.length >= 5) break;
+        if (!onCourtNames.has(p.name)) onCourt.push(p);
+      }
+    }
+    return onCourt.slice(0, 5);
+  };
+
+  const homePlayers = filterOnCourt(boxData?.home?.players, homeOnCourt);
+  const awayPlayers = filterOnCourt(boxData?.away?.players, awayOnCourt);
+  const labelFor = (teamPlayers) =>
+    onCourtLabel(status, plays.length, (teamPlayers || []).some((p) => p.starter));
+  const homeLabel = labelFor(boxData?.home?.players);
+  const awayLabel = labelFor(boxData?.away?.players);
+
+  // If side is specified, render only that team
+  if (side === "away") {
+    return loading ? (
+      <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
+    ) : (
+      <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} label={awayLabel} />
+    );
+  }
+  if (side === "home") {
+    return loading ? (
+      <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
+    ) : (
+      <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} label={homeLabel} />
+    );
+  }
+
+  // Default: render both teams stacked
+  return (
+    <div className="space-y-4">
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
+          <Skeleton variant="rectangle" height="h-48" className="rounded-lg" />
+        </div>
+      ) : (
+        <>
+          <TeamSection teamAbbrev={awayTeam} players={awayPlayers} status={status} label={awayLabel} />
+          <TeamSection teamAbbrev={homeTeam} players={homePlayers} status={status} label={homeLabel} />
+        </>
+      )}
+    </div>
+  );
+}

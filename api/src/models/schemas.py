@@ -226,12 +226,15 @@ class RosterPlayer(BaseModel):
 
 class TeamScheduleGame(BaseModel):
     game_id: str
-    date: str
+    date: str  # the Eastern day, same as ``day`` (kept for older clients)
     opponent: str
     home_away: str = ""
     result: str = ""
-    status: str = ""
+    status: str = ""  # Scheduled, Live, Halftime or Final
     score: str = ""
+    start: str = ""  # tip time, ISO 8601 with the Eastern offset
+    day: str = ""  # e.g. "Wed, Nov 25" (Eastern)
+    tip: str = ""  # e.g. "7:30 PM" (Eastern)
 
 
 class TeamPlayerStats(BaseModel):
@@ -284,6 +287,19 @@ class PlayerSeasonStats(BaseModel):
     three_pct: str = "0.0%"
     ft_pct: str = "0.0%"
     gp: int = 0
+    # ESPN's full per-game line for the same season; "" when ESPN doesn't give it
+    season: str = ""  # e.g. "2026-27"
+    gs: int | None = None  # games started
+    mpg: str = ""
+    fg: str = ""  # made-attempted per game, e.g. "11.5-25.0"
+    three: str = ""
+    ft: str = ""
+    orpg: str = ""
+    drpg: str = ""
+    tovpg: str = ""
+    pfpg: str = ""
+    double_doubles: int | None = None
+    triple_doubles: int | None = None
 
 
 # Stats
@@ -294,9 +310,56 @@ class StatLeader(BaseModel):
     player: str
     player_id: str = ""
     team: str = ""
+    position: str | None = None
     value: str = ""
     gp: int | None = None
     headshot_url: str = ""
+
+
+class PlayerTableRow(BaseModel):
+    player_id: str
+    player: str
+    team: str = ""
+    team_name: str = ""
+    position: str | None = None
+    age: int | None = None
+    jersey: str | None = None
+    gp: int | None = None
+    min: str = ""
+    pts: str = ""
+    reb: str = ""
+    ast: str = ""
+    threes: str = ""
+    stl: str = ""
+    blk: str = ""
+    fg_pct: str = ""
+    three_pct: str = ""
+    ft_pct: str = ""
+    headshot_url: str = ""
+
+
+class PlayerTableResponse(BaseModel):
+    """One page of the Players table after search, filters and sort."""
+
+    season_label: str = ""
+    total: int = 0
+    page: int = 1
+    per_page: int = 25
+    sort: str = "pts"
+    dir: str = "desc"
+    rows: list[PlayerTableRow] = Field(default_factory=list)
+
+
+class CategoryLeadersResponse(BaseModel):
+    """One category's qualified leaders after the Stats page's filters: `qualified` is how many
+    players qualify league-wide (ESPN's count), `matching` how many of them pass the filters."""
+
+    category: str
+    season_label: str = ""
+    is_previous_season: bool = False
+    qualified: int = 0
+    matching: int = 0
+    rows: list[StatLeader] = Field(default_factory=list)
 
 
 class StatLeadersResponse(BaseModel):
@@ -307,18 +370,29 @@ class StatLeadersResponse(BaseModel):
     # True before this season's first regular-season game: the leaders are last
     # season's (the same decision as the standings fallback).
     is_previous_season: bool = False
+    # Players with stats in the season the leaders are from (ESPN's total); None if unknown.
+    player_count: int | None = None
 
 
 class TeamStatsRow(BaseModel):
+    """One team's per-game regular-season numbers, ranked by point differential."""
+
     rank: int
     team: str
     abbrev: str = ""
     record: str = ""
-    ortg: str = ""
-    drtg: str = ""
-    net_rtg: str = ""
-    pace: str = ""
-    ts_pct: str = ""
+    games: int = 0
+    ppg: str = ""  # points per game
+    opp_ppg: str = ""  # opponents' points per game
+    diff: str = ""  # point differential per game
+    fg_pct: str = ""
+    three_pct: str = ""
+    ft_pct: str = ""
+    rpg: str = ""
+    apg: str = ""
+    spg: str = ""
+    bpg: str = ""
+    tov: str = ""
 
 
 # Box Score

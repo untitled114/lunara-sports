@@ -7,11 +7,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.services.stats_service import (
-    _resolve_athlete,
     _safe_float,
     get_player_game_log,
     get_player_season_stats,
-    get_team_stats_list,
 )
 
 
@@ -148,7 +146,7 @@ class TestGetPlayerGameLog:
             ],
             "events": {
                 "e1": {
-                    "gameDate": "2026-02-15T02:30:00",
+                    "gameDate": "2026-02-15T02:30Z",
                     "opponent": {"abbreviation": "LAL"},
                     "team": {"abbreviation": "BOS"},
                     "atVs": "vs",
@@ -192,54 +190,11 @@ class TestGetPlayerGameLog:
             assert len(result) == 1
             assert result[0]["pts"] == 21
             assert result[0]["reb"] == 6
-            assert result[0]["date"] == "2026-02-15"
+            # ESPN dates are UTC: 02:30Z is 21:30 the evening before in Eastern time.
+            assert result[0]["date"] == "2026-02-14"
 
     async def test_empty_on_no_data(self):
         with patch("src.services.stats_service.espn_client") as mock_espn:
             mock_espn.get_athlete_gamelog = AsyncMock(return_value=None)
             result = await get_player_game_log("123")
             assert result == []
-
-
-@pytest.mark.asyncio
-class TestResolveAthlete:
-    async def test_from_map(self):
-        athlete_map = {"123": {"name": "LeBron James", "abbrev": "LAL"}}
-        result = await _resolve_athlete("123", athlete_map)
-        assert result["name"] == "LeBron James"
-
-    async def test_fallback_to_espn(self):
-        athlete_map = {}
-        with patch("src.services.stats_service.espn_client") as mock:
-            mock.get_athlete_info = AsyncMock(
-                return_value={
-                    "athlete": {"displayName": "Steph Curry", "team": {"abbreviation": "GS"}}
-                }
-            )
-            result = await _resolve_athlete("456", athlete_map)
-            assert result["name"] == "Steph Curry"
-
-    async def test_unknown_athlete(self):
-        athlete_map = {}
-        with patch("src.services.stats_service.espn_client") as mock:
-            mock.get_athlete_info = AsyncMock(return_value=None)
-            result = await _resolve_athlete("789", athlete_map)
-            assert "789" in result["name"]
-
-
-@pytest.mark.asyncio
-class TestGetTeamStatsList:
-    async def test_always_empty(self):
-        """No data source is connected: always returns empty."""
-        result = await get_team_stats_list()
-        assert result == []
-
-
-@pytest.mark.asyncio
-async def test_athlete_lookup_skips_teams_whose_roster_fails():
-    """espn_client returns None for a failed roster request; that team is skipped."""
-    from src.services.stats_service import _build_athlete_lookup
-
-    with patch("src.services.stats_service.espn_client") as mock:
-        mock.get_team_roster = AsyncMock(return_value=None)
-        assert await _build_athlete_lookup() == {}

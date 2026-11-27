@@ -1,0 +1,166 @@
+/* Tailwind scans only the site's own source (src/ and index.html), never test reports,
+   e2e specs, scripts or notes elsewhere in frontend/, so a build's CSS depends only on the
+   commit's source files: Vercel's build and a local build give the same file names. */
+@import "tailwindcss" source(none);
+@source "../";
+@source "../../index.html";
+
+:root {
+  /* Graphite and basketball orange. */
+  --surface-0: #0B0B0C; --surface-1: #19191C; --surface-2: #232327;
+  --border: #3A3A40; --border-strong: #4A4A52;
+  --text-1: #F2F2F3; --text-2: #B0B0B6; --text-3: #9A9AA1;
+  --accent: #F26B1D; --accent-hover: #FF8A47;
+  --accent-fill: #F26B1D; --accent-fill-hover: #FF8A47;
+  /* Text on the orange fill: white on orange is too faint, so the fill takes dark ink. */
+  --accent-ink: #111111;
+  --live: #3DD68C; --loss: #F2555A; --warn: #F59E0B;
+  /* Home box 2's corner glow. */
+  --info: #60A5FA;
+  /* Boxes are solid, lifted off the leather by a shadow, so text never sits on the photo. */
+  --surface-card: #19191C;
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  /* Backdrop glow washes: orange top-left (a favorite team or the game's home team
+     replaces it), green top-right, amber bottom-center. */
+  --glow-1: #F26B1D; --glow-2: #10B981; --glow-3: #F59E0B;
+  /* The page behind the backdrop photo. */
+  --backdrop: #000105;
+  /* --text-3's value on a surface (see the backdrop rule below). */
+  --text-3-surface: #9A9AA1;
+}
+
+/* Text on the arena backdrop. Over the photo and glow, --text-3 can't hold
+   4.5:1 (the photo alone peaks near luminance 0.02), so page content that sits straight on
+   the backdrop reads --text-3 as --text-2. Any surface puts --text-3 back. */
+#main-content { --text-3: var(--text-2); }
+#main-content :where(.bg-surface-card, .bg-surface-0, .bg-surface-1, .bg-surface-2) {
+  --text-3: var(--text-3-surface);
+}
+
+@theme inline {
+  --color-surface-0: var(--surface-0); --color-surface-1: var(--surface-1); --color-surface-2: var(--surface-2);
+  --color-surface-card: var(--surface-card);
+  --color-border: var(--border); --color-border-strong: var(--border-strong);
+  --color-text-1: var(--text-1); --color-text-2: var(--text-2); --color-text-3: var(--text-3);
+  --color-accent: var(--accent); --color-accent-hover: var(--accent-hover);
+  --color-accent-fill: var(--accent-fill); --color-accent-fill-hover: var(--accent-fill-hover);
+  --color-live: var(--live); --color-loss: var(--loss); --color-warn: var(--warn);
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+  --font-sans: 'Source Sans 3', system-ui, sans-serif;
+  --font-display: 'Oswald', 'Source Sans 3', sans-serif;
+  --color-accent-ink: var(--accent-ink);
+  --shadow-card: var(--card-shadow);
+}
+
+html, body { background: var(--surface-0); color: var(--text-1); font-family: var(--font-sans); }
+
+@layer utilities {
+  /* Source Sans 3 for reading; Oswald for headings, names, scores and big numbers. Labels
+     are normal case. Numbers stay close to the size of the text around them. */
+  .t-title { font-family: var(--font-display); font-size: 30px; line-height: 36px; font-weight: 600; }
+  .t-section { font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 600; }
+  .t-body { font-size: 16px; line-height: 24px; font-weight: 400; }
+  .t-small { font-size: 14px; line-height: 20px; font-weight: 400; }
+  .t-label { font-size: 13px; line-height: 18px; font-weight: 500; }
+  .t-score-sm { font-family: var(--font-display); font-size: 18px; line-height: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .t-score { font-family: var(--font-display); font-size: 22px; line-height: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .t-num { font-family: var(--font-display); font-size: 26px; line-height: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* The display wordmark: the landing hero's LUNARA SPORTS and the top-bar
+     brand, nowhere else. The only place a 900 weight, slanted type and a gradient text fill
+     are allowed (check-design.mjs scopes them to this block). Size comes from the caller. */
+  .display-wordmark {
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: -0.05em;
+    line-height: 0.9;
+    color: var(--text-1);
+    background: linear-gradient(180deg, #FFFFFF 0%, #C8D0DC 50%, #94A3B8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    padding-right: 0.08em;
+  }
+
+  /* Game header team washes: each team's primary washes in from its own side.
+     The caller sets --wash-away/--wash-home (colors) and --wash-away-strength/
+     --wash-home-strength (percentages) from utils/teamColors.js teamWash(); a team with no
+     colors gets none. Gradients are allowed here only (check-design.mjs). */
+  .team-wash {
+    background-image: linear-gradient(90deg, color-mix(in srgb, var(--wash-away, transparent) var(--wash-away-strength, 0%), transparent) 0%, transparent 50%), linear-gradient(270deg, color-mix(in srgb, var(--wash-home, transparent) var(--wash-home-strength, 0%), transparent) 0%, transparent 50%);
+  }
+
+  /* The game header's big scores: t-score's weight and tabular numbers, display size. */
+  .t-score-display { font-family: var(--font-display); font-size: 30px; line-height: 34px; }
+  @media (min-width: 640px) {
+    .t-score-display { font-size: 36px; line-height: 40px; }
+  }
+
+  .card-live {
+    border-color: color-mix(in srgb, var(--live) 40%, var(--border));
+    box-shadow: 0 0 24px -8px color-mix(in srgb, var(--live) 45%, transparent);
+  }
+}
+
+/* Motion. Tailwind v4 never loaded tailwind.config.js, so its
+   fadeIn/scaleIn/slideInRight keyframes never shipped; the rest used to live as
+   plain classes in styles.css. Durations, easings and keyframes are unchanged. */
+@theme {
+  --animate-fadeIn: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-scaleIn: scaleIn 0.2s ease-out;
+  --animate-slideInRight: slideInRight 0.3s ease-out;
+  --animate-float: float 8s ease-in-out infinite;
+  --animate-reaction-float: reaction-float 3s ease-out forwards;
+  --animate-flash: flash 1.2s ease-out forwards;
+  --animate-progress: progress 1.2s ease-in-out forwards;
+  --animate-intel: intel-materialize 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-boot: diagnostic-flash 1s ease-out both;
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes scaleIn {
+    0% { transform: scale(0.95); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes slideInRight {
+    0% { transform: translateX(100%); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+  @keyframes reaction-float {
+    0% { transform: translateY(0) scale(0.5); opacity: 0; }
+    15% { transform: translateY(-10vh) scale(1.2); opacity: 1; }
+    100% { transform: translateY(-100vh) scale(1); opacity: 0; }
+  }
+  @keyframes flash {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes progress {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(0%); }
+  }
+  @keyframes intel-materialize {
+    0% { opacity: 0; transform: translateY(24px) scale(0.97); filter: brightness(2) blur(4px); }
+    12% { opacity: 0.7; transform: translateY(8px) scale(0.99); filter: brightness(1.4) blur(0px); }
+    25% { opacity: 0.4; filter: brightness(2.5); }
+    40% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
+  }
+  @keyframes diagnostic-flash {
+    0% { opacity: 0; filter: brightness(2); }
+    5% { opacity: 1; filter: brightness(1); }
+    10% { opacity: 0.5; }
+    15% { opacity: 1; }
+    100% { opacity: 1; }
+  }
+}

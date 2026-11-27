@@ -1,0 +1,550 @@
+{
+ "_source": "GET /stats/leaders/{category}?limit=10 (plus the filters named in each key) as the API computes it from ESPN's live qualified lists and standings, run 2026-11-26 ~11:00 ET with an in-memory dict as the cache; unedited output.",
+ "data": {
+  "pts": {
+   "category": "pts",
+   "season_label": "2026-27 regular season",
+   "is_previous_season": false,
+   "qualified": 317,
+   "matching": 317,
+   "rows": [
+    {
+     "rank": 1,
+     "player": "Luka Doncic",
+     "player_id": "3945274",
+     "team": "LAL",
+     "position": "G",
+     "value": "36.6",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3945274.png"
+    },
+    {
+     "rank": 2,
+     "player": "Shai Gilgeous-Alexander",
+     "player_id": "4278073",
+     "team": "OKC",
+     "position": "G",
+     "value": "32.1",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4278073.png"
+    },
+    {
+     "rank": 3,
+     "player": "Victor Wembanyama",
+     "player_id": "5104157",
+     "team": "SA",
+     "position": "F",
+     "value": "30.7",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5104157.png"
+    },
+    {
+     "rank": 4,
+     "player": "Giannis Antetokounmpo",
+     "player_id": "3032977",
+     "team": "MIA",
+     "position": "F",
+     "value": "28.4",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3032977.png"
+    },
+    {
+     "rank": 5,
+     "player": "Jayson Tatum",
+     "player_id": "4065648",
+     "team": "BOS",
+     "position": "F",
+     "value": "27.3",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4065648.png"
+    },
+    {
+     "rank": 6,
+     "player": "Jalen Brunson",
+     "player_id": "3934672",
+     "team": "NY",
+     "position": "G",
+     "value": "26.1",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3934672.png"
+    },
+    {
+     "rank": 7,
+     "player": "Tyrese Maxey",
+     "player_id": "4431678",
+     "team": "PHI",
+     "position": "G",
+     "value": "25.9",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4431678.png"
+    },
+    {
+     "rank": 8,
+     "player": "Jamal Murray",
+     "player_id": "3936299",
+     "team": "DEN",
+     "position": "G",
+     "value": "25.8",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3936299.png"
+    },
+    {
+     "rank": 9,
+     "player": "Anthony Davis",
+     "player_id": "6583",
+     "team": "WSH",
+     "position": "F",
+     "value": "25.6",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/6583.png"
+    },
+    {
+     "rank": 10,
+     "player": "Donovan Mitchell",
+     "player_id": "3908809",
+     "team": "CLE",
+     "position": "G",
+     "value": "25.0",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3908809.png"
+    }
+   ]
+  },
+  "pts_team_MIA": {
+   "category": "pts",
+   "season_label": "2026-27 regular season",
+   "is_previous_season": false,
+   "qualified": 317,
+   "matching": 11,
+   "rows": [
+    {
+     "rank": 1,
+     "player": "Giannis Antetokounmpo",
+     "player_id": "3032977",
+     "team": "MIA",
+     "position": "F",
+     "value": "28.4",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3032977.png"
+    },
+    {
+     "rank": 2,
+     "player": "Bam Adebayo",
+     "player_id": "4066261",
+     "team": "MIA",
+     "position": "C",
+     "value": "19.1",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4066261.png"
+    },
+    {
+     "rank": 3,
+     "player": "Davion Mitchell",
+     "player_id": "4278053",
+     "team": "MIA",
+     "position": "G",
+     "value": "17.2",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4278053.png"
+    },
+    {
+     "rank": 4,
+     "player": "Klay Thompson",
+     "player_id": "6475",
+     "team": "MIA",
+     "position": "G",
+     "value": "14.4",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/6475.png"
+    },
+    {
+     "rank": 5,
+     "player": "Pelle Larsson",
+     "player_id": "4601025",
+     "team": "MIA",
+     "position": "G",
+     "value": "11.3",
+     "gp": 14,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4601025.png"
+    },
+    {
+     "rank": 6,
+     "player": "Andrew Wiggins",
+     "player_id": "3059319",
+     "team": "MIA",
+     "position": "F",
+     "value": "9.1",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3059319.png"
+    },
+    {
+     "rank": 7,
+     "player": "Bobby Portis",
+     "player_id": "3064482",
+     "team": "MIA",
+     "position": "F",
+     "value": "7.5",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3064482.png"
+    },
+    {
+     "rank": 8,
+     "player": "Ryan Conwell",
+     "player_id": "5107157",
+     "team": "MIA",
+     "position": "G",
+     "value": "7.4",
+     "gp": 15,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5107157.png"
+    },
+    {
+     "rank": 9,
+     "player": "Tim Hardaway Jr.",
+     "player_id": "2528210",
+     "team": "MIA",
+     "position": "G",
+     "value": "4.5",
+     "gp": 11,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/2528210.png"
+    },
+    {
+     "rank": 10,
+     "player": "Simone Fontecchio",
+     "player_id": "3899664",
+     "team": "MIA",
+     "position": "F",
+     "value": "3.6",
+     "gp": 11,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3899664.png"
+    }
+   ]
+  },
+  "reb_position_C": {
+   "category": "reb",
+   "season_label": "2026-27 regular season",
+   "is_previous_season": false,
+   "qualified": 317,
+   "matching": 47,
+   "rows": [
+    {
+     "rank": 1,
+     "player": "Karl-Anthony Towns",
+     "player_id": "3136195",
+     "team": "NY",
+     "position": "C",
+     "value": "13.6",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3136195.png"
+    },
+    {
+     "rank": 2,
+     "player": "Donovan Clingan",
+     "player_id": "5105565",
+     "team": "POR",
+     "position": "C",
+     "value": "11.1",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5105565.png"
+    },
+    {
+     "rank": 3,
+     "player": "Nikola Jokic",
+     "player_id": "3112335",
+     "team": "DEN",
+     "position": "C",
+     "value": "10.9",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3112335.png"
+    },
+    {
+     "rank": 4,
+     "player": "Isaiah Hartenstein",
+     "player_id": "4222252",
+     "team": "OKC",
+     "position": "C",
+     "value": "10.8",
+     "gp": 19,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4222252.png"
+    },
+    {
+     "rank": 5,
+     "player": "Walker Kessler",
+     "player_id": "4433136",
+     "team": "LAL",
+     "position": "C",
+     "value": "10.8",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4433136.png"
+    },
+    {
+     "rank": 6,
+     "player": "Rudy Gobert",
+     "player_id": "3032976",
+     "team": "MIN",
+     "position": "C",
+     "value": "10.4",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3032976.png"
+    },
+    {
+     "rank": 7,
+     "player": "Alperen Sengun",
+     "player_id": "4871144",
+     "team": "HOU",
+     "position": "C",
+     "value": "9.3",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4871144.png"
+    },
+    {
+     "rank": 8,
+     "player": "Ivica Zubac",
+     "player_id": "4017837",
+     "team": "IND",
+     "position": "C",
+     "value": "9.1",
+     "gp": 13,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4017837.png"
+    },
+    {
+     "rank": 9,
+     "player": "Joel Embiid",
+     "player_id": "3059318",
+     "team": "PHI",
+     "position": "C",
+     "value": "8.9",
+     "gp": 14,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3059318.png"
+    },
+    {
+     "rank": 10,
+     "player": "Wendell Carter Jr.",
+     "player_id": "4277847",
+     "team": "ORL",
+     "position": "C",
+     "value": "8.8",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4277847.png"
+    }
+   ]
+  },
+  "ast_conference_west": {
+   "category": "ast",
+   "season_label": "2026-27 regular season",
+   "is_previous_season": false,
+   "qualified": 317,
+   "matching": 160,
+   "rows": [
+    {
+     "rank": 1,
+     "player": "Nikola Jokic",
+     "player_id": "3112335",
+     "team": "DEN",
+     "position": "C",
+     "value": "8.9",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3112335.png"
+    },
+    {
+     "rank": 2,
+     "player": "Luka Doncic",
+     "player_id": "3945274",
+     "team": "LAL",
+     "position": "G",
+     "value": "7.7",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3945274.png"
+    },
+    {
+     "rank": 3,
+     "player": "Darius Acuff Jr.",
+     "player_id": "5142620",
+     "team": "SAC",
+     "position": "G",
+     "value": "7.3",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5142620.png"
+    },
+    {
+     "rank": 4,
+     "player": "Alperen Sengun",
+     "player_id": "4871144",
+     "team": "HOU",
+     "position": "C",
+     "value": "7.2",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4871144.png"
+    },
+    {
+     "rank": 5,
+     "player": "Keyonte George",
+     "player_id": "4433627",
+     "team": "UTA",
+     "position": "G",
+     "value": "6.8",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4433627.png"
+    },
+    {
+     "rank": 6,
+     "player": "Cooper Flagg",
+     "player_id": "5041939",
+     "team": "DAL",
+     "position": "F",
+     "value": "6.7",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5041939.png"
+    },
+    {
+     "rank": 7,
+     "player": "Draymond Green",
+     "player_id": "6589",
+     "team": "GS",
+     "position": "F",
+     "value": "6.6",
+     "gp": 15,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/6589.png"
+    },
+    {
+     "rank": 8,
+     "player": "Darius Garland",
+     "player_id": "4396907",
+     "team": "LAC",
+     "position": "G",
+     "value": "6.4",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4396907.png"
+    },
+    {
+     "rank": 9,
+     "player": "Stephon Castle",
+     "player_id": "4845367",
+     "team": "SA",
+     "position": "G",
+     "value": "6.3",
+     "gp": 19,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4845367.png"
+    },
+    {
+     "rank": 10,
+     "player": "Deni Avdija",
+     "player_id": "4683021",
+     "team": "POR",
+     "position": "F",
+     "value": "6.1",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4683021.png"
+    }
+   ]
+  },
+  "fg_pct": {
+   "category": "fg_pct",
+   "season_label": "2026-27 regular season",
+   "is_previous_season": false,
+   "qualified": 133,
+   "matching": 133,
+   "rows": [
+    {
+     "rank": 1,
+     "player": "Daniel Gafford",
+     "player_id": "4278049",
+     "team": "DAL",
+     "position": "F",
+     "value": "69.5",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4278049.png"
+    },
+    {
+     "rank": 2,
+     "player": "Walker Kessler",
+     "player_id": "4433136",
+     "team": "LAL",
+     "position": "C",
+     "value": "66.9",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4433136.png"
+    },
+    {
+     "rank": 3,
+     "player": "Domantas Sabonis",
+     "player_id": "3155942",
+     "team": "SAC",
+     "position": "F",
+     "value": "65.4",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3155942.png"
+    },
+    {
+     "rank": 4,
+     "player": "Aday Mara",
+     "player_id": "5174983",
+     "team": "OKC",
+     "position": "C",
+     "value": "64.9",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5174983.png"
+    },
+    {
+     "rank": 5,
+     "player": "Jarrett Allen",
+     "player_id": "4066328",
+     "team": "CLE",
+     "position": "C",
+     "value": "63.0",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4066328.png"
+    },
+    {
+     "rank": 6,
+     "player": "Giannis Antetokounmpo",
+     "player_id": "3032977",
+     "team": "MIA",
+     "position": "F",
+     "value": "60.3",
+     "gp": 16,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3032977.png"
+    },
+    {
+     "rank": 7,
+     "player": "Neemias Queta",
+     "player_id": "4397424",
+     "team": "BOS",
+     "position": "C",
+     "value": "60.2",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4397424.png"
+    },
+    {
+     "rank": 8,
+     "player": "Donovan Clingan",
+     "player_id": "5105565",
+     "team": "POR",
+     "position": "C",
+     "value": "58.7",
+     "gp": 18,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5105565.png"
+    },
+    {
+     "rank": 9,
+     "player": "Zion Williamson",
+     "player_id": "4395628",
+     "team": "NO",
+     "position": "F",
+     "value": "58.3",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4395628.png"
+    },
+    {
+     "rank": 10,
+     "player": "Paul Reed",
+     "player_id": "4278562",
+     "team": "DET",
+     "position": "F",
+     "value": "57.1",
+     "gp": 17,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4278562.png"
+    }
+   ]
+  }
+ }
+}

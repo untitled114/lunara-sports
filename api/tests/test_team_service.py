@@ -369,32 +369,30 @@ class TestGetTeamRoster:
 
     async def test_returns_empty_when_espn_returns_none(self):
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=None)
+            mock.get_roster = AsyncMock(return_value=None)
             result = await get_team_roster("BOS")
             assert result == []
 
     async def test_full_athlete_data(self):
         """Full athlete with all fields populated."""
         data = {
-            "team": {
-                "athletes": [
-                    {
-                        "id": "4065648",
-                        "displayName": "Jayson Tatum",
-                        "jersey": "0",
-                        "position": {"abbreviation": "SF"},
-                        "displayHeight": "6' 8\"",
-                        "displayWeight": "210 lbs",
-                        "age": 27,
-                        "experience": {"years": 7},
-                        "college": {"name": "Duke"},
-                        "headshot": {"href": "http://tatum.png"},
-                    }
-                ]
-            }
+            "athletes": [
+                {
+                    "id": "4065648",
+                    "displayName": "Jayson Tatum",
+                    "jersey": "0",
+                    "position": {"abbreviation": "SF"},
+                    "displayHeight": "6' 8\"",
+                    "displayWeight": "210 lbs",
+                    "age": 27,
+                    "experience": {"years": 7},
+                    "college": {"name": "Duke"},
+                    "headshot": {"href": "http://tatum.png"},
+                }
+            ]
         }
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
             assert len(result) == 1
             p = result[0]
@@ -412,16 +410,14 @@ class TestGetTeamRoster:
     async def test_athlete_minimal_data(self):
         """Athlete with missing optional fields -> defaults."""
         data = {
-            "team": {
-                "athletes": [
-                    {
-                        "fullName": "Rookie Player",
-                    }
-                ]
-            }
+            "athletes": [
+                {
+                    "fullName": "Rookie Player",
+                }
+            ]
         }
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
             assert len(result) == 1
             p = result[0]
@@ -432,91 +428,83 @@ class TestGetTeamRoster:
             assert p.height == ""
             assert p.weight == ""
             assert p.age is None
-            assert p.experience == "R"  # No experience key -> "R"
+            assert p.experience == "-"  # no experience from ESPN: unknown, not a rookie
             assert p.college == ""
             assert p.headshot_url == ""
 
     async def test_athlete_uses_displayname_over_fullname(self):
         """displayName takes priority over fullName."""
         data = {
-            "team": {
-                "athletes": [
-                    {
-                        "displayName": "Display Name",
-                        "fullName": "Full Name",
-                    }
-                ]
-            }
+            "athletes": [
+                {
+                    "displayName": "Display Name",
+                    "fullName": "Full Name",
+                }
+            ]
         }
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
             assert result[0].name == "Display Name"
 
     async def test_multiple_athletes(self):
         """Multiple athletes returned."""
         data = {
-            "team": {
-                "athletes": [
-                    {"displayName": "Player A", "id": "1"},
-                    {"displayName": "Player B", "id": "2"},
-                    {"displayName": "Player C", "id": "3"},
-                ]
-            }
+            "athletes": [
+                {"displayName": "Player A", "id": "1"},
+                {"displayName": "Player B", "id": "2"},
+                {"displayName": "Player C", "id": "3"},
+            ]
         }
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
             assert len(result) == 3
             assert [p.name for p in result] == ["Player A", "Player B", "Player C"]
 
     async def test_empty_athletes_list(self):
         """ESPN returns team but empty athletes list."""
-        data = {"team": {"athletes": []}}
+        data = {"athletes": []}
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
             assert result == []
 
     async def test_no_athletes_key(self):
         """ESPN returns team but no athletes key at all."""
-        data = {"team": {}}
+        data = {}
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
             assert result == []
 
     async def test_athlete_experience_zero_years(self):
         """Athlete with experience years = 0."""
         data = {
-            "team": {
-                "athletes": [
-                    {
-                        "displayName": "Rookie",
-                        "experience": {"years": 0},
-                    }
-                ]
-            }
+            "athletes": [
+                {
+                    "displayName": "Rookie",
+                    "experience": {"years": 0},
+                }
+            ]
         }
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
-            assert result[0].experience == "0"
+            assert result[0].experience == "R"  # 0 years in the league: a rookie
 
     async def test_athlete_no_headshot_key(self):
         """Athlete with headshot = None or missing."""
         data = {
-            "team": {
-                "athletes": [
-                    {
-                        "displayName": "No Photo",
-                        "headshot": None,
-                    }
-                ]
-            }
+            "athletes": [
+                {
+                    "displayName": "No Photo",
+                    "headshot": None,
+                }
+            ]
         }
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
             # headshot is None -> athlete.get("headshot") is None -> falsy -> ""
             assert result[0].headshot_url == ""
@@ -524,37 +512,33 @@ class TestGetTeamRoster:
     async def test_athlete_no_college_key(self):
         """Athlete with college = None."""
         data = {
-            "team": {
-                "athletes": [
-                    {
-                        "displayName": "International",
-                        "college": None,
-                    }
-                ]
-            }
+            "athletes": [
+                {
+                    "displayName": "International",
+                    "college": None,
+                }
+            ]
         }
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
             assert result[0].college == ""
 
     async def test_athlete_experience_none(self):
         """Athlete with experience key set to None."""
         data = {
-            "team": {
-                "athletes": [
-                    {
-                        "displayName": "Null Exp",
-                        "experience": None,
-                    }
-                ]
-            }
+            "athletes": [
+                {
+                    "displayName": "Null Exp",
+                    "experience": None,
+                }
+            ]
         }
         with patch("src.services.team_service.espn_client") as mock:
-            mock.get_team_roster = AsyncMock(return_value=data)
+            mock.get_roster = AsyncMock(return_value=data)
             result = await get_team_roster("BOS")
-            # experience is None -> falsy -> "R"
-            assert result[0].experience == "R"
+            # experience is None: unknown, not a rookie
+            assert result[0].experience == "-"
 
 
 # get_team_schedule
@@ -613,7 +597,7 @@ class TestGetTeamSchedule:
         assert sched is not None
         assert sched.result == ""
         assert sched.score == ""
-        assert sched.status == "scheduled"
+        assert sched.status == "Scheduled"
 
     async def test_date_formatting(self, team_session):
         result = await get_team_schedule("BOS", team_session)
@@ -626,14 +610,11 @@ class TestGetTeamSchedule:
         result = await get_team_schedule("XXX", team_session)
         assert result == []
 
-    async def test_schedule_ordered_by_start_time_desc(self, team_session):
-        """Games should come back ordered by start_time descending."""
+    async def test_schedule_ordered_soonest_first(self, team_session):
+        """The whole schedule comes back soonest first."""
         result = await get_team_schedule("LAL", team_session)
-        # LAL has 3 games: g2 (Feb 20), g3 (Feb 18), g1 (Feb 17)
-        assert len(result) == 3
-        assert result[0].game_id == "g2"
-        assert result[1].game_id == "g3"
-        assert result[2].game_id == "g1"
+        # LAL has 3 games: g1 (Feb 17), g3 (Feb 18), g2 (Feb 20)
+        assert [g.game_id for g in result] == ["g1", "g3", "g2"]
 
     async def test_game_without_start_time(self, session):
         """Game with no start_time - date should be empty string.
@@ -665,7 +646,7 @@ class TestGetTeamSchedule:
 
         result = await get_team_schedule("PHX", session)
         assert len(result) == 1
-        assert result[0].status == "live"
+        assert result[0].status == "Live"
         assert result[0].result == ""  # Not final -> no result
 
 

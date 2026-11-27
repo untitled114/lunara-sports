@@ -2,7 +2,7 @@
 # The definition of passing for this repository: lint and tests, each service in its own
 # Python 3.12 virtual environment built from its pinned constraints.
 #
-#   scripts/check.sh --stage all|envs|lint|api|ingestion|integration
+#   scripts/check.sh --stage all|envs|lint|api|ingestion|integration|frontend
 #
 # `envs` only builds the environments (what the Makefile's dev targets need).
 #
@@ -74,14 +74,17 @@ run_api() { venv api api && (cd api && ../.ci/api/bin/pytest tests -q --cov); }
 run_ingestion() { venv ingestion ingestion && (cd ingestion && ../.ci/ingestion/bin/pytest tests -q --cov); }
 run_integration() { shared_venv && .ci/shared/bin/pytest tests/integration -q; }
 
+# The website: install, unit tests, the design check, then a production build.
+run_frontend() { (cd frontend && npm ci --no-audit --no-fund && npx vitest run && npm run -s design:check && npx vite build); }
+
 case "$STAGE" in
     all)
-        for s in lint api ingestion integration; do
+        for s in lint api ingestion integration frontend; do
             echo "== $s"
             "run_$s"
         done
-        echo "ALL PASSED: lint api ingestion integration"
+        echo "ALL PASSED: lint api ingestion integration frontend"
         ;;
-    envs | lint | api | ingestion | integration) "run_$STAGE" ;;
+    envs | lint | api | ingestion | integration | frontend) "run_$STAGE" ;;
     *) echo "unknown stage: $STAGE" >&2; exit 2 ;;
 esac

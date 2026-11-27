@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -119,19 +122,26 @@ async def get_team_detail(abbrev: str, session: AsyncSession) -> TeamDetailRespo
     )
 
 
+def _experience(athlete: dict) -> str:
+    """Seasons in the NBA before this one: "R" for a rookie (0 years), "-" when ESPN gives none."""
+    years = (athlete.get("experience") or {}).get("years")
+    if years is None:
+        return "-"
+    return "R" if years == 0 else str(years)
+
+
 async def get_team_roster(abbrev: str) -> list[RosterPlayer]:
-    """Get team roster from ESPN."""
+    """Get team roster from ESPN's roster endpoint."""
     espn_id = espn_id_for(abbrev)
     if not espn_id:
         return []
 
-    data = await espn_client.get_team_roster(espn_id)
+    data = await espn_client.get_roster(espn_id)
     if not data:
         return []
 
     players = []
-    team_data = data.get("team", {})
-    athletes = team_data.get("athletes", [])
+    athletes = data.get("athletes", [])
 
     for athlete in athletes:
         players.append(
@@ -143,9 +153,7 @@ async def get_team_roster(abbrev: str) -> list[RosterPlayer]:
                 height=athlete.get("displayHeight", ""),
                 weight=athlete.get("displayWeight", "").replace(" lbs", ""),
                 age=athlete.get("age"),
-                experience=str(athlete.get("experience", {}).get("years", "R"))
-                if athlete.get("experience")
-                else "R",
+                experience=_experience(athlete),
                 college=athlete.get("college", {}).get("name", "")
                 if athlete.get("college")
                 else "",
@@ -156,13 +164,23 @@ async def get_team_roster(abbrev: str) -> list[RosterPlayer]:
     return players
 
 
+_ET = ZoneInfo("America/New_York")
+_STATUS_WORDS = {"scheduled": "Scheduled", "live": "Live", "halftime": "Halftime", "final": "Final"}
+
+
+def _eastern(start: datetime) -> datetime:
+    """A stored tip time in Eastern time (a naive value from the database is UTC)."""
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    return start.astimezone(_ET)
+
+
 async def get_team_schedule(abbrev: str, session: AsyncSession) -> list[TeamScheduleGame]:
-    """Get team schedule from local games table."""
+    """A team's whole schedule from the games table, soonest first, in Eastern time."""
     stmt = (
         select(Game)
         .where((Game.home_team == abbrev) | (Game.away_team == abbrev))
-        .order_by(Game.start_time.desc())
-        .limit(20)
+        .order_by(Game.start_time.asc())
     )
     result = await session.execute(stmt)
     games = result.scalars().all()
@@ -184,15 +202,20 @@ async def get_team_schedule(abbrev: str, session: AsyncSession) -> list[TeamSche
                 f"{g.home_score}-{g.away_score}" if is_home else f"{g.away_score}-{g.home_score}"
             )
 
+        tip = _eastern(g.start_time) if g.start_time else None
+        day = f"{tip:%a}, {tip:%b} {tip.day}" if tip else ""
         schedule.append(
             TeamScheduleGame(
                 game_id=g.id,
-                date=g.start_time.strftime("%b %d") if g.start_time else "",
+                date=day,
                 opponent=f"{home_away} {opp}",
                 home_away=home_away,
                 result=f"{result_str} {score}" if result_str else "",
-                status=g.status if g.status != "final" else "Final",
+                status=_STATUS_WORDS.get(g.status, g.status.capitalize()),
                 score=score,
+                start=tip.isoformat() if tip else "",
+                day=day,
+                tip=tip.strftime("%-I:%M %p") if tip else "",
             )
         )
 

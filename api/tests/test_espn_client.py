@@ -23,6 +23,7 @@ from src.services.espn_client import (
     get_scoreboard_calendar,
     get_standings,
     get_team_roster,
+    get_team_stats,
     init_espn_client,
 )
 
@@ -170,6 +171,18 @@ class TestGetGameSummary:
 class TestUncachedWrapperFunctions:
     """Thin wrapper functions that just delegate to _cached_get with their
     own cache key / URL / TTL - previously never exercised at all."""
+
+    async def test_get_team_stats_asks_for_every_team_of_one_season(self, mock_redis, mock_http):
+        client, resp = mock_http
+        resp.json.return_value = {"teams": []}
+        assert await get_team_stats(2027) == {"teams": []}
+        url = client.get.call_args.args[0]
+        assert url.endswith("/statistics/byteam")
+        assert client.get.call_args.kwargs["params"] == {
+            "limit": "30",
+            "season": "2027",
+            "seasontype": "2",
+        }
 
     async def test_get_team_roster(self, mock_redis, mock_http):
         _, resp = mock_http

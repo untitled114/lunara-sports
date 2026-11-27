@@ -1,0 +1,109 @@
+/* Global base styles that sit outside the design tokens (src/styles/tokens.css):
+   the page grain, the skip link, the font-size and reduced-motion settings,
+   the app-shell scroll lock, and scrollbars. */
+
+/* Page grain: the one allowed ambient effect. AppLayout sets its opacity inline
+   from the "Background texture" setting (arenaIntensity x 0.12). */
+.page-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* Skip link */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 9999;
+  padding: 1rem 1.5rem;
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 12px 0;
+}
+.skip-to-content:focus {
+  left: 0;
+}
+
+/* Focus ring: the accent ring on every keyboard-focused control, not only the
+   ones that set focus-visible:outline-2 outline-accent themselves. In the base layer
+   (zero-specificity :where) so a component's own utilities still win. */
+@layer base {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* Font size setting (ThemeContext adds font-sm/md/lg to <html>) */
+html.font-sm { font-size: 12px; }
+html.font-md { font-size: 13px; }
+html.font-lg { font-size: 14px; }
+
+/* Reduced motion (the setting, and the OS preference) */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* App shell: the content div handles its own scrolling */
+html, body, #react-root {
+  height: 100% !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+/* Mobile tap targets */
+@media (max-width: 768px) {
+  button, a, [role="button"] {
+    min-height: 36px;
+  }
+}
+
+/* Long headings wrap between words on small screens. A word is only ever split when it
+   alone is wider than the line (overflow-wrap: break-word does not lower an element's
+   min-content width, so flex siblings can no longer squeeze a heading mid-word). */
+@media (max-width: 640px) {
+  h1, h2 {
+    overflow-wrap: break-word;
+  }
+}

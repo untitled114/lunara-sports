@@ -10,3 +10,8 @@ htmlcov/
 *.egg-info/
 build/
 .env
+
+# The website's install, build and local settings
+node_modules/
+dist/
+.env.local

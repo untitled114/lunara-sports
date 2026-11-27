@@ -1,0 +1,19 @@
+{
+ "_source": "GET /players/3945274, captured 2026-11-25T23:03:14Z. Real player record, unedited.",
+ "data": {
+  "id": "3945274",
+  "name": "Luka Doncic",
+  "jersey": "77",
+  "position": "G",
+  "height": "6' 8\"",
+  "weight": "230",
+  "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3945274.png",
+  "age": 27,
+  "experience": "9th Season",
+  "college": "",
+  "draft": "2018: Rd 1, Pk 3 (ATL)",
+  "birthplace": "Ljubljana, Slovenia",
+  "team": "Los Angeles Lakers",
+  "team_abbrev": "LAL"
+ }
+}

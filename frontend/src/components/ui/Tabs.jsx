@@ -1,0 +1,179 @@
+import React, { useState, useEffect, useRef } from 'react';
+import clsx from 'clsx';
+
+/**
+ * Tabs - Tab navigation component
+ *
+ * Renders with the one shared tab style used site-wide (same look as the
+ * `Segmented` control: bg-surface-1 border-border rounded-md p-1, roving
+ * tabindex, arrow-key navigation). `variant` is kept for API compatibility
+ * with existing callers but no longer changes the rendered style.
+ *
+ * @param {Object} props
+ * @param {Array} props.tabs - Array: { id, label, icon, badge, disabled, content }
+ * @param {string} props.activeTab - Currently active tab ID
+ * @param {function} props.onChange - Callback: (tabId) => {}
+ * @param {string} props.variant - Ignored; older callers still pass it
+ * @param {boolean} props.urlSync - Sync with URL hash (default: false)
+ * @param {string} props.className - Additional classes
+ *
+ * @example
+ * <Tabs
+ *   tabs={[
+ *     { id: 'overview', label: 'Overview', icon: Home },
+ *     { id: 'projects', label: 'Projects', badge: 5 },
+ *     { id: 'settings', label: 'Settings', disabled: true }
+ *   ]}
+ *   activeTab="overview"
+ *   onChange={(tabId) => setActiveTab(tabId)}
+ * />
+ */
+// eslint-disable-next-line no-unused-vars
+const Tabs = ({ tabs = [], activeTab, onChange, variant = 'underline', urlSync = false, className = '' }) => {
+  const [activeTabState, setActiveTabState] = useState(activeTab || tabs[0]?.id);
+  const tabRefs = useRef({});
+
+  // Sync with URL hash
+  useEffect(() => {
+    if (urlSync) {
+      const hash = window.location.hash.slice(1);
+      if (hash && tabs.find((tab) => tab.id === hash)) {
+        setActiveTabState(hash);
+      }
+    }
+  }, [urlSync, tabs]);
+
+  // Update the active tab when the value passed in changes
+  useEffect(() => {
+    if (activeTab && activeTab !== activeTabState) {
+      setActiveTabState(activeTab);
+    }
+  }, [activeTab]);
+
+  // Handle tab change
+  const handleTabChange = (tabId) => {
+    const tab = tabs.find((t) => t.id === tabId);
+    if (tab && !tab.disabled) {
+      setActiveTabState(tabId);
+      onChange?.(tabId);
+
+      // Update URL hash if enabled
+      if (urlSync) {
+        window.location.hash = tabId;
+      }
+    }
+  };
+
+  // Roving tabindex selection, matching Segmented's wrap-around focus model,
+  // plus the base Tabs component's disabled-skipping: advancing in `direction`
+  // (wrapping) until a non-disabled tab is found, same as the pre-rollout
+  // while-loop skip in handleKeyDown.
+  const selectByIndex = (index, direction = 1) => {
+    if (tabs.length === 0) return;
+    let wrapped = ((index % tabs.length) + tabs.length) % tabs.length;
+    let attempts = 0;
+    while (tabs[wrapped]?.disabled && attempts < tabs.length) {
+      wrapped = ((wrapped + direction) % tabs.length + tabs.length) % tabs.length;
+      attempts++;
+    }
+    const tab = tabs[wrapped];
+    if (!tab || tab.disabled) return; // every tab disabled
+    handleTabChange(tab.id);
+    tabRefs.current[tab.id]?.focus();
+  };
+
+  const handleKeyDown = (e, currentIndex) => {
+    switch (e.key) {
+      case 'ArrowRight':
+        e.preventDefault();
+        selectByIndex(currentIndex + 1, 1);
+        break;
+
+      case 'ArrowLeft':
+        e.preventDefault();
+        selectByIndex(currentIndex - 1, -1);
+        break;
+
+      case 'Home':
+        e.preventDefault();
+        selectByIndex(0, 1);
+        break;
+
+      case 'End':
+        e.preventDefault();
+        selectByIndex(tabs.length - 1, -1);
+        break;
+
+      default:
+        break;
+    }
+  };
+
+  return (
+    <div className={className}>
+      {/* Tab List */}
+      <div
+        role="tablist"
+        aria-orientation="horizontal"
+        className="inline-flex max-w-full gap-1 rounded-md bg-surface-1 border border-border p-1 overflow-x-auto scrollbar-hide"
+      >
+        {tabs.map((tab, index) => {
+          const isActive = tab.id === activeTabState;
+          const Icon = tab.icon;
+
+          return (
+            <button
+              key={tab.id}
+              ref={(el) => {
+                tabRefs.current[tab.id] = el;
+              }}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`tabpanel-${tab.id}`}
+              aria-disabled={tab.disabled}
+              tabIndex={isActive ? 0 : -1}
+              disabled={tab.disabled}
+              onClick={() => handleTabChange(tab.id)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+              className={clsx(
+                't-small flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 transition-colors focus-visible:outline-2 outline-accent',
+                tab.disabled
+                  ? 'text-text-3 cursor-not-allowed'
+                  : isActive
+                    ? 'bg-accent-fill text-accent-ink' // one selected look site-wide (Segmented, nav, date strip)
+                    : 'text-text-2 hover:text-text-1 cursor-pointer'
+              )}
+            >
+              {/* Icons from sm up; below it the labels alone fit a 390px screen. */}
+              {Icon && <Icon className="hidden sm:block w-4 h-4 flex-shrink-0" aria-hidden="true" />}
+              <span className="whitespace-nowrap">{tab.label}</span>
+              {tab.badge !== undefined && tab.badge !== null && (
+                <span
+                  className={clsx(
+                    't-label rounded-sm px-2 py-0.5',
+                    isActive ? 'bg-accent-fill-hover text-accent-ink' : 'bg-surface-1 text-text-2'
+                  )}
+                >
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab Content */}
+      {tabs.map((tab) => {
+        const isActive = tab.id === activeTabState;
+        return (
+          <div key={tab.id} id={`tabpanel-${tab.id}`} role="tabpanel" aria-labelledby={tab.id} hidden={!isActive} className="mt-4">
+            {isActive && tab.content}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export default Tabs;

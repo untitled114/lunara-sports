@@ -38,6 +38,19 @@ def _rosters():
     )
 
 
+def _team_rosters():
+    """The same captured athletes, listed the way ESPN's /teams/{id}/roster lists them
+    (top-level ``athletes``), which is what the team roster reads."""
+    return patch(
+        "src.services.espn_client.get_roster",
+        AsyncMock(
+            side_effect=lambda espn_id: (
+                {"athletes": ROSTERS[espn_id]["team"]["athletes"]} if espn_id in ROSTERS else None
+            )
+        ),
+    )
+
+
 async def test_search_finds_a_player_whose_headshot_is_a_url():
     with _rosters():
         result = await get_all_players(search="Deni Avdija")
@@ -93,13 +106,13 @@ async def test_an_athlete_with_missing_fields_parses_empty():
 
 
 async def test_team_roster_parses_url_headshots_and_missing_fields():
-    with _rosters():
+    with _team_rosters():
         roster = await get_team_roster("CHA")
 
     assert len(roster) == len(ROSTERS[30]["team"]["athletes"])
     wrightsell = next(p for p in roster if p.id == "5460427")
     assert (wrightsell.jersey, wrightsell.weight, wrightsell.headshot_url) == ("", "", "")
-    with _rosters():
+    with _team_rosters():
         avdija = next(p for p in await get_team_roster("POR") if p.id == "4683021")
     assert avdija.headshot_url == AVDIJA_HEADSHOT
     assert avdija.jersey == "8"

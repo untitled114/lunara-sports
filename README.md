@@ -1,22 +1,53 @@
 # lunara-sports
 
-A live NBA data pipeline. It polls ESPN's public scoreboard and play-by-play feeds during games,
-writes every game and play to PostgreSQL, serves them over a REST and WebSocket API while the
-game is on, and keeps an analytics layer of SQL views over the stored plays.
+Live NBA play by play, from ESPN to the browser within a second or two. A Python ingestion service
+polls ESPN during games and writes every game and play to PostgreSQL; a FastAPI service pushes
+new plays to browsers over WebSocket and serves scores, box scores, standings and stats; a React
+site shows it all.
 
-## What is here
+**Live site:** https://www.lunara-app.com
+
+<p>
+  <img src="docs/images/home-desktop.webp" alt="The home page" width="49%">
+  <img src="docs/images/game-desktop.webp" alt="A finished game: box scores and the recap of every play" width="49%">
+</p>
+<p>
+  <img src="docs/images/players-phone.webp" alt="The Players table on a phone" width="24%">
+</p>
+
+The repository has two parts:
+
+1. **Streaming data engineering:** getting live events in, keeping them correct, and getting them
+   out fast.
+2. **Software development:** the API, the website, the tests and CI.
+
+## Part 1: Streaming data engineering
+
+How a play travels (the intervals are the ones in the code):
+
+1. `ingestion/` polls ESPN's scoreboard every 10 seconds to find live games, and each live game's
+   play by play every second. Each poll is bounded to 3 seconds, so a slow game never stalls the
+   others.
+2. One collector per game remembers each ESPN play id with the fields it last produced and emits
+   a play only when it is new or changed. All collectors share one buffered PostgreSQL sink that
+   writes in order.
+3. When a game ends, its stored plays are reconciled with ESPN's final play list.
+4. In `api/`, a poller reads new rows every quarter second and pushes them to the game's
+   WebSocket subscribers. The scoreboard reaches every open page every 2 seconds.
+5. SQL views in the `analytics` schema turn the stored plays into game flow, scoring runs and
+   per-player scoring.
 
 | Area | Path | What it does |
 |---|---|---|
-| Ingestion | `ingestion/` | Polls ESPN for the scoreboard and for each live game's plays, and writes them through one buffered PostgreSQL sink |
+| Ingestion | `ingestion/` | Polls ESPN for the scoreboard and each live game's plays, and writes them through one buffered PostgreSQL sink |
 | Reconcile | `ingestion/src/reconcile.py` | Makes a finished game's stored plays match ESPN's final play list; a CLI does the same for stored games |
 | Database | `storage/postgres/migrations/` | Numbered SQL migrations: games, teams, plays, users, predictions and social tables, and the analytics views |
 | Analytics | `storage/postgres/migrations/016_analytics_views.sql` | Views for play flow, quarter scoring, player points, scoring runs and game flow |
-| API | `api/` | FastAPI: REST for games, plays, box scores, standings, teams and players; WebSocket feeds for the scoreboard and each game; JWT sign-in |
+| Live fan-out | `api/src/ws/` | The play poller and the WebSocket connection manager, one room per game |
 | Monitoring | `monitoring/`, `docker-compose.yml` | Prometheus with PostgreSQL and Redis exporters, a Grafana dashboard, the API's request metrics |
-| Tests | `api/tests/`, `ingestion/tests/`, `tests/integration/` | Unit tests per service, and tests against a real PostgreSQL for the sink, the play broadcast poller, reconcile and the views |
+| Real-database tests | `tests/integration/`, `ingestion/tests/test_reconcile_db.py`, `ingestion/tests/test_analytics_db.py` | The sink, the play broadcast poller, reconcile and the views against a real PostgreSQL |
 
-## Data notes
+### Data notes
 
 - **A play is identified by ESPN's play id, not its sequence number.** ESPN renumbers plays
   during a game: a play recorded late is inserted and the plays after it shift. When plays were
@@ -43,7 +74,7 @@ game is on, and keeps an analytics layer of SQL views over the stored plays.
   exponential backoff; each collector has a circuit breaker that stops calling an endpoint that
   keeps failing (`ingestion/src/resilience/`).
 
-## The analytics views
+### The analytics views
 
 All in the `analytics` schema, read-only, over plays that carry ESPN's time order:
 
@@ -59,10 +90,27 @@ All in the `analytics` schema, read-only, over plays that carry ESPN's time orde
 On the stored CLE @ CHA game they give ESPN's own figures: line scores 29-40-38-17 and
 28-25-27-32, the largest leads (33 and 9) and 3 lead changes.
 
+## Part 2: Software development
+
+| Area | Path | What it does |
+|---|---|---|
+| API | `api/` | FastAPI: REST for games, plays, box scores, standings, teams, players and stats; WebSocket feeds for the scoreboard and each game; JWT sign-in. ESPN reads go through a Redis cache with a lifetime per endpoint |
+| Players table | `api/src/services/stats_service.py` | `GET /stats/players`: every player with stats this season, sortable by any column, 25 per page, searchable by name, team or team and number ("knicks 11"), with team, position and conference filters and the NBA's games rule |
+| Leaders | `api/src/routers/stats.py` | `GET /stats/leaders/{category}`: the leaders in nine categories under the NBA's qualifying rules, and every team's per-game numbers |
+| Website | `frontend/` | React 18, Vite and Tailwind v4: the scoreboard, game pages with live play by play and box scores, standings, teams, stats and the Players table. Every row is one link |
+| Design check | `frontend/scripts/check-design.mjs` | Keeps the design rules in code: colors only from the tokens, no off-system effects, type weights and copy, run in CI |
+| Tests | `api/tests/`, `ingestion/tests/`, `frontend/src/**/*.test.*` | Unit tests per service with a 99.1% line and branch coverage gate; the website's tests run against recorded API responses |
+| CI | `scripts/check.sh`, `.github/workflows/ci.yml` | Lint, the API and ingestion suites, the real-PostgreSQL tests and the website (tests, design check, production build) |
+
+The site's art and its browser test suite, with the images it uses, are not in this repository
+(so `npm run e2e` has nothing to run here).
+`frontend/src/addons/index.js` loads optional parts of the site when they are present; this
+repository has none.
+
 ## Run it
 
 Requirements: Linux, Docker, Python 3.12 with its `venv` module (`python3.12-venv` on Debian and
-Ubuntu), and the `psql` client.
+Ubuntu), the `psql` client, and Node 22 for the website.
 
 ```bash
 cp .env.example .env
@@ -77,16 +125,22 @@ and in a second terminal:
 make dev-api        # the API on 127.0.0.1:8000 (docs at /docs)
 ```
 
-The two services each get their own environment in `.ci/` (built by `make envs`, which the dev
-targets run first): both ship a top-level package named `src`, so they never share one.
+and in a third, the website against that API:
+
+```bash
+make dev-web        # the site on 127.0.0.1:3000
+```
+
+The two Python services each get their own environment in `.ci/` (built by `make envs`, which
+the dev targets run first): both ship a top-level package named `src`, so they never share one.
 
 ## Tests
 
 ```bash
-make test      # lint, and the API and ingestion suites (no database needed)
+make test      # lint, the API and ingestion suites, and the website (no database needed)
 make test-db   # all of that plus the real-PostgreSQL tests, on a throwaway postgres:16 container
 ```
 
 `scripts/check.sh` is what both run, and what CI runs. Recorded responses used by the tests are
-listed, with when they were recorded, in `api/tests/fixtures/README.md` and
-`tests/fixtures/espn/README.md`.
+listed, with when they were recorded, in `api/tests/fixtures/README.md`,
+`tests/fixtures/espn/README.md` and `frontend/e2e/fixtures/README.md`.

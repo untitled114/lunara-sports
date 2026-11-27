@@ -9,7 +9,7 @@ export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB JWT_SECRET
 PG_URL := postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:5432/$(POSTGRES_DB)
 IT_DSN := postgresql://postgres:postgres@localhost:55433/lunara_it
 
-.PHONY: infra up down logs db-migrate db-reset envs dev-ingestion dev-api test test-db lint build help
+.PHONY: infra up down logs db-migrate db-reset envs dev-ingestion dev-api dev-web test test-db lint build help
 
 # --- Infrastructure ---
 
@@ -53,12 +53,16 @@ dev-api: envs ## The API on 127.0.0.1:8000 (docs at /docs)
 		REDIS_URL=redis://localhost:6379/0 \
 		../.ci/api/bin/uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
 
+dev-web: ## The website on 127.0.0.1:3000, against the local API (needs Node 22)
+	cd frontend && npm ci --no-audit --no-fund && npm run dev
+
 # --- Tests ---
 
-test: ## Lint and every suite that needs no database (each service in its own venv)
+test: ## Lint and every suite that needs no database (each service in its own venv), and the website
 	scripts/check.sh --stage lint
 	scripts/check.sh --stage api
 	scripts/check.sh --stage ingestion
+	scripts/check.sh --stage frontend
 
 test-db: ## Everything, plus the real-PostgreSQL tests, on a throwaway postgres:16 container
 	@docker rm -f lunara-it-pg >/dev/null 2>&1 || true

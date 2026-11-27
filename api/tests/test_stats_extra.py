@@ -5,8 +5,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 from src.services.stats_service import (
-    _build_athlete_lookup,
-    _resolve_athlete,
     _safe_float,
     get_player_game_log,
     get_player_season_stats,
@@ -283,91 +281,3 @@ class TestGetPlayerGameLog:
             mock_espn.get_athlete_gamelog = AsyncMock(side_effect=Exception("ESPN down"))
             result = await get_player_game_log("12345")
             assert result == []
-
-
-class TestBuildAthleteLookup:
-    async def test_builds_lookup(self):
-        roster_data = {
-            "team": {
-                "athletes": [
-                    {"id": "123", "displayName": "LeBron James"},
-                    {"id": "456", "displayName": "Anthony Davis"},
-                ]
-            }
-        }
-        with (
-            patch("src.services.stats_service.espn_client") as mock_espn,
-            patch("src.services.team_mapping.ESPN_TEAM_IDS", {"LAL": 13}),
-        ):
-            mock_espn.get_team_roster = AsyncMock(return_value=roster_data)
-            result = await _build_athlete_lookup()
-            assert "123" in result
-            assert result["123"]["name"] == "LeBron James"
-
-    async def test_handles_error(self):
-        with (
-            patch("src.services.stats_service.espn_client") as mock_espn,
-            patch("src.services.team_mapping.ESPN_TEAM_IDS", {"LAL": 13}),
-        ):
-            mock_espn.get_team_roster = AsyncMock(side_effect=Exception("error"))
-            result = await _build_athlete_lookup()
-            assert result == {}
-
-    async def test_athlete_without_id_is_skipped(self):
-        """An athlete dict with no (or empty) "id" contributes no lookup
-        entry, while a valid sibling still gets added."""
-        roster_data = {
-            "team": {
-                "athletes": [
-                    {"displayName": "No ID Guy"},  # missing "id" entirely
-                    {"id": "123", "displayName": "LeBron James"},
-                ]
-            }
-        }
-        with (
-            patch("src.services.stats_service.espn_client") as mock_espn,
-            patch("src.services.team_mapping.ESPN_TEAM_IDS", {"LAL": 13}),
-        ):
-            mock_espn.get_team_roster = AsyncMock(return_value=roster_data)
-            result = await _build_athlete_lookup()
-            assert list(result.keys()) == ["123"]
-
-
-class TestResolveAthlete:
-    async def test_from_map(self):
-        athlete_map = {"123": {"name": "LeBron James", "abbrev": "LAL"}}
-        result = await _resolve_athlete("123", athlete_map)
-        assert result["name"] == "LeBron James"
-
-    async def test_from_espn(self):
-        espn_data = {
-            "displayName": "Anthony Davis",
-            "team": {"abbreviation": "LAL"},
-        }
-        with patch("src.services.stats_service.espn_client") as mock_espn:
-            mock_espn.get_athlete_info = AsyncMock(return_value=espn_data)
-            result = await _resolve_athlete("456", {})
-            assert result["name"] == "Anthony Davis"
-
-    async def test_espn_returns_none(self):
-        with patch("src.services.stats_service.espn_client") as mock_espn:
-            mock_espn.get_athlete_info = AsyncMock(return_value=None)
-            result = await _resolve_athlete("999", {})
-            assert "Player 999" in result["name"]
-
-    async def test_espn_error(self):
-        with patch("src.services.stats_service.espn_client") as mock_espn:
-            mock_espn.get_athlete_info = AsyncMock(side_effect=Exception("err"))
-            result = await _resolve_athlete("999", {})
-            assert "Player 999" in result["name"]
-
-    async def test_espn_data_without_a_name_falls_through_to_default(self):
-        """ESPN returns data, but the athlete has neither displayName nor
-        fullName - `if name:` is False, so nothing is
-        cached and the generic "Player {id}" fallback is used instead."""
-        athlete_map: dict = {}
-        with patch("src.services.stats_service.espn_client") as mock_espn:
-            mock_espn.get_athlete_info = AsyncMock(return_value={"team": {"abbreviation": "LAL"}})
-            result = await _resolve_athlete("777", athlete_map)
-            assert result["name"] == "Player 777"
-            assert "777" not in athlete_map  # not cached

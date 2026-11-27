@@ -1,0 +1,433 @@
+{
+ "_source": "GET /stats/leaders?limit=5 as the API computes it (qualified leaders and the player count) from ESPN's live standings and statistics/byathlete endpoints, run 2026-11-26 01:03 ET; unedited output.",
+ "data": {
+  "categories": {
+   "pts": [
+    {
+     "rank": 1,
+     "player": "Luka Doncic",
+     "player_id": "3945274",
+     "team": "LAL",
+     "value": "36.6",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3945274.png"
+    },
+    {
+     "rank": 2,
+     "player": "Shai Gilgeous-Alexander",
+     "player_id": "4278073",
+     "team": "OKC",
+     "value": "32.1",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4278073.png"
+    },
+    {
+     "rank": 3,
+     "player": "Victor Wembanyama",
+     "player_id": "5104157",
+     "team": "SA",
+     "value": "29.9",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5104157.png"
+    },
+    {
+     "rank": 4,
+     "player": "Giannis Antetokounmpo",
+     "player_id": "3032977",
+     "team": "MIA",
+     "value": "28.2",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3032977.png"
+    },
+    {
+     "rank": 5,
+     "player": "Jayson Tatum",
+     "player_id": "4065648",
+     "team": "BOS",
+     "value": "27.3",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4065648.png"
+    }
+   ],
+   "reb": [
+    {
+     "rank": 1,
+     "player": "Karl-Anthony Towns",
+     "player_id": "3136195",
+     "team": "NY",
+     "value": "13.9",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3136195.png"
+    },
+    {
+     "rank": 2,
+     "player": "Domantas Sabonis",
+     "player_id": "3155942",
+     "team": "SAC",
+     "value": "13.5",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3155942.png"
+    },
+    {
+     "rank": 3,
+     "player": "Giannis Antetokounmpo",
+     "player_id": "3032977",
+     "team": "MIA",
+     "value": "12.6",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3032977.png"
+    },
+    {
+     "rank": 4,
+     "player": "Victor Wembanyama",
+     "player_id": "5104157",
+     "team": "SA",
+     "value": "12.3",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5104157.png"
+    },
+    {
+     "rank": 5,
+     "player": "Donovan Clingan",
+     "player_id": "5105565",
+     "team": "POR",
+     "value": "11.3",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5105565.png"
+    }
+   ],
+   "ast": [
+    {
+     "rank": 1,
+     "player": "Josh Giddey",
+     "player_id": "4871145",
+     "team": "CHI",
+     "value": "9.4",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4871145.png"
+    },
+    {
+     "rank": 2,
+     "player": "Trae Young",
+     "player_id": "4277905",
+     "team": "WSH",
+     "value": "8.9",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4277905.png"
+    },
+    {
+     "rank": 3,
+     "player": "Nikola Jokic",
+     "player_id": "3112335",
+     "team": "DEN",
+     "value": "8.9",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3112335.png"
+    },
+    {
+     "rank": 4,
+     "player": "Davion Mitchell",
+     "player_id": "4278053",
+     "team": "MIA",
+     "value": "8.6",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4278053.png"
+    },
+    {
+     "rank": 5,
+     "player": "Cade Cunningham",
+     "player_id": "4432166",
+     "team": "DET",
+     "value": "8.3",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4432166.png"
+    }
+   ],
+   "threes": [
+    {
+     "rank": 1,
+     "player": "Luka Doncic",
+     "player_id": "3945274",
+     "team": "LAL",
+     "value": "4.8",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3945274.png"
+    },
+    {
+     "rank": 2,
+     "player": "Anthony Edwards",
+     "player_id": "4594268",
+     "team": "MIN",
+     "value": "4.5",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4594268.png"
+    },
+    {
+     "rank": 3,
+     "player": "Stephen Curry",
+     "player_id": "3975",
+     "team": "GS",
+     "value": "4.3",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3975.png"
+    },
+    {
+     "rank": 4,
+     "player": "Desmond Bane",
+     "player_id": "4066320",
+     "team": "ORL",
+     "value": "4.2",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4066320.png"
+    },
+    {
+     "rank": 5,
+     "player": "Klay Thompson",
+     "player_id": "6475",
+     "team": "MIA",
+     "value": "4.0",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/6475.png"
+    }
+   ],
+   "stl": [
+    {
+     "rank": 1,
+     "player": "Dyson Daniels",
+     "player_id": "4869342",
+     "team": "ATL",
+     "value": "3.0",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4869342.png"
+    },
+    {
+     "rank": 2,
+     "player": "Matisse Thybulle",
+     "player_id": "3907498",
+     "team": "LAL",
+     "value": "2.3",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3907498.png"
+    },
+    {
+     "rank": 3,
+     "player": "Paul George",
+     "player_id": "4251",
+     "team": "BOS",
+     "value": "2.1",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4251.png"
+    },
+    {
+     "rank": 4,
+     "player": "Christian Braun",
+     "player_id": "4431767",
+     "team": "DEN",
+     "value": "2.1",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4431767.png"
+    },
+    {
+     "rank": 5,
+     "player": "Bam Adebayo",
+     "player_id": "4066261",
+     "team": "MIA",
+     "value": "2.1",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4066261.png"
+    }
+   ],
+   "blk": [
+    {
+     "rank": 1,
+     "player": "Victor Wembanyama",
+     "player_id": "5104157",
+     "team": "SA",
+     "value": "3.9",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5104157.png"
+    },
+    {
+     "rank": 2,
+     "player": "Myles Turner",
+     "player_id": "3133628",
+     "team": "MIL",
+     "value": "2.2",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3133628.png"
+    },
+    {
+     "rank": 3,
+     "player": "Walker Kessler",
+     "player_id": "4433136",
+     "team": "LAL",
+     "value": "2.1",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4433136.png"
+    },
+    {
+     "rank": 4,
+     "player": "Donovan Clingan",
+     "player_id": "5105565",
+     "team": "POR",
+     "value": "2.1",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5105565.png"
+    },
+    {
+     "rank": 5,
+     "player": "Peyton Watson",
+     "player_id": "4576087",
+     "team": "CLE",
+     "value": "1.8",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4576087.png"
+    }
+   ],
+   "fg_pct": [
+    {
+     "rank": 1,
+     "player": "Daniel Gafford",
+     "player_id": "4278049",
+     "team": "DAL",
+     "value": "69.5",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4278049.png"
+    },
+    {
+     "rank": 2,
+     "player": "Walker Kessler",
+     "player_id": "4433136",
+     "team": "LAL",
+     "value": "66.9",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4433136.png"
+    },
+    {
+     "rank": 3,
+     "player": "Aday Mara",
+     "player_id": "5174983",
+     "team": "OKC",
+     "value": "64.9",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5174983.png"
+    },
+    {
+     "rank": 4,
+     "player": "Domantas Sabonis",
+     "player_id": "3155942",
+     "team": "SAC",
+     "value": "63.9",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3155942.png"
+    },
+    {
+     "rank": 5,
+     "player": "Jarrett Allen",
+     "player_id": "4066328",
+     "team": "CLE",
+     "value": "62.5",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4066328.png"
+    }
+   ],
+   "three_pct": [
+    {
+     "rank": 1,
+     "player": "Moritz Wagner",
+     "player_id": "3150844",
+     "team": "BKN",
+     "value": "64.5",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3150844.png"
+    },
+    {
+     "rank": 2,
+     "player": "Cam Spencer",
+     "player_id": "4433083",
+     "team": "MEM",
+     "value": "54.5",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4433083.png"
+    },
+    {
+     "rank": 3,
+     "player": "Caleb Martin",
+     "player_id": "3138160",
+     "team": "DAL",
+     "value": "52.8",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3138160.png"
+    },
+    {
+     "rank": 4,
+     "player": "Danny Wolf",
+     "player_id": "5107173",
+     "team": "BKN",
+     "value": "52.2",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5107173.png"
+    },
+    {
+     "rank": 5,
+     "player": "Corey Kispert",
+     "player_id": "4280151",
+     "team": "ATL",
+     "value": "48.8",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4280151.png"
+    }
+   ],
+   "ft_pct": [
+    {
+     "rank": 1,
+     "player": "Cam Spencer",
+     "player_id": "4433083",
+     "team": "MEM",
+     "value": "97.2",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4433083.png"
+    },
+    {
+     "rank": 2,
+     "player": "Grayson Allen",
+     "player_id": "3135045",
+     "team": "CHA",
+     "value": "92.7",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3135045.png"
+    },
+    {
+     "rank": 3,
+     "player": "Devin Booker",
+     "player_id": "3136193",
+     "team": "PHX",
+     "value": "92.2",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/3136193.png"
+    },
+    {
+     "rank": 4,
+     "player": "Daniss Jenkins",
+     "player_id": "5107199",
+     "team": "DET",
+     "value": "92.1",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/5107199.png"
+    },
+    {
+     "rank": 5,
+     "player": "Ty Jerome",
+     "player_id": "4065733",
+     "team": "MEM",
+     "value": "90.6",
+     "gp": null,
+     "headshot_url": "https://a.espncdn.com/i/headshots/nba/players/full/4065733.png"
+    }
+   ]
+  },
+  "season_label": "2026-27 regular season",
+  "is_previous_season": false,
+  "player_count": 481
+ }
+}

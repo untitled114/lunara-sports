@@ -1,0 +1,26 @@
+{
+ "_source": "GET /players/3945274/stats as this API computes it from ESPN's real athlete stats for Luka Doncic, recorded 2026-11-25 22:52 UTC (api/tests/fixtures/espn_athlete_stats_3945274_20261125.json), unedited values.",
+ "data": {
+  "ppg": "36.6",
+  "rpg": "6.6",
+  "apg": "7.7",
+  "spg": "1.8",
+  "bpg": "0.6",
+  "fg_pct": "46.0%",
+  "three_pct": "36.5%",
+  "ft_pct": "86.5%",
+  "gp": 16,
+  "season": "2026-27",
+  "gs": 16,
+  "mpg": "36.2",
+  "fg": "11.5-25.0",
+  "three": "4.8-13.2",
+  "ft": "8.8-10.2",
+  "orpg": "0.4",
+  "drpg": "6.3",
+  "tovpg": "5.1",
+  "pfpg": "3.1",
+  "double_doubles": 4,
+  "triple_doubles": 0
+ }
+}

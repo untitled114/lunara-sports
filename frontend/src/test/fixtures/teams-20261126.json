@@ -1,0 +1,245 @@
+{
+  "_source": "GET /teams, captured 2026-11-26 ~10:30 ET (Thanksgiving; no games since the standings capture of 00:30 ET). Real, unedited.",
+  "data": [
+    {
+      "name": "Boston Celtics",
+      "abbrev": "BOS",
+      "conference": "Eastern",
+      "division": "Atlantic",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/bos.png",
+      "last_game": "W 131-116 @ WSH"
+    },
+    {
+      "name": "Brooklyn Nets",
+      "abbrev": "BKN",
+      "conference": "Eastern",
+      "division": "Atlantic",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/bkn.png",
+      "last_game": "W 104-97 @ MIL"
+    },
+    {
+      "name": "New York Knicks",
+      "abbrev": "NY",
+      "conference": "Eastern",
+      "division": "Atlantic",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/ny.png",
+      "last_game": "W 121-102 vs CLE"
+    },
+    {
+      "name": "Philadelphia 76ers",
+      "abbrev": "PHI",
+      "conference": "Eastern",
+      "division": "Atlantic",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/phi.png",
+      "last_game": "W 111-104 vs MIA"
+    },
+    {
+      "name": "Toronto Raptors",
+      "abbrev": "TOR",
+      "conference": "Eastern",
+      "division": "Atlantic",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/tor.png",
+      "last_game": "L 116-111 vs MIL"
+    },
+    {
+      "name": "Chicago Bulls",
+      "abbrev": "CHI",
+      "conference": "Eastern",
+      "division": "Central",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/chi.png",
+      "last_game": "W 107-105 @ CHA"
+    },
+    {
+      "name": "Cleveland Cavaliers",
+      "abbrev": "CLE",
+      "conference": "Eastern",
+      "division": "Central",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/cle.png",
+      "last_game": "L 121-102 @ NY"
+    },
+    {
+      "name": "Detroit Pistons",
+      "abbrev": "DET",
+      "conference": "Eastern",
+      "division": "Central",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/det.png",
+      "last_game": "W 104-86 @ ORL"
+    },
+    {
+      "name": "Indiana Pacers",
+      "abbrev": "IND",
+      "conference": "Eastern",
+      "division": "Central",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/ind.png",
+      "last_game": "W 125-120 vs OKC"
+    },
+    {
+      "name": "Milwaukee Bucks",
+      "abbrev": "MIL",
+      "conference": "Eastern",
+      "division": "Central",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/mil.png",
+      "last_game": "L 104-97 vs BKN"
+    },
+    {
+      "name": "Atlanta Hawks",
+      "abbrev": "ATL",
+      "conference": "Eastern",
+      "division": "Southeast",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/atl.png",
+      "last_game": "W 107-97 vs DET"
+    },
+    {
+      "name": "Charlotte Hornets",
+      "abbrev": "CHA",
+      "conference": "Eastern",
+      "division": "Southeast",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/cha.png",
+      "last_game": "L 107-105 vs CHI"
+    },
+    {
+      "name": "Miami Heat",
+      "abbrev": "MIA",
+      "conference": "Eastern",
+      "division": "Southeast",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/mia.png",
+      "last_game": "L 111-104 @ PHI"
+    },
+    {
+      "name": "Orlando Magic",
+      "abbrev": "ORL",
+      "conference": "Eastern",
+      "division": "Southeast",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/orl.png",
+      "last_game": "L 104-86 vs DET"
+    },
+    {
+      "name": "Washington Wizards",
+      "abbrev": "WSH",
+      "conference": "Eastern",
+      "division": "Southeast",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/wsh.png",
+      "last_game": "L 131-116 vs BOS"
+    },
+    {
+      "name": "Denver Nuggets",
+      "abbrev": "DEN",
+      "conference": "Western",
+      "division": "Northwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/den.png",
+      "last_game": "L 120-101 vs DAL"
+    },
+    {
+      "name": "Minnesota Timberwolves",
+      "abbrev": "MIN",
+      "conference": "Western",
+      "division": "Northwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/min.png",
+      "last_game": "W 113-106 @ OKC"
+    },
+    {
+      "name": "Oklahoma City Thunder",
+      "abbrev": "OKC",
+      "conference": "Western",
+      "division": "Northwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/okc.png",
+      "last_game": "L 113-106 vs MIN"
+    },
+    {
+      "name": "Portland Trail Blazers",
+      "abbrev": "POR",
+      "conference": "Western",
+      "division": "Northwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/por.png",
+      "last_game": "W 116-111 vs SA"
+    },
+    {
+      "name": "Utah Jazz",
+      "abbrev": "UTA",
+      "conference": "Western",
+      "division": "Northwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/uta.png",
+      "last_game": "L 109-94 @ LAL"
+    },
+    {
+      "name": "Golden State Warriors",
+      "abbrev": "GS",
+      "conference": "Western",
+      "division": "Pacific",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/gs.png",
+      "last_game": "W 129-110 vs SAC"
+    },
+    {
+      "name": "LA Clippers",
+      "abbrev": "LAC",
+      "conference": "Western",
+      "division": "Pacific",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/lac.png",
+      "last_game": "L 115-97 @ MEM"
+    },
+    {
+      "name": "Los Angeles Lakers",
+      "abbrev": "LAL",
+      "conference": "Western",
+      "division": "Pacific",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/lal.png",
+      "last_game": "W 109-94 vs UTA"
+    },
+    {
+      "name": "Phoenix Suns",
+      "abbrev": "PHX",
+      "conference": "Western",
+      "division": "Pacific",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/phx.png",
+      "last_game": "L 116-104 @ HOU"
+    },
+    {
+      "name": "Sacramento Kings",
+      "abbrev": "SAC",
+      "conference": "Western",
+      "division": "Pacific",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/sac.png",
+      "last_game": "L 129-110 @ GS"
+    },
+    {
+      "name": "Dallas Mavericks",
+      "abbrev": "DAL",
+      "conference": "Western",
+      "division": "Southwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/dal.png",
+      "last_game": "W 120-101 @ DEN"
+    },
+    {
+      "name": "Houston Rockets",
+      "abbrev": "HOU",
+      "conference": "Western",
+      "division": "Southwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/hou.png",
+      "last_game": "W 116-104 vs PHX"
+    },
+    {
+      "name": "Memphis Grizzlies",
+      "abbrev": "MEM",
+      "conference": "Western",
+      "division": "Southwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/mem.png",
+      "last_game": "W 115-97 vs LAC"
+    },
+    {
+      "name": "New Orleans Pelicans",
+      "abbrev": "NO",
+      "conference": "Western",
+      "division": "Southwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/no.png",
+      "last_game": "L 123-119 vs PHX"
+    },
+    {
+      "name": "San Antonio Spurs",
+      "abbrev": "SA",
+      "conference": "Western",
+      "division": "Southwest",
+      "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/sa.png",
+      "last_game": "L 116-111 @ POR"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "_source": "GET /teams/CLE, captured 2026-11-26 ~09:15 ET. Real, unedited.",
+  "data": {
+    "name": "Cleveland Cavaliers",
+    "abbrev": "CLE",
+    "city": "Cleveland",
+    "venue": "Rocket Arena",
+    "record": "9-10",
+    "conference": "Eastern",
+    "division": "Central",
+    "color": "#860038",
+    "logo_url": "https://a.espncdn.com/i/teamlogos/nba/500/cle.png"
+  }
+}
